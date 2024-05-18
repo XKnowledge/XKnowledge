@@ -19,7 +19,7 @@ class XKHomePageViewAPI(MethodView):
     """ 这个类相当于一个session，每一个session在内存中保有一个数据管理器 """
 
     def get(self):
-        folder_path = "../data"
+        folder_path = "data"
         files_and_folders = os.listdir(folder_path)
         # todo 未来支持创建文件夹
         files = [file for file in files_and_folders if os.path.isfile(os.path.join(folder_path, file))]

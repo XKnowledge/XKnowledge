@@ -1,0 +1,39 @@
+{
+  "name": "XKnowledge",
+  "version": "1.0.0",
+  "description": "自制知识图谱",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . XKnowledge --platform=win32 --arch=x64 --overwrite --prune=true --out=dist --icon=static/icon.ico --extra-resource=venv --dir",
+    "dist": "electron-packager . XKnowledge --platform=win32 --arch=x64 --overwrite --prune=true --out=dist --icon=static/icon.ico --extra-resource=venv",
+    "test": "echo \"Error: no xknowledge test specified\" && exit 1",
+    "build": "electron-builder"
+  },
+  "author": "XKnowledge, Inc.",
+  "license": "MIT License",
+  "build": {
+    "appId": "com.xknowledge.xknowledge",
+    "productName": "XKnowledge",
+    "icon": "static/icon.ico",
+    "files": [
+      "main.js",
+      "preload.js",
+      "xk_main.py",
+      "xk_homepage.py",
+      "xk_mainview.py",
+      "data/**/*",
+      "storage/**/*",
+      "templates/**/*",
+      "static/**/*",
+      "build/**/*",
+      "public/**/*",
+      "!**/node_modules/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^30.0.6",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2"
+  }
+}

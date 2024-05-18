@@ -3,7 +3,7 @@ from flask.views import MethodView
 from wtforms import Form, StringField, IntegerField
 from wtforms.validators import length
 
-from source.storage.xk_json import JsonFileHandler
+from storage.xk_json import JsonFileHandler
 from storage.xk_datamanager import global_data_manager
 
 

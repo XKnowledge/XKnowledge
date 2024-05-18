@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 
-from source.storage.xk_json import JsonFileHandler
+from storage.xk_json import JsonFileHandler
 
 
 # todo 对于Node、Link都可以封装成类，类的成员函数中实现add/delete/undo/redo，未来重构的时候可以考虑这种架构，但是现在先不重构
@@ -14,7 +14,7 @@ class XKDataManager:
     def __init__(self):
         self.json_handler = None  # 保留一个json处理器
         # todo root_folder未来可以做成参数可修改的形式
-        self.root_folder = os.path.abspath("../data")  # 软件对应的根文件夹
+        self.root_folder = os.path.abspath("data")  # 软件对应的根文件夹
         self.file_path = None  # json对应的文件路径
         self.json_data = None  # 储存在内存中的json数据
         self.json_data_old = None  # 储存直至上次未保存的json
