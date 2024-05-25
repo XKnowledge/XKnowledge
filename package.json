@@ -5,8 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-packager . XKnowledge --platform=win32 --arch=x64 --overwrite --prune=true --out=dist --icon=static/icon.ico --extra-resource=venv --dir",
-    "dist": "electron-packager . XKnowledge --platform=win32 --arch=x64 --overwrite --prune=true --out=dist --icon=static/icon.ico --extra-resource=venv",
+    "pack": "electron-packager . XKnowledge --platform=win32 --arch=x64 --overwrite --prune=true --out=install --icon=static/icon.ico --extra-resource=xkvenv",
     "test": "echo \"Error: no xknowledge test specified\" && exit 1",
     "build": "electron-builder"
   },
@@ -22,6 +21,7 @@
       "xk_main.py",
       "xk_homepage.py",
       "xk_mainview.py",
+      "xk_homepage.js",
       "data/**/*",
       "storage/**/*",
       "templates/**/*",
@@ -31,9 +31,12 @@
       "!**/node_modules/**/*"
     ]
   },
+  "type": "commonjs",
   "devDependencies": {
     "electron": "^30.0.6",
     "electron-builder": "^24.13.3",
-    "electron-packager": "^17.1.2"
+    "electron-forge": "^5.2.4",
+    "electron-packager": "^17.1.2",
+    "electron-shortcut": "^0.5.0"
   }
 }

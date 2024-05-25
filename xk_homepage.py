@@ -43,7 +43,10 @@ class XKHomePageViewAPI(MethodView):
 
         if operation_type == 'createFile':
             # 如果是创建文件，文件名要加后缀
-            global_data_manager.set_file_name("{0}.json".format(file_name))
+            if file_name[-3:] == ".xk":
+                global_data_manager.set_file_name(file_name)
+            else:
+                global_data_manager.set_file_name("{0}.xk".format(file_name))
             global_data_manager.create_file()
 
         if operation_type == 'deleteFile':

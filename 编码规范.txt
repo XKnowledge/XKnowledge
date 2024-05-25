@@ -1,6 +1,0 @@
-1. 所有的字符串全部使用双引号
-2. 文件开头名称使用xk_作为开头
-3. 命名参考Google Python的标准，参考网页：https://blog.csdn.net/chengyikang20/article/details/124706919
-4. 写注释
-
-除以上四条外，暂无其他要求

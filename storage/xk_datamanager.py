@@ -36,7 +36,8 @@ class XKDataManager:
 
     def set_file_name(self, file_name: str):
         self.file_name = file_name
-        self.title = file_name[:-5]
+        if file_name[-3:] == ".xk":
+            self.title = file_name[:-3]
 
     def open_file(self):
         # 重新打开一个新的文件

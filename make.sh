@@ -1,7 +1,7 @@
 
-python -m venv new_venv
-  # source new_venv/bin/activate  # 在Linux或Mac上
-./new_venv/Scripts/activate  # 在Windows上
+python -m venv xkvenv
+  # source xkvenv/bin/activate  # 在Linux或Mac上
+./xkvenv/Scripts/activate  # 在Windows上
 
 pip freeze > requirements.txt
 pip install -r requirements.txt #仅仅安装必要的包
