@@ -15,6 +15,8 @@ class XKDataManager:
         self.json_handler = None  # 保留一个json处理器
         # todo root_folder未来可以做成参数可修改的形式
         self.root_folder = os.path.abspath("data")  # 软件对应的根文件夹
+        if not os.path.isdir(self.root_folder):
+            os.makedirs(self.root_folder)
         self.file_path = None  # json对应的文件路径
         self.json_data = None  # 储存在内存中的json数据
         self.json_data_old = None  # 储存直至上次未保存的json
@@ -33,6 +35,8 @@ class XKDataManager:
 
     def set_root_folder(self, folder_path):
         self.root_folder = os.path.abspath(folder_path)
+        if not os.path.isdir(self.root_folder):
+            os.makedirs(self.root_folder)
 
     def set_file_name(self, file_name: str):
         self.file_name = file_name

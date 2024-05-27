@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, MenuItem, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const fs = require('fs')
 
 let mainWindow;
 let pythonProcess = null;
@@ -50,42 +51,12 @@ app.whenReady().then(() => {
                 mainWindow.focus();
             }
         });
-
-        // 指定虚拟环境的python执行路径
-        let py = null;  //在Unix或MacOS上使用xkvenv/bin/python
-        if (process.platform !== 'darwin') {
-            py = path.join(__dirname, 'xkvenv/Scripts/python.exe');
-        } else {
-            py = path.join(__dirname, 'xkvenv/bin/python.exe');
-        }
-        // 指定要运行的Flask应用
-        const script = path.join(__dirname, 'xk_main.py');
-        pythonProcess = spawn(py, [script]);
+        const script = path.join(__dirname, 'xk_main/xk_main.exe');
+        pythonProcess = spawn(script);
         pythonProcess.stdout.on('data', (data) => {
             console.log(`stdout: ${data}`);
         });
-
-        const menu = new Menu();
-        menu.append(new MenuItem({
-            label: "菜单",
-            submenu: [
-                {
-                    label: "新建文件",
-                    // accelerator: process.platform === 'darwin' ? 'Alt+Cmd+I' : 'Alt+Shift+I',
-                    click: () => {
-                        mainWindow.webContents.send("act", "new_file");
-                    }
-                },
-                {
-                    label: "导入本地文件",
-                    // accelerator: process.platform === 'darwin' ? 'Alt+Cmd+I' : 'Alt+Shift+I',
-                    click: () => {
-                        mainWindow.webContents.send("act", "export_file");
-                    }
-                }]
-        }));
-        Menu.setApplicationMenu(menu);
-
+        Menu.setApplicationMenu(null);
         createWindow();
     }
 });
@@ -100,14 +71,14 @@ ipcMain.on('switch_window', (event, arg) => {
         height: 800,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
-            devTools: false, // 禁用开发者工具快捷键
-            webviewTag: false, // 禁用 webview 标签
-            accelerator: {
-                'Cmd+[': null,
-                'Cmd+]': null,
-                'Cmd+W': null,
-                'Ctrl+R': null
-            }
+            // devTools: false, // 禁用开发者工具快捷键
+            // webviewTag: false, // 禁用 webview 标签
+            // accelerator: {
+            //     'Cmd+[': null,
+            //     'Cmd+]': null,
+            //     'Cmd+W': null,
+            //     'Ctrl+R': null
+            // }
         },
         backgroundColor: "#fff",
         minHeight: 600,
@@ -115,6 +86,7 @@ ipcMain.on('switch_window', (event, arg) => {
         title: "XKnowledge",
         icon: "static/icon.ico"
     });
+    mainWindow.webContents.openDevTools({mode:'detach'})
 
     const menu = new Menu()
     menu.append(new MenuItem({

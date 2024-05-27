@@ -297,3 +297,6 @@ dist
 
 # Install directories
 install/
+dist/
+xk_main/
+*.spec

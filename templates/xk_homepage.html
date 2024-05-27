@@ -40,27 +40,60 @@
     th {
         background-color: #f2f2f2;
     }
+
+    .borderless-button {
+        background: none;
+        /* 移除背景色 */
+        border: none;
+        /* 移除边框 */
+        padding: 10px 20px;
+        /* 设置按钮内边距 */
+        margin: 0;
+        /* 移除默认的外边距 */
+        cursor: pointer;
+        /* 设置鼠标悬停时的指针手势 */
+        font-size: 16px;
+        /* 设置字体大小 */
+        color: #444444;
+        /* 设置按钮文本颜色 */
+        outline: none;
+        /* 移除点击时的轮廓 */
+        transition: background-color 0.3s;
+        /* 平滑过渡效果 */
+    }
+
+    .borderless-button:hover {
+        background-color: #f0f0f0;
+        /* 鼠标悬停或聚焦时的背景色 */
+    }
 </style>
 {% endblock %}
 
 {% block body %}
 <div>
     <div>
-        <button id="buttonCreateFile" type="button">新建文件</button>
-        <button id="buttonImportFile" type="button">导入本地文件</button>
+        <button id="buttonCreateFile" class="borderless-button" type="button" onclick="onCreateFileClick()"
+            title="新建文件">
+            <div>
+                <img src="static/add.svg" style="width:24px;height:24px;" />
+            </div>
+        </button>
+        <button id="buttonImportFile" class="borderless-button" type="button" onclick="onImportFileClick()"
+            title="导入文件">
+            <div>
+                <img src="static/file.svg" style="width:24px;height:24px;" />
+            </div>
+            <form id="fileUploadForm" method="post" action="{{ url_for('XKnowledge.XKHomePageView') }}"
+                enctype="multipart/form-data" style="display:none">
+                <input type="file" id="fileUpload" name="file" accept=".xk" />
+            </form>
+        </button>
 
         <div id="dialogCreateFile" style="display: none;">
             <form id="createFileFieldForm" method="post">
-                <label for="fileNameField">文件名称:</label>
+                <label for="fileNameField" style="font-size:16px;color:#444444;">文件名称</label>
                 <input type="text" id="fileNameField" />
-                <button type="submit">创建</button>
-            </form>
-        </div>
-
-        <div id="dialogImportFile" style="display: none;">
-            <form method="post" action="{{ url_for('XKnowledge.XKHomePageView') }}" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".xk" />
-                <input type="submit" value="导入文件" />
+                <button type="submit" class="borderless-button">创建</button>
             </form>
         </div>
     </div>
@@ -121,16 +154,14 @@
     }
 
     const dialogCreateFile = document.getElementById("dialogCreateFile");
-    const dialogImportFile = document.getElementById("dialogImportFile");
 
-    document.getElementById("buttonCreateFile").addEventListener("click", function (event) {
+    function onCreateFileClick() {
         if (dialogCreateFile.style.display === "none") {
-            dialogImportFile.style.display = "none";
             dialogCreateFile.style.display = "block";
         } else {
             dialogCreateFile.style.display = "none";
         }
-    });
+    }
 
     document.getElementById("createFileFieldForm").addEventListener("submit", function (event) {
         // 获取表单内的所有控件
@@ -144,31 +175,12 @@
         sendData(formData, window.electronAPI.ipcsend());
     });
 
-    document.getElementById("buttonImportFile").addEventListener("click", function (event) {
-        if (dialogImportFile.style.display === 'none') {
-            dialogCreateFile.style.display = "none";
-            dialogImportFile.style.display = "block";
-        } else {
-            dialogImportFile.style.display = "none";
-        }
-    });
+    function onImportFileClick() {
+        document.getElementById('fileUpload').click();
+    }
 
-    window.electronAPI.ipcRecive((value) => {
-        if (value === "new_file") {
-            if (dialogCreateFile.style.display === "none") {
-                dialogImportFile.style.display = "none";
-                dialogCreateFile.style.display = "block";
-            } else {
-                dialogCreateFile.style.display = "none";
-            }
-        } else if (value === "export_file") {
-            if (dialogImportFile.style.display === 'none') {
-                dialogCreateFile.style.display = "none";
-                dialogImportFile.style.display = "block";
-            } else {
-                dialogImportFile.style.display = "none";
-            }
-        }
+    document.getElementById('fileUpload').addEventListener('change', function () {
+        document.getElementById('fileUploadForm').submit();
     });
 
 </script>

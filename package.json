@@ -14,26 +14,22 @@
   "build": {
     "appId": "com.xknowledge.xknowledge",
     "productName": "XKnowledge",
-    "icon": "static/icon.ico",
+    "icon": "static/XKnowledge_icon.png",
+    "compression": "store",
+    "directories": {
+      "output": "build"
+    },
+    "asar": false,
     "files": [
       "main.js",
       "preload.js",
-      "xk_main.py",
-      "xk_homepage.py",
-      "xk_mainview.py",
-      "xk_homepage.js",
-      "data/**/*",
-      "storage/**/*",
-      "templates/**/*",
-      "static/**/*",
-      "build/**/*",
-      "public/**/*",
+      "xk_main/**/*",
       "!**/node_modules/**/*"
     ]
   },
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^30.0.6",
+    "electron": "^30.0.8",
     "electron-builder": "^24.13.3",
     "electron-forge": "^5.2.4",
     "electron-packager": "^17.1.2",

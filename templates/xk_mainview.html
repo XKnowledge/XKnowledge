@@ -234,19 +234,25 @@
                 const nodeNames = chartInstance.getOption().series[0].data.map(function (node) {
                     return node.name;
                 });
-                if (nodeNames.indexOf(this.elements['nodeNameField'].value) !== -1) {
+                const node_name_field = this['nodeNameField'];
+                if (nodeNames.indexOf(this['nodeNameField'].value) !== -1) {
                     alert("不能创建同名节点，请修改节点名称");
                 } else {
                     // 不重名的情况下发送数据到后端
+                    const node_desc = document.getElementById['nodeDescribeField'];
+                    const category_field = document.getElementById['categoryField'];
                     const formData = new FormData();
                     formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
                     formData.append("createNode", JSON.stringify({
-                        name: this.elements['nodeNameField'].value,
-                        des: this.elements['nodeDescribeField'].value,
+                        name: node_name_field.value,
+                        des: node_desc.value,
                         symbolSize: 50,
-                        category: this.elements['categoryField'].value
+                        category: category_field.value
                     }));
                     sendData(formData, chartInstance);
+                    node_name_field.value = "";
+                    node_desc.value = "";
+                    category_field.value = "";
                 }
                 highlightInstance.reset();
             }
@@ -274,8 +280,8 @@
             const formData = new FormData();
             formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
             formData.append("createEdge", JSON.stringify({
-                name: this.elements['edgeNameField'].value,
-                des: this.elements['edgeDescribeField'].value
+                name: document.getElementById['edgeNameField'].value,
+                des: document.getElementById['edgeDescribeField'].value
             }));
             sendData(formData, chartInstance);
             highlightInstance.reset();
@@ -321,19 +327,20 @@
             }
 
             if (event.key === "Delete") {
+                // todo 这个逻辑需要修改后端，将delete在后端上合并，并且前端只发送一个form
                 dialogCreateEdge.style.display = "none";
-                const formData = new FormData();
-                formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
-                formData.append("deleteNode", 1);
-                sendData(formData, chartInstance);
-                highlightInstance.resetNode();
                 if (highlightInstance.highlightEdge !== undefined) {
                     const formData = new FormData();
                     formData.append("highlightLink", JSON.stringify(highlightInstance.highlightEdge));
                     formData.append("deleteLink", 1);
                     sendData(formData, chartInstance);
-                    highlightInstance.resetEdge();
+                    highlightInstance.highlightEdge = undefined;
                 }
+                const formData = new FormData();
+                formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
+                formData.append("deleteNode", 1);
+                sendData(formData, chartInstance);
+                highlightInstance.highlightNodeList = [];
             }
 
             if (event.ctrlKey && event.key === "z") {
