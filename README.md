@@ -34,3 +34,7 @@ npm install --save-dev electron electron-packager electron-builder
 ```bash
 sh make.sh
 ```
+
+# icon库
+
+https://www.iconfont.cn/collections/detail?spm=a313x.search_index.0.da5a778a4.726b3a81W2DMri&cid=7077
