@@ -28,4 +28,4 @@ if __name__ == "__main__":
     app.register_blueprint(blueprint)  # 在app中注册蓝图
 
     print(app.url_map)
-    app.run(debug=True)  # 以debug模式运行应用
+    app.run()

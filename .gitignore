@@ -127,6 +127,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+xkvenv/
 
 requirements.txt
 
@@ -293,3 +294,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Install directories
+install/
+dist/
+xk_main/
+*.spec

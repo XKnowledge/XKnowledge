@@ -19,7 +19,7 @@ class XKHomePageViewAPI(MethodView):
     """ 这个类相当于一个session，每一个session在内存中保有一个数据管理器 """
 
     def get(self):
-        folder_path = "data"
+        folder_path = global_data_manager.root_folder
         files_and_folders = os.listdir(folder_path)
         # todo 未来支持创建文件夹
         files = [file for file in files_and_folders if os.path.isfile(os.path.join(folder_path, file))]
@@ -43,7 +43,10 @@ class XKHomePageViewAPI(MethodView):
 
         if operation_type == 'createFile':
             # 如果是创建文件，文件名要加后缀
-            global_data_manager.set_file_name("{0}.json".format(file_name))
+            if file_name[-3:] == ".xk":
+                global_data_manager.set_file_name(file_name)
+            else:
+                global_data_manager.set_file_name("{0}.xk".format(file_name))
             global_data_manager.create_file()
 
         if operation_type == 'deleteFile':
