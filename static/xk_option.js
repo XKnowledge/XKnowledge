@@ -18,10 +18,6 @@ function createOption(jsonData) {
                 mark: {
                     show: true
                 },
-                // 还原
-                restore: {
-                    show: true
-                },
                 // 保存为图片
                 saveAsImage: {
                     show: true

@@ -239,8 +239,8 @@
                     alert("不能创建同名节点，请修改节点名称");
                 } else {
                     // 不重名的情况下发送数据到后端
-                    const node_desc = document.getElementById['nodeDescribeField'];
-                    const category_field = document.getElementById['categoryField'];
+                    const node_desc = this['nodeDescribeField'];
+                    const category_field = this['categoryField'];
                     const formData = new FormData();
                     formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
                     formData.append("createNode", JSON.stringify({
@@ -280,8 +280,8 @@
             const formData = new FormData();
             formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
             formData.append("createEdge", JSON.stringify({
-                name: document.getElementById['edgeNameField'].value,
-                des: document.getElementById['edgeDescribeField'].value
+                name: this['edgeNameField'].value,
+                des: this['edgeDescribeField'].value
             }));
             sendData(formData, chartInstance);
             highlightInstance.reset();
