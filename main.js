@@ -115,6 +115,15 @@ ipcMain.on('switch_window', (event, arg) => {
                 click: () => {
                     mainWindow.webContents.send("act", "redo");
                 }
+            },
+            {
+                type: "separator"
+            },
+            {
+                label: "导出文件",
+                click: () => {
+                    mainWindow.webContents.send("act", "export");
+                }
             }]
     }));
     Menu.setApplicationMenu(menu);
