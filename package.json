@@ -14,7 +14,7 @@
   "build": {
     "appId": "com.xknowledge.xknowledge",
     "productName": "XKnowledge",
-    "icon": "static/XKnowledge_icon.png",
+    "icon": "static/XKnowledge_icon.ico",
     "compression": "store",
     "directories": {
       "output": "build"

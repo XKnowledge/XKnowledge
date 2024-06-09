@@ -99,12 +99,17 @@
             if (this.highlightEdge === undefined) {
                 // 如果边没有初始化，就初始化
                 this.highlightEdge = { data: data, dataIndex: dataIndex };
+                highlight(dataIndex, "edge");
             } else {
                 // 如果边初始化了，就将旧的边解除高亮
                 downplay(this.highlightEdge.dataIndex, "edge");
-                this.highlightEdge = { data: data, dataIndex: dataIndex };
+                if (this.highlightEdge.dataIndex !== dataIndex){
+                    this.highlightEdge = { data: data, dataIndex: dataIndex };
+                    highlight(dataIndex, "edge");
+                } else {
+                    this.highlightEdge.dataIndex = undefined;
+                }
             }
-            highlight(dataIndex, "edge");
         }
 
         reset() {
@@ -136,7 +141,6 @@
 <div id="main" style="height:calc(100vh - 40px);margin:auto 0">
     <button id="buttonCreateNode" type="button">创建节点</button>
     <button id="buttonCreateEdge" type="button">创建边</button>
-    <button id="buttonExportFile" onclick="download()" type="button">导出文件</button>
 
     <div id="dialogCreateNode" style="display: none;">
         <form id="createNodeFieldForm" method="post">
@@ -162,7 +166,7 @@
 
     <div id="chart" style="width:100%;height:100%;margin:auto auto"></div>
     <script type="text/javascript">
-        const highlightInstance = new HighlightClass('value1', 'value2');
+        const highlightInstance = new HighlightClass();
         const chartInstance = echarts.init(document.getElementById("chart"));
         chartInstance.showLoading(); // 加载等待
         let jsonData = {{ json_data | tojson }};
@@ -239,8 +243,8 @@
                     alert("不能创建同名节点，请修改节点名称");
                 } else {
                     // 不重名的情况下发送数据到后端
-                    const node_desc = document.getElementById['nodeDescribeField'];
-                    const category_field = document.getElementById['categoryField'];
+                    const node_desc = this['nodeDescribeField'];
+                    const category_field = this['categoryField'];
                     const formData = new FormData();
                     formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
                     formData.append("createNode", JSON.stringify({
@@ -280,16 +284,12 @@
             const formData = new FormData();
             formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
             formData.append("createEdge", JSON.stringify({
-                name: document.getElementById['edgeNameField'].value,
-                des: document.getElementById['edgeDescribeField'].value
+                name: this['edgeNameField'].value,
+                des: this['edgeDescribeField'].value
             }));
             sendData(formData, chartInstance);
             highlightInstance.reset();
         });
-
-        function download() {
-            window.location.href = '{{ url_for('XKnowledge.XKExportFile') }}';
-        }
 
         window.addEventListener("resize", () => {
             // 当窗口大小变化时，重新刷新图表
@@ -357,7 +357,11 @@
         });
 
         window.electronAPI.ipcRecive((value) => {
-            if (value === "undo") {
+            if (value === "save") {
+                const formData = new FormData();
+                formData.append("saveData", 1);
+                sendData(formData, undefined);
+            } else if (value === "undo") {
                 const formData = new FormData();
                 formData.append("undo", 1);
                 sendData(formData, chartInstance);
@@ -365,10 +369,8 @@
                 const formData = new FormData();
                 formData.append("redo", 1);
                 sendData(formData, chartInstance);
-            } else if (value === "save") {
-                const formData = new FormData();
-                formData.append("saveData", 1);
-                sendData(formData, undefined);
+            } else if (value === "export") {
+                window.location.href = '{{ url_for('XKnowledge.XKExportFile') }}';
             }
         });
 
