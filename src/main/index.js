@@ -36,6 +36,21 @@ function createWindow() {
     icon: '../../resources/Knowledge.png'
   })
 
+  const menu = Menu.buildFromTemplate([
+    {
+      label: app.name,
+      submenu: [
+        {
+          click: () => mainWindow.webContents.send('open-view', 'chart'),
+          label: '跳转'
+        }
+      ]
+    }
+
+  ])
+
+  Menu.setApplicationMenu(menu)
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -57,8 +72,6 @@ function createWindow() {
   // } else {
   //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   // }
-
-  // mainWindow.loadURL('http://localhost:5173/#/chart')
   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
@@ -189,11 +202,24 @@ ipcMain.on('switch_window', (event, arg) => {
           click: () => {
             mainWindow.webContents.send('act', 'export')
           }
+        },
+        {
+          label: '跳转页面',
+          click: () => {
+            mainWindow.webContents.send('open-view', 'chart')
+          }
         }]
     }))
   Menu.setApplicationMenu(menu)
 
-  mainWindow.loadURL('http://localhost:5173/#/chart')
+  mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  // 监听渲染进程发出的 'did-finish-load' 事件
+  mainWindow.webContents.on('did-finish-load', () => {
+    // 页面加载完成后，发送消息到渲染进程
+    mainWindow.webContents.send('open-view', 'chart')
+  })
+
+  // mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })

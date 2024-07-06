@@ -77,6 +77,12 @@ const items = reactive([
   getItem('我的文件', 'myFiles', () => h(FileTextOutlined))
 ])
 
+
+window.electronAPI.openView((value) => {
+  console.log(value)
+  router.push(value)
+})
+
 const handleClick = e => {
   // console.log('click', e)
   const itemObj = items.find((item) => item.key === e.key)
