@@ -1,6 +1,16 @@
-node_modules
 dist
 out
+build
+release
+xk_main
+
 .DS_Store
 *.log*
 .idea
+
+node_modules
+xkvenv
+__pycache__
+
+*lock*
+yarn.lock

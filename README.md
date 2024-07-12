@@ -56,7 +56,7 @@ pip install pyinstaller
 # 安装electron相关包
 
 ```bash
-npm install --save-dev electron electron-packager electron-builder
+npm install
 ```
 
 # 运行打包脚本，在根目录cmd窗口执行sh进入到sh
@@ -72,7 +72,7 @@ https://www.iconfont.cn/collections/detail?spm=a313x.search_index.0.da5a778a4.72
 # 打包指令
 ``` cmd
 # 修改前
-pyinstaller --clean -D -p xkvenv\Lib\site-packages --add-data static:static --add-data templates:templates --distpath=. --noconfirm xk_main.py
+pyinstaller --clean -D -p xkvenv/Lib/site-packages --add-data "backend/static:static" --add-data "backend/templates:templates" --distpath=. --noconfirm backend/xk_main.py
 ```
 ```cmd
 pyinstaller --clean -D -p xkvenv/lib/python3.11/site-packages --add-data "backend/static:static" --add-data "backend/templates:templates" --distpath=. --noconfirm backend/xk_main.py

@@ -109,7 +109,7 @@ app.whenReady().then(() => {
     createWindow()
   }
 
-  app.on('activate', function() {
+  app.on('activate', function () {
     // 在 macOS 上，当单击应用程序的 Dock 图标且没有其他窗口打开时，重新创建窗口是常见的操作。
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -118,9 +118,8 @@ app.whenReady().then(() => {
 // 当所有窗口关闭时退出，但在 macOS 上除外。
 // 在 macOS 上，通常应用程序和它们的菜单栏会保持活动状态，直到用户使用 Cmd + Q 明确退出应用程序。
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  if (pythonProcess !== null) pythonProcess.kill()
+  if (process.platform !== 'darwin') app.quit()
 })
 
 // 在这个文件中，你可以包含你的应用程序特定的主进程代码。你也可以将它们放在单独的文件中，然后在这里进行引用。
@@ -138,8 +137,8 @@ ipcMain.on('switch_window', (event, arg) => {
   // }
   // console.log(preloadPath)
   mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 800,
+    width: 900,
+    height: 670,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js')
       // devTools: false, // 禁用开发者工具快捷键
@@ -165,52 +164,52 @@ ipcMain.on('switch_window', (event, arg) => {
   })
   mainWindow.webContents.openDevTools({ mode: 'detach' })
 
-  const menu = new Menu()
-  menu.append(
-    new MenuItem({
-      label: '菜单',
-      submenu: [
-        {
-          label: '保存',
-          accelerator: 'Ctrl+S',
-          click: () => {
-            mainWindow.webContents.send('act', 'save')
-          }
-        },
-        {
-          type: 'separator'
-        },
-        {
-          label: '撤销',
-          accelerator: 'Ctrl+Z',
-          click: () => {
-            mainWindow.webContents.send('act', 'undo')
-          }
-        },
-        {
-          label: '重做',
-          accelerator: 'Ctrl+Y',
-          click: () => {
-            mainWindow.webContents.send('act', 'redo')
-          }
-        },
-        {
-          type: 'separator'
-        },
-        {
-          label: '导出文件',
-          click: () => {
-            mainWindow.webContents.send('act', 'export')
-          }
-        },
-        {
-          label: '跳转页面',
-          click: () => {
-            mainWindow.webContents.send('open-view', 'chart')
-          }
-        }]
-    }))
-  Menu.setApplicationMenu(menu)
+  // const menu = new Menu()
+  // menu.append(
+  //   new MenuItem({
+  //     label: '菜单',
+  //     submenu: [
+  //       {
+  //         label: '保存',
+  //         accelerator: 'Ctrl+S',
+  //         click: () => {
+  //           mainWindow.webContents.send('act', 'save')
+  //         }
+  //       },
+  //       {
+  //         type: 'separator'
+  //       },
+  //       {
+  //         label: '撤销',
+  //         accelerator: 'Ctrl+Z',
+  //         click: () => {
+  //           mainWindow.webContents.send('act', 'undo')
+  //         }
+  //       },
+  //       {
+  //         label: '重做',
+  //         accelerator: 'Ctrl+Y',
+  //         click: () => {
+  //           mainWindow.webContents.send('act', 'redo')
+  //         }
+  //       },
+  //       {
+  //         type: 'separator'
+  //       },
+  //       {
+  //         label: '导出文件',
+  //         click: () => {
+  //           mainWindow.webContents.send('act', 'export')
+  //         }
+  //       },
+  //       {
+  //         label: '跳转页面',
+  //         click: () => {
+  //           mainWindow.webContents.send('open-view', 'chart')
+  //         }
+  //       }]
+  //   }))
+  // Menu.setApplicationMenu(menu)
 
   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   // 监听渲染进程发出的 'did-finish-load' 事件
