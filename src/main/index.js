@@ -100,7 +100,16 @@ app.whenReady().then(() => {
         mainWindow.focus()
       }
     })
-    const script = path.join(__dirname, '../../xk_main/xk_main')
+    let script
+    if (process.platform === 'win32') {
+      script = path.join(__dirname, '../../xk_main/xk_main.exe')
+    } else if (process.platform === 'darwin') {
+      script = path.join(__dirname, '../../xk_main/xk_main')
+    } else {
+      script = path.join(__dirname, '../../xk_main/xk_main')
+    }
+    console.log(process.platform)
+    // const script = path.join(__dirname, '../../xk_main/xk_main')
     pythonProcess = spawn(script)
     pythonProcess.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`)
