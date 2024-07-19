@@ -17,20 +17,6 @@ import myAxios from '../utils/myAxios'
 const fileList = ref([])
 
 onMounted(async () => {
-  // const fileListValue = fileList.value
-  // const files = await window.electronAPI.getAllFiles()
-  // let counter = 0
-  // files.forEach((file) => {
-  //   if (file.endsWith('.xk')) {
-  //     fileListValue.push({
-  //       id: counter++,
-  //       // name: file.replace(/\.[^/.]+$/, ''),
-  //       name: file,
-  //       src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
-  //     })
-  //   }
-  // })
-  // fileList.value =
   const fileListValue = []
   let res = await myAxios.get('http://127.0.0.1:5000')
   let counter = 0

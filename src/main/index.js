@@ -108,8 +108,6 @@ app.whenReady().then(() => {
     } else {
       script = path.join(__dirname, '../../xk_main/xk_main')
     }
-    console.log(process.platform)
-    // const script = path.join(__dirname, '../../xk_main/xk_main')
     pythonProcess = spawn(script)
     pythonProcess.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`)

@@ -14,3 +14,5 @@ __pycache__
 
 *lock*
 yarn.lock
+
+xk_main.spec
