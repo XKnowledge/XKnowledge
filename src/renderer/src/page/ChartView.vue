@@ -4,19 +4,28 @@
       <a-layout-header :style="headerStyle" class="move-show">
         <a-button class="no-move-button" @click="createNode">创建节点</a-button>
         <a-button class="no-move-button" @click="createSide">创建边</a-button>
-
         <a-button class="no-move-button" @click="toggleSider">Toggle Sider</a-button>
         <!-- 控制按钮 -->
       </a-layout-header>
       <a-layout>
         <a-layout-content :style="contentStyle">
-          <div id="chart" :style="echartsStyle" />
+          <div id="chart" :style="echartsStyle"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
-          Sider
+          <a-layout-content v-show="createNodeVisible">
+            <a-form id="createNodeFieldForm" class="form-style" @submit.prevent="createNodeSubmit1">
+              <a-label for="nodeNameField">名称</a-label>
+              <a-input type="text" id="nodeNameField" v-model="nodeName" /><br />
+              <a-label for="nodeDescribeField">描述</a-label>
+              <a-input type="text" id="nodeDescribeField" /><br />
+              <a-label for="categoryField">所属类目</a-label>
+              <a-input type="text" id="categoryField" /><br />
+              <a-button type="submit">创建</a-button>
+            </a-form>
+          </a-layout-content>
         </a-layout-sider>
       </a-layout>
-      <a-layout-footer class="footerStyle">Footer</a-layout-footer>
+      <a-layout-footer class="footer-style">Footer</a-layout-footer>
     </a-layout>
   </a-space>
 </template>
@@ -27,59 +36,103 @@ import * as echarts from 'echarts'
 import myAxios from '../utils/myAxios'
 import createOption from '../utils/myOption.ts'
 
-const chatData = ref()
+const chatData = ref();
 
 // 基于准备好的dom，初始化echarts实例
-let chartDom = null
-let myChart = null
+let chartDom = null;
+let chartInstance = null;
+let highlightNodeList = []; // 高亮节点记录
+let history = []; // 记录历史
+let history_sequence_number = -1; // HSN：历史操作对应的目前的位置
 
 onMounted(() => {
   myAxios.get('http://127.0.0.1:5000/XKMainView').then(response => {
     if (response) {
       // 获取数据
-      chatData.value = response
-      const chatDataValue = chatData.value
+      chatData.value = response;
+      const chatDataValue = chatData.value;
       if (chatDataValue) {
-        const option = createOption(chatDataValue)
+        const option = createOption(chatDataValue);
         // 调用渲染图表逻辑
-        getCharts(option)
+        getCharts(option);
       }
     }
   })
-  window.addEventListener('resize', myResize)
+  window.addEventListener('resize', myResize);
 })
 
 const getCharts = (option) => {
-  console.log('option')
+  console.log('option');
 
   // 基于准备好的dom，初始化echarts实例
-  chartDom = document.getElementById('chart')
-  console.log(option)
+  chartDom = document.getElementById('chart');
+  console.log(option);
   if (!chartDom) {
-    console.error('chart图表容器不存在，请检查HTML代码！')
+    console.error('chart图表容器不存在，请检查HTML代码！');
   } else {
     // 初始化 ECharts 图表
-    myChart = echarts.init(chartDom)
+    chartInstance = echarts.init(chartDom);
     if (!option) {
-      console.error('图表信息为空，请联系管理员！')
+      console.error('图表信息为空，请联系管理员！');
     } else {
       // 使用刚指定的配置项和数据显示图表。
-      myChart.setOption(option)
+      chartInstance.setOption(option);
+
+      chartInstance.on("click", clickChart);
     }
   }
 }
 
-const siderVisible = ref(true) // 初始状态为显示
+const clickChart = event => {
+  // console.log(event);
+  if (event.dataType === "node") {
+    const pos = highlightNodeList.indexOf(event.dataIndex);
+    if (pos !== -1 && highlightNodeList.length !== 0) {
+      // 当重复点击节点的时候，将节点高亮去掉，并且更新highlightNodeList
+      if (highlightNodeList.length === 1) {
+        operateChart(event.dataIndex, "node", "downplay");
+        highlightNodeList = [];
+      } else {
+        operateChart(event.dataIndex, "node", "downplay");
+        highlightNodeList = [highlightNodeList[(pos + 1) % 2]];// 取pos对应的另一个节点
+      }
+    } else {
+      if (highlightNodeList.length < 2) {
+        // 点击第一个节点时，高亮点击的那个节点，点击第二个节点时，高亮新点击的节点
+        highlightNodeList[highlightNodeList.length] = event.dataIndex;
+        operateChart(event.dataIndex, "node", "highlight");
+      } else {
+        // 点击第三个节点时，将第一个节点高亮取消，并把第二个节点放到第一个位置上，为了后面的有向链接做准备
+        operateChart(highlightNodeList[0], "node", "downplay");
+        operateChart(event.dataIndex, "node", "highlight");
+        highlightNodeList = [highlightNodeList[1], event.dataIndex];
+      }
+    }
+    console.log(highlightNodeList);
+  }
+}
+
+const operateChart = (dataIndex, dataType, action) => {
+  // 高亮，根据数据类型和位置来高亮
+  chartInstance.dispatchAction({
+    type: action,
+    seriesIndex: 0,
+    dataType: dataType,
+    dataIndex: dataIndex
+  });
+}
+
+const siderVisible = ref(true) // 初始状态为显示\
+const createNodeVisible = ref(false)
 
 const echartsWidth = ref('100vh')
 
 const toggleSider = () => {
-  siderVisible.value = !siderVisible.value // 切换侧边栏的显示状态
-  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw'
-  console.log(echartsWidth.value)
+  siderVisible.value = !siderVisible.value; // 切换侧边栏的显示状态
+  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw';
   // 使用 nextTick 等待DOM更新完成后执行resize
   nextTick(() => {
-    myChart.resize()
+    chartInstance.resize();
   })
 }
 
@@ -87,22 +140,49 @@ const toggleSider = () => {
 // watch(echartsWidth, (newVal, oldVal) => {
 //   if (newVal !== oldVal) {
 //     // 确保只有在值真正改变时才调用resize
-//     myChart.resize() // 执行echarts图表的resize方法
+//     chartInstance.resize() // 执行echarts图表的resize方法
 //   }
 // })
 
 const myResize = () => {
-  myChart.resize()
+  chartInstance.resize();
 }
 
 const createNode = () => {
-  myChart.resize()
+  siderVisible.value = true; // 切换侧边栏的显示状态
+  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw';
+  createNodeVisible.value = true;
+  nextTick(() => {
+    chartInstance.resize();
+  });
 }
+
+const createNodeSubmit1 = event => {
+  event.preventDefault();
+  console.log("haha");
+  console.log(this.nodeName);
+}
+
+// document.getElementById("createNodeFieldForm").addEventListener("submit", (event) => {
+//   // 获取表单内的所有控件
+//   event.preventDefault();
+//   console.log("haha");
+//   console.log(this["nodeNameField"].value);
+//   // dialogCreateEdge.style.display = "none"; // 当表单提交时，关闭弹窗
+
+//   // const formData = new FormData();
+//   // formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
+//   // formData.append("createEdge", JSON.stringify({
+//   //   name: this['edgeNameField'].value,
+//   //   des: this['edgeDescribeField'].value
+//   // }));
+//   // sendData(formData, chartInstance);
+//   // highlightInstance.reset();
+// });
 
 const createSide = () => {
-  myChart.resize()
+  chartInstance.resize();
 }
-
 
 const headerStyle = {
   textAlign: 'center',
@@ -129,7 +209,6 @@ const echartsStyle = {
 </script>
 
 <style>
-
 .echarts-style {
   width: 100%;
   height: 100%;
@@ -141,9 +220,12 @@ const echartsStyle = {
 
 .move-show {
   display: flex;
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
-  -webkit-app-region: drag; /* 可拖动 */
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: center;
+  /* 水平居中 */
+  -webkit-app-region: drag;
+  /* 可拖动 */
   background-color: #f5f5f5;
   width: 100%;
   height: 53px !important;
@@ -156,7 +238,7 @@ const echartsStyle = {
   -webkit-app-region: no-drag;
 }
 
-.footerStyle {
+.footer-style {
   padding: 0 !important;
   text-align: center;
   background-color: #f5f5f5;
@@ -166,10 +248,27 @@ const echartsStyle = {
 
 .sider-style {
   text-align: center;
-  line-height: 120px;
+  line-height: 50px;
   width: 270px !important;
   max-width: 270px !important;
   min-width: 270px !important;
   background-color: #f5f5f5 !important;
+}
+
+.form-style {
+  background-color: #f5f5f5 !important;
+}
+
+.form-style input {
+  width: 200px !important;
+  max-width: 200px !important;
+  min-width: 200px !important;
+  height: 30px !important;
+}
+
+.form-style button {
+  height: 30px !important;
+  background-color: #0d5bc6 !important;
+  color: #ffffff;
 }
 </style>

@@ -2,11 +2,11 @@ const createOption = (jsonData) => {
   return {
     // 图的标题
     title: {
-      text: jsonData.title
+      text: "test"
     },
     // 提示框的配置
     tooltip: {
-      formatter: function(x) {
+      formatter: function (x) {
         return x.data.des
       }
     },
@@ -26,7 +26,7 @@ const createOption = (jsonData) => {
     },
     legend: [{
       // selectedMode: "single",
-      data: jsonData.categories.map(function(a) {
+      data: jsonData.categories.map(function (a) {
         return a.name
       })
     }],
@@ -67,7 +67,7 @@ const createOption = (jsonData) => {
       // 边上显示当前边的名称
       edgeLabel: {
         show: true,
-        formatter: function(x) {
+        formatter: function (x) {
           return x.data.name
         }
       },
@@ -90,9 +90,87 @@ const createOption = (jsonData) => {
         }
       },
       // 数据
-      data: jsonData.data,
-      links: jsonData.links,
-      categories: jsonData.categories
+      data: [
+        {
+          "name": "node01",
+          "des": "nodedes01",
+          "symbolSize": 70,
+          "category": "\u7c7b\u76ee0",
+          rich: {
+            inputBox: {
+              backgroudColor: "#fff",
+              borderWidth: 1,
+              borderRadius: 5,
+              width: 100,
+              height: 20
+            }
+          }
+        },
+        {
+          "name": "node02",
+          "des": "nodedes02",
+          "symbolSize": 50,
+          "category": "\u7c7b\u76ee1"
+        },
+        {
+          "name": "node03",
+          "des": "nodedes3",
+          "symbolSize": 50,
+          "category": "\u7c7b\u76ee2"
+        },
+        {
+          "name": "node05",
+          "des": "nodedes05",
+          "symbolSize": 50,
+          "category": "\u7c7b\u76ee1"
+        },
+        {
+          "name": "node04",
+          "des": "nodedes04",
+          "symbolSize": 50,
+          "category": "\u7c7b\u76ee3"
+        }
+      ],
+      links: [
+        {
+          "source": "node01",
+          "target": "node02",
+          "name": "link01",
+          "des": "link01des"
+        },
+        {
+          "source": "node01",
+          "target": "node03",
+          "name": "link02",
+          "des": "link02des"
+        },
+        {
+          "source": "node01",
+          "target": "node05",
+          "name": "link04",
+          "des": "link05des"
+        },
+        {
+          "source": "node01",
+          "target": "node04",
+          "name": "link03",
+          "des": "link03des"
+        }
+      ],
+      categories: [
+        {
+          "name": "\u7c7b\u76ee0"
+        },
+        {
+          "name": "\u7c7b\u76ee3"
+        },
+        {
+          "name": "\u7c7b\u76ee2"
+        },
+        {
+          "name": "\u7c7b\u76ee1"
+        }
+      ]
     }]
   }
 }
