@@ -1,4 +1,4 @@
-const createOption = (jsonData) => {
+const createOption = () => {
   return {
     // 图的标题
     title: {
@@ -26,9 +26,7 @@ const createOption = (jsonData) => {
     },
     legend: [{
       // selectedMode: "single",
-      data: jsonData.categories.map(function (a) {
-        return a.name
-      })
+      data: ['类目1', '类目0', '类目3', '类目2']
     }],
     graphic: [
       {
@@ -95,16 +93,7 @@ const createOption = (jsonData) => {
           "name": "node01",
           "des": "nodedes01",
           "symbolSize": 70,
-          "category": "\u7c7b\u76ee0",
-          rich: {
-            inputBox: {
-              backgroudColor: "#fff",
-              borderWidth: 1,
-              borderRadius: 5,
-              width: 100,
-              height: 20
-            }
-          }
+          "category": "\u7c7b\u76ee0"
         },
         {
           "name": "node02",
