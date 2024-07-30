@@ -3,8 +3,8 @@
     <a-layout style="height: 100vh">
       <a-layout-header :style="headerStyle" class="move-show">
         <a-button class="no-move-button" @click="createNode">创建节点</a-button>
-        <a-button class="no-move-button" @click="createSide">创建边</a-button>
-        <a-button class="no-move-button" @click="toggleSider">Toggle Sider</a-button>
+        <a-button class="no-move-button" @click="createEdge">创建边</a-button>
+        <a-button class="no-move-button" @click="toggleSider">编辑框</a-button>
         <!-- 控制按钮 -->
       </a-layout-header>
       <a-layout>
@@ -12,15 +12,18 @@
           <div id="chart" :style="echartsStyle"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
-          <a-form :model="formStat" v-show="createNodeVisible">
+          <a-space v-show="errorMessageVisible" direction="vertical" style="width: 100%">
+            <a-alert message="errorMessage" type="error" />
+          </a-space>
+          <a-form v-show="createNodeVisible">
             <a-form-item label="名称">
-              <a-input v-model:value="newNode.name" />
+              <a-textarea v-model:value="newNode.name" />
             </a-form-item>
             <a-form-item label="描述">
-              <a-input v-model:value="newNode.des" />
+              <a-textarea v-model:value="newNode.des" />
             </a-form-item>
             <a-form-item label="所属类目">
-              <a-input v-model:value="newNode.category" />
+              <a-textarea v-model:value="newNode.category" />
             </a-form-item>
             <a-form-item>
               <a-button @click="createNodeSubmit">创建</a-button>
@@ -34,10 +37,10 @@
 </template>
 
 <script setup>
-import { onMounted, ref, nextTick, reactive, toRaw } from 'vue'
-import * as echarts from 'echarts'
-import myAxios from '../utils/myAxios'
-import createOption from '../utils/myOption.ts'
+import { onMounted, ref, nextTick, reactive, toRaw } from "vue";
+import * as echarts from "echarts";
+import myAxios from "../utils/myAxios";
+import createOption from "../utils/myOption.ts";
 
 const chartData = ref();
 const newNode = ref({
@@ -46,6 +49,11 @@ const newNode = ref({
   "symbolSize": 50,
   "category": ""
 });
+const errorMessageVisible = ref(false);
+const errorMessage = ref("");
+const siderVisible = ref(true); // 初始状态为显示\
+const createNodeVisible = ref(false);
+const echartsWidth = ref("100vh");
 
 // 基于准备好的dom，初始化echarts实例
 let chartDom = null;
@@ -59,22 +67,22 @@ onMounted(() => {
   chartData.value = createOption();
   // 调用渲染图表逻辑
   getChart(chartData.value);
-  window.addEventListener('resize', resizeChart);
-})
+  window.addEventListener("resize", resizeChart);
+});
 
 const getChart = (option) => {
-  console.log('option');
+  console.log("option");
 
   // 基于准备好的dom，初始化echarts实例
-  chartDom = document.getElementById('chart');
+  chartDom = document.getElementById("chart");
   console.log(option);
   if (!chartDom) {
-    console.error('chart图表容器不存在，请检查HTML代码！');
+    console.error("chart图表容器不存在，请检查HTML代码！");
   } else {
     // 初始化 ECharts 图表
     chartInstance = echarts.init(chartDom);
     if (!option) {
-      console.error('图表信息为空，请联系管理员！');
+      console.error("图表信息为空，请联系管理员！");
     } else {
       // 使用刚指定的配置项和数据显示图表。
       chartInstance.setOption(option);
@@ -82,7 +90,7 @@ const getChart = (option) => {
       chartInstance.on("click", clickChart);
     }
   }
-}
+};
 
 const clickChart = event => {
   // console.log(event);
@@ -111,7 +119,7 @@ const clickChart = event => {
     }
     console.log(highlightNodeList);
   }
-}
+};
 
 const operateChart = (dataIndex, dataType, action) => {
   // 高亮，根据数据类型和位置来高亮
@@ -121,21 +129,16 @@ const operateChart = (dataIndex, dataType, action) => {
     dataType: dataType,
     dataIndex: dataIndex
   });
-}
-
-const siderVisible = ref(true) // 初始状态为显示\
-const createNodeVisible = ref(false)
-
-const echartsWidth = ref('100vh')
+};
 
 const toggleSider = () => {
   siderVisible.value = !siderVisible.value; // 切换侧边栏的显示状态
-  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw';
+  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   // 使用 nextTick 等待DOM更新完成后执行resize
   nextTick(() => {
     chartInstance.resize();
-  })
-}
+  });
+};
 
 // 观察echartsWidth的变化
 // watch(echartsWidth, (newVal, oldVal) => {
@@ -147,16 +150,18 @@ const toggleSider = () => {
 
 const resizeChart = () => {
   chartInstance.resize();
-}
+};
 
 const createNode = () => {
   siderVisible.value = true; // 切换侧边栏的显示状态
-  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw';
+  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createNodeVisible.value = true;
+  errorMessageVisible.value = false;
+  errorMessage.value = "";
   nextTick(() => {
     chartInstance.resize();
   });
-}
+};
 
 const resetNewNode = () => {
   newNode.value = {
@@ -165,72 +170,68 @@ const resetNewNode = () => {
     "symbolSize": 50,
     "category": ""
   };
-}
+};
+
+const resetError = () => {
+  errorMessageVisible.value = false;
+  errorMessage.value = "";
+};
 
 const jsonReactive = (x) => {
   return JSON.parse(JSON.stringify(x));
-}
+};
 
 const createNodeSubmit = () => {
-  chartData.value.series[0].data.push(jsonReactive(newNode.value));
-  let categories = [...new Set(chartData.value.series[0].data.map((x) => {
-    return x.category
-  }))]; // 将类型去重
-  chartData.value.series[0].categories = categories.map((x) => {
-    return { "name": x }
+  const names = chartData.value.series[0].data.map((x) => {
+    return x.name;
   });
-  chartData.value.legend[0].data = categories.map((x) => {
-    return x
-  });
-  chartInstance.setOption(chartData.value);
-  createNodeVisible.value = false;
+  if (names.indexOf(newNode.value.name) === -1) {
+    chartData.value.series[0].data.push(jsonReactive(newNode.value));
+    let categories = [...new Set(chartData.value.series[0].data.map((x) => {
+      return x.category;
+    }))]; // 将类型去重
+    chartData.value.series[0].categories = categories.map((x) => {
+      return { "name": x };
+    });
+    chartData.value.legend[0].data = categories.map((x) => {
+      return x;
+    });
+    chartInstance.setOption(chartData.value);
+    createNodeVisible.value = false;
+    resetError();
+  } else {
+    errorMessageVisible.value = true;
+    errorMessage.value = "不能创建同名节点";
+  }
   resetNewNode();
-}
+};
 
-// const resetNewNode = () => {}
 
-// document.getElementById("createNodeFieldForm").addEventListener("submit", (event) => {
-//   // 获取表单内的所有控件
-//   event.preventDefault();
-//   console.log("haha");
-//   console.log(this["nodeNameField"].value);
-//   // dialogCreateEdge.style.display = "none"; // 当表单提交时，关闭弹窗
-
-//   // const formData = new FormData();
-//   // formData.append("highlightNode", JSON.stringify(highlightInstance.highlightNodeList));
-//   // formData.append("createEdge", JSON.stringify({
-//   //   name: this['edgeNameField'].value,
-//   //   des: this['edgeDescribeField'].value
-//   // }));
-//   // sendData(formData, chartInstance);
-//   // highlightInstance.reset();
-// });
-
-const createSide = () => {
+const createEdge = () => {
   chartInstance.resize();
-}
+};
 
 const headerStyle = {
-  textAlign: 'center',
+  textAlign: "center",
   height: 50,
   paddingInline: 50,
-  lineHeight: '64px',
-  backgroundColor: '#f5f5f5'
-}
+  lineHeight: "64px",
+  backgroundColor: "#f5f5f5"
+};
 const contentStyle = {
-  textAlign: 'center',
+  textAlign: "center",
   minHeight: 120,
-  lineHeight: '120px',
-  backgroundColor: '#ffffff',
+  lineHeight: "120px",
+  backgroundColor: "#ffffff",
   width: echartsWidth.value,
-  height: 'calc(100vh - 86px)'
-}
+  height: "calc(100vh - 86px)"
+};
 const echartsStyle = {
-  width: '100%',
-  height: '100%'
+  width: "100%",
+  height: "100%"
   // width: echartsWidth.value,
   // height: 'calc(100vh - 86px)'
-}
+};
 
 </script>
 

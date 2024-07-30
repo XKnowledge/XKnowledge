@@ -25,14 +25,14 @@
 </template>
 
 <script setup>
-import { UnorderedListOutlined } from '@ant-design/icons-vue'
+import { UnorderedListOutlined } from "@ant-design/icons-vue";
 
-import { ref } from 'vue'
-import MyCardList from '../components/MyCardList.vue'
+import { ref } from "vue";
+import MyCardList from "../components/MyCardList.vue";
 
 const MENU = [
-  { key: '1', name: '全部' },
-  { key: '2', name: '基本' },
+  { key: "1", name: "全部" },
+  { key: "2", name: "基本" }
   // { key: '3', name: '知识管理' },
   // { key: '4', name: '会议和计划' },
   // { key: '5', name: '学习和教育' },
@@ -40,23 +40,23 @@ const MENU = [
   // { key: '7', name: '娱乐和生活' },
   // { key: '8', name: '分析和决策' },
   // { key: '9', name: '创造力' }
-]
+];
 
-const MenuList = ref(MENU)
+const MenuList = ref(MENU);
 
-const curMenu = ref('全部')
+const curMenu = ref("全部");
 
 const onClick = ({ key }) => {
-  console.log(`Click on item ${key}`)
-  curMenu.value = MenuList.value[key].name
-}
+  console.log(`Click on item ${key}`);
+  curMenu.value = MenuList.value[key].name;
+};
 
 const myHistory = ref([
   {
-    id: 'test1',
-    name: '思维导图1',
-    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
-  },
+    id: "test1",
+    name: "思维导图1",
+    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+  }
   // {
   //   id: 'test2',
   //   name: '思维导图2',
@@ -67,7 +67,7 @@ const myHistory = ref([
   //   name: '思维导图3',
   //   src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
   // }
-])
+]);
 
 </script>
 

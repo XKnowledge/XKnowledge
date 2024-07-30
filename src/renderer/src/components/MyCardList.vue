@@ -16,9 +16,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { defineProps } from 'vue'
-import myAxios from '../utils/myAxios'
+import { ref } from "vue";
+import { defineProps } from "vue";
+import myAxios from "../utils/myAxios";
 
 const props = defineProps({
   historyList: {
@@ -26,47 +26,47 @@ const props = defineProps({
     required: true,
     default: () => []
   }
-})
+});
 
 /**
  * 检测双击事件和单击事件使用
  */
-let timer = null
+let timer = null;
 
-const selected = ref('')
+const selected = ref("");
 
 const handleClick = (id) => {
   //清除未执行的定时器
-  clearTimeout(timer)
+  clearTimeout(timer);
   timer = setTimeout(function() {
-    if (id === selected.value) return
-    var card = document.getElementById(id)
+    if (id === selected.value) return;
+    var card = document.getElementById(id);
     // 添加选中样式
     // card.classList.remove('my-card')
-    card.classList.add('my-card-selected')
+    card.classList.add("my-card-selected");
 
-    unHandleClick()
+    unHandleClick();
 
-    selected.value = id
-  }, 400)
-}
+    selected.value = id;
+  }, 400);
+};
 
 const unHandleClick = () => {
-  if (selected.value === '') {
-    return
+  if (selected.value === "") {
+    return;
   }
-  var card = document.getElementById(selected.value)
-  card.classList.remove('my-card-selected')
+  var card = document.getElementById(selected.value);
+  card.classList.remove("my-card-selected");
   // card.classList.add('my-card')
-  selected.value = ''
-}
+  selected.value = "";
+};
 
 /**
  * 双击事件打开这个 文件 or 模板
  * @param id
  */
 const handleDoubleClick = async (id, fileName) => {
-  clearTimeout(timer) //清除未执行的定时器
+  clearTimeout(timer); //清除未执行的定时器
   // handleClick(id)
   // console.log('fileName', fileName + '.xk')
   // const file_content = await window.electronAPI.openFileByName(fileName + '.xk')
@@ -76,17 +76,17 @@ const handleDoubleClick = async (id, fileName) => {
   // formData.append("operationType", "openFile");
   // formData.append("fileName", JSON.stringify(fileName));
 
-  myAxios.post('http://127.0.0.1:5000/', {
-    operationType: 'openFile',
+  myAxios.post("http://127.0.0.1:5000/", {
+    operationType: "openFile",
     fileName: fileName
   }).then(response => {
-    console.log(response)
-    if (response === 'ok') {
-      console.log('跳转打开')
-      window.electronAPI.ipcSend()
+    console.log(response);
+    if (response === "ok") {
+      console.log("跳转打开");
+      window.electronAPI.ipcSend();
     }
-  })
-}
+  });
+};
 
 /**
  * 右键事件 弹出右键窗口
@@ -94,20 +94,20 @@ const handleDoubleClick = async (id, fileName) => {
  */
 const handleRightClick = async (id, event) => {
   // 阻止默认右键事件
-  event.preventDefault()
+  event.preventDefault();
 
   // 在控制台输出鼠标右键点击的位置
-  console.log('Right clicked at:', { x: event.clientX, y: event.clientY })
+  console.log("Right clicked at:", { x: event.clientX, y: event.clientY });
 
   // 在这里执行其他你想要的操作，比如显示自定义右键菜单等
-  console.log('右键', id)
+  console.log("右键", id);
 
   // const content = 'test_save_content'
   //
   // const fileName = 'test_save'
   // const saveAns = await window.electronAPI.saveFile(fileName + '.xk', content)
   // console.log('保存结果:', saveAns)
-}
+};
 
 
 </script>

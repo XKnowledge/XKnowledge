@@ -1,10 +1,10 @@
-import { contextBridge, ipcRenderer, fs } from 'electron'
+import { contextBridge, ipcRenderer, fs } from "electron";
 // import { electronAPI } from '@electron-toolkit/preload'
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  ipcReceive: (callback) => ipcRenderer.on('act', (_event, value) => callback(value)),
-  ipcSend: () => ipcRenderer.send('switch_window'),
-  openView: (callback) => ipcRenderer.on('open-view', (_event, value) => callback(value))
-})
+contextBridge.exposeInMainWorld("electronAPI", {
+  ipcReceive: (callback) => ipcRenderer.on("act", (_event, value) => callback(value)),
+  ipcSend: () => ipcRenderer.send("switch_window"),
+  openView: (callback) => ipcRenderer.on("open-view", (_event, value) => callback(value))
+});
 // 在渲染进程中通过preload脚本引入fs模块
-contextBridge.exposeInMainWorld('electronFs', fs)
+contextBridge.exposeInMainWorld("electronFs", fs);

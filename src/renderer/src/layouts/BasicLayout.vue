@@ -30,34 +30,34 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, h } from 'vue'
-import { AppstoreAddOutlined, BookOutlined, HistoryOutlined, FileTextOutlined } from '@ant-design/icons-vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, watch, h } from "vue";
+import { AppstoreAddOutlined, BookOutlined, HistoryOutlined, FileTextOutlined } from "@ant-design/icons-vue";
+import { useRouter } from "vue-router";
 
-const router = useRouter()
-const title = ref('新建')
+const router = useRouter();
+const title = ref("新建");
 
-const selectedKeys = ref(['add'])
-const openKeys = ref([])
+const selectedKeys = ref(["add"]);
+const openKeys = ref([]);
 
 const headerStyle = {
-  textAlign: 'center',
+  textAlign: "center",
   height: 30,
   paddingInline: 50,
-  lineHeight: '64px',
-  backgroundColor: '#ffffff'
-}
+  lineHeight: "64px",
+  backgroundColor: "#ffffff"
+};
 const contentStyle = {
-  textAlign: 'center',
+  textAlign: "center",
   minHeight: 120,
-  lineHeight: '120px',
-  backgroundColor: '#ffffff'
-}
+  lineHeight: "120px",
+  backgroundColor: "#ffffff"
+};
 const siderStyle = {
-  textAlign: 'center',
-  lineHeight: '120px',
-  backgroundColor: '#f5f5f5'
-}
+  textAlign: "center",
+  lineHeight: "120px",
+  backgroundColor: "#f5f5f5"
+};
 
 function getItem(label, key, icon, children, type) {
   return {
@@ -66,32 +66,32 @@ function getItem(label, key, icon, children, type) {
     children,
     label,
     type
-  }
+  };
 }
 
 const items = reactive([
-  getItem('新建', 'add', () => h(AppstoreAddOutlined)),
-  getItem('最近', 'history', () => h(HistoryOutlined)),
-  getItem('图库', 'gallery', () => h(BookOutlined)),
+  getItem("新建", "add", () => h(AppstoreAddOutlined)),
+  getItem("最近", "history", () => h(HistoryOutlined)),
+  getItem("图库", "gallery", () => h(BookOutlined)),
   // getItem('测试页面', 'chart', () => h(BookOutlined)),
-  getItem('我的文件', 'myFiles', () => h(FileTextOutlined))
-])
+  getItem("我的文件", "myFiles", () => h(FileTextOutlined))
+]);
 
 
 window.electronAPI.openView((value) => {
-  console.log(value)
-  router.push(value)
-})
+  console.log(value);
+  router.push(value);
+});
 
 const handleClick = e => {
   // console.log('click', e)
-  const itemObj = items.find((item) => item.key === e.key)
-  title.value = itemObj.label
-  router.push(e.key)
-}
+  const itemObj = items.find((item) => item.key === e.key);
+  title.value = itemObj.label;
+  router.push(e.key);
+};
 watch(openKeys, val => {
-  console.log('openKeys', val)
-})
+  console.log("openKeys", val);
+});
 </script>
 
 <style>

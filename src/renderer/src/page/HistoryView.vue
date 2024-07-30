@@ -10,26 +10,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import MyCardList from '../components/MyCardList.vue'
+import { ref } from "vue";
+import MyCardList from "../components/MyCardList.vue";
 
 const myHistory = ref([
   {
-    id: 'test1',
-    name: '思维导图1',
-    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
+    id: "test1",
+    name: "思维导图1",
+    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
   },
   {
-    id: 'test2',
-    name: '思维导图2',
-    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
+    id: "test2",
+    name: "思维导图2",
+    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
   },
   {
-    id: 'test3',
-    name: '思维导图3',
-    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
+    id: "test3",
+    name: "思维导图3",
+    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
   }
-])
+]);
 </script>
 
 <style scoped>
