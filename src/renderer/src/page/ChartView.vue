@@ -12,17 +12,20 @@
           <div id="chart" :style="echartsStyle"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
-          <a-layout-content v-show="createNodeVisible">
-            <a-form id="createNodeFieldForm" class="form-style" @submit.prevent="createNodeSubmit1">
-              <a-label for="nodeNameField">名称</a-label>
-              <a-input type="text" id="nodeNameField" v-model="nodeName" /><br />
-              <a-label for="nodeDescribeField">描述</a-label>
-              <a-input type="text" id="nodeDescribeField" /><br />
-              <a-label for="categoryField">所属类目</a-label>
-              <a-input type="text" id="categoryField" /><br />
-              <a-button type="submit">创建</a-button>
-            </a-form>
-          </a-layout-content>
+          <a-form :model="formStat" v-show="createNodeVisible">
+            <a-form-item label="名称">
+              <a-input v-model:value="newNode.name" />
+            </a-form-item>
+            <a-form-item label="描述">
+              <a-input v-model:value="newNode.des" />
+            </a-form-item>
+            <a-form-item label="所属类目">
+              <a-input v-model:value="newNode.category" />
+            </a-form-item>
+            <a-form-item>
+              <a-button @click="createNodeSubmit">创建</a-button>
+            </a-form-item>
+          </a-form>
         </a-layout-sider>
       </a-layout>
       <a-layout-footer class="footer-style">Footer</a-layout-footer>
@@ -31,12 +34,18 @@
 </template>
 
 <script setup>
-import { onMounted, ref, nextTick } from 'vue'
+import { onMounted, ref, nextTick, reactive, toRaw } from 'vue'
 import * as echarts from 'echarts'
 import myAxios from '../utils/myAxios'
 import createOption from '../utils/myOption.ts'
 
-const chatData = ref();
+const chartData = ref();
+const newNode = ref({
+  "name": "",
+  "des": "",
+  "symbolSize": 50,
+  "category": ""
+});
 
 // 基于准备好的dom，初始化echarts实例
 let chartDom = null;
@@ -46,22 +55,14 @@ let history = []; // 记录历史
 let history_sequence_number = -1; // HSN：历史操作对应的目前的位置
 
 onMounted(() => {
-  myAxios.get('http://127.0.0.1:5000/XKMainView').then(response => {
-    if (response) {
-      // 获取数据
-      chatData.value = response;
-      const chatDataValue = chatData.value;
-      if (chatDataValue) {
-        const option = createOption(chatDataValue);
-        // 调用渲染图表逻辑
-        getCharts(option);
-      }
-    }
-  })
-  window.addEventListener('resize', myResize);
+  // 获取数据
+  chartData.value = createOption();
+  // 调用渲染图表逻辑
+  getChart(chartData.value);
+  window.addEventListener('resize', resizeChart);
 })
 
-const getCharts = (option) => {
+const getChart = (option) => {
   console.log('option');
 
   // 基于准备好的dom，初始化echarts实例
@@ -144,7 +145,7 @@ const toggleSider = () => {
 //   }
 // })
 
-const myResize = () => {
+const resizeChart = () => {
   chartInstance.resize();
 }
 
@@ -157,11 +158,36 @@ const createNode = () => {
   });
 }
 
-const createNodeSubmit1 = event => {
-  event.preventDefault();
-  console.log("haha");
-  console.log(this.nodeName);
+const resetNewNode = () => {
+  newNode.value = {
+    "name": "",
+    "des": "",
+    "symbolSize": 50,
+    "category": ""
+  };
 }
+
+const jsonReactive = (x) => {
+  return JSON.parse(JSON.stringify(x));
+}
+
+const createNodeSubmit = () => {
+  chartData.value.series[0].data.push(jsonReactive(newNode.value));
+  let categories = [...new Set(chartData.value.series[0].data.map((x) => {
+    return x.category
+  }))]; // 将类型去重
+  chartData.value.series[0].categories = categories.map((x) => {
+    return { "name": x }
+  });
+  chartData.value.legend[0].data = categories.map((x) => {
+    return x
+  });
+  chartInstance.setOption(chartData.value);
+  createNodeVisible.value = false;
+  resetNewNode();
+}
+
+// const resetNewNode = () => {}
 
 // document.getElementById("createNodeFieldForm").addEventListener("submit", (event) => {
 //   // 获取表单内的所有控件
