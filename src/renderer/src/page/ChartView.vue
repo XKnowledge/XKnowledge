@@ -12,9 +12,11 @@
           <div id="chart" :style="echartsStyle"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
+
           <a-space v-show="errorMessageVisible" direction="vertical" style="width: 100%">
-            <a-alert message="errorMessage" type="error" />
+            <a-alert :message="errorMessage" type="error" />
           </a-space>
+
           <a-form v-show="createNodeVisible">
             <a-form-item label="名称">
               <a-textarea v-model:value="newNode.name" />
@@ -29,6 +31,22 @@
               <a-button @click="createNodeSubmit">创建</a-button>
             </a-form-item>
           </a-form>
+
+          <a-form v-show="currentNodeVisible">
+            <a-form-item label="名称">
+              <a-textarea v-model:value="currentNode.name" />
+            </a-form-item>
+            <a-form-item label="描述">
+              <a-textarea v-model:value="currentNode.des" />
+            </a-form-item>
+            <a-form-item label="所属类目">
+              <a-textarea v-model:value="currentNode.category" />
+            </a-form-item>
+            <a-form-item>
+              <a-button @click="currentNodeSubmit">修改</a-button>
+            </a-form-item>
+          </a-form>
+
         </a-layout-sider>
       </a-layout>
       <a-layout-footer class="footer-style">Footer</a-layout-footer>
@@ -37,23 +55,34 @@
 </template>
 
 <script setup>
-import { onMounted, ref, nextTick, reactive, toRaw } from "vue";
+import { nextTick, onMounted, ref } from "vue";
 import * as echarts from "echarts";
-import myAxios from "../utils/myAxios";
 import createOption from "../utils/myOption.ts";
 
 const chartData = ref();
+
+const errorMessageVisible = ref(false);
+const errorMessage = ref("");
+
+const echartsWidth = ref("100vh");
+const siderVisible = ref(true); // 初始状态为显示
+
+const createNodeVisible = ref(false);
 const newNode = ref({
   "name": "",
   "des": "",
   "symbolSize": 50,
   "category": ""
 });
-const errorMessageVisible = ref(false);
-const errorMessage = ref("");
-const siderVisible = ref(true); // 初始状态为显示\
-const createNodeVisible = ref(false);
-const echartsWidth = ref("100vh");
+
+const currentNodeVisible = ref(false);
+const currentNode = ref({
+  "name": "",
+  "des": "",
+  "symbolSize": 50,
+  "category": ""
+});
+let currentDataIndex;
 
 // 基于准备好的dom，初始化echarts实例
 let chartDom = null;
@@ -70,7 +99,16 @@ onMounted(() => {
   window.addEventListener("resize", resizeChart);
 });
 
+const resetSider = () => {
+  errorMessageVisible.value = false;
+  createNodeVisible.value = false;
+  currentNodeVisible.value = false;
+};
+
 const getChart = (option) => {
+  /**
+   * 图表初始化
+   */
   console.log("option");
 
   // 基于准备好的dom，初始化echarts实例
@@ -93,8 +131,16 @@ const getChart = (option) => {
 };
 
 const clickChart = event => {
-  // console.log(event);
+  /**
+   * 点击表格，产生事件，对事件进行响应
+   */
+  console.log(event);
+  resetSider();
   if (event.dataType === "node") {
+    currentNodeVisible.value = true;
+    currentNode.value = event.data;
+    currentDataIndex = event.dataIndex;
+
     const pos = highlightNodeList.indexOf(event.dataIndex);
     if (pos !== -1 && highlightNodeList.length !== 0) {
       // 当重复点击节点的时候，将节点高亮去掉，并且更新highlightNodeList
@@ -122,7 +168,9 @@ const clickChart = event => {
 };
 
 const operateChart = (dataIndex, dataType, action) => {
-  // 高亮，根据数据类型和位置来高亮
+  /**
+   * 操作图表内的节点，根据数据类型和位置来高亮或者去除高亮
+   */
   chartInstance.dispatchAction({
     type: action,
     seriesIndex: 0,
@@ -132,6 +180,10 @@ const operateChart = (dataIndex, dataType, action) => {
 };
 
 const toggleSider = () => {
+  /**
+   * 显示侧边栏
+   */
+  resetSider();
   siderVisible.value = !siderVisible.value; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   // 使用 nextTick 等待DOM更新完成后执行resize
@@ -140,24 +192,18 @@ const toggleSider = () => {
   });
 };
 
-// 观察echartsWidth的变化
-// watch(echartsWidth, (newVal, oldVal) => {
-//   if (newVal !== oldVal) {
-//     // 确保只有在值真正改变时才调用resize
-//     chartInstance.resize() // 执行echarts图表的resize方法
-//   }
-// })
-
 const resizeChart = () => {
   chartInstance.resize();
 };
 
 const createNode = () => {
+  /**
+   * 创建新节点
+   */
   siderVisible.value = true; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createNodeVisible.value = true;
-  errorMessageVisible.value = false;
-  errorMessage.value = "";
+  resetError();
   nextTick(() => {
     chartInstance.resize();
   });
@@ -177,35 +223,88 @@ const resetError = () => {
   errorMessage.value = "";
 };
 
+const setError = (message) => {
+  errorMessageVisible.value = true;
+  errorMessage.value = message;
+};
+
 const jsonReactive = (x) => {
   return JSON.parse(JSON.stringify(x));
 };
 
+const updateLegend = () => {
+  /**
+   * 更新图例，比如节点类别
+   */
+  let categories = [...new Set(chartData.value.series[0].data.map((x) => {
+    return x.category;
+  }))]; // 将类型去重
+  chartData.value.series[0].categories = categories.map((x) => {
+    return { "name": x };
+  });
+  chartData.value.legend[0].data = categories.map((x) => {
+    return x;
+  });
+};
+
 const createNodeSubmit = () => {
+  /**
+   * 响应创建新节点的提交
+   */
   const names = chartData.value.series[0].data.map((x) => {
     return x.name;
   });
   if (names.indexOf(newNode.value.name) === -1) {
     chartData.value.series[0].data.push(jsonReactive(newNode.value));
-    let categories = [...new Set(chartData.value.series[0].data.map((x) => {
-      return x.category;
-    }))]; // 将类型去重
-    chartData.value.series[0].categories = categories.map((x) => {
-      return { "name": x };
-    });
-    chartData.value.legend[0].data = categories.map((x) => {
-      return x;
-    });
+    updateLegend();
     chartInstance.setOption(chartData.value);
-    createNodeVisible.value = false;
     resetError();
+    resetNewNode();
   } else {
-    errorMessageVisible.value = true;
-    errorMessage.value = "不能创建同名节点";
+    setError("不能创建同名节点");
   }
-  resetNewNode();
 };
 
+const currentNodeSubmit = () => {
+  /**
+   * 实现节点的动态修改
+   */
+  let names = chartData.value.series[0].data.map((x) => {
+    return x.name;
+  });
+  const oldName = names[currentDataIndex];
+  const newName = currentNode.value.name;
+
+  if (oldName !== newName) {
+    names.slice(0, currentDataIndex).push(...names.slice(currentDataIndex + 1)); // 去掉旧节点名称
+    if (names.indexOf(newName) === -1) {
+      chartData.value.series[0].data[currentDataIndex] = jsonReactive(currentNode.value);
+      updateLegend();
+
+      // 修改新节点所在的边
+      const links = chartData.value.series[0].links;
+      const length = links.length;
+      for (let i = 0; i < length; i++) {
+        if (links[i].source === oldName) {
+          chartData.value.series[0].links[i].source = newName;
+        }
+        if (links[i].target === oldName) {
+          chartData.value.series[0].links[i].target = newName;
+        }
+      }
+
+      chartInstance.setOption(chartData.value);
+      resetError();
+    } else {
+      setError("不能创建同名节点");
+    }
+  } else {
+    chartData.value.series[0].data[currentDataIndex] = jsonReactive(currentNode.value);
+    updateLegend();
+    chartInstance.setOption(chartData.value);
+    resetError();
+  }
+};
 
 const createEdge = () => {
   chartInstance.resize();
@@ -218,6 +317,7 @@ const headerStyle = {
   lineHeight: "64px",
   backgroundColor: "#f5f5f5"
 };
+
 const contentStyle = {
   textAlign: "center",
   minHeight: 120,
@@ -226,6 +326,7 @@ const contentStyle = {
   width: echartsWidth.value,
   height: "calc(100vh - 86px)"
 };
+
 const echartsStyle = {
   width: "100%",
   height: "100%"

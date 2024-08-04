@@ -32,7 +32,7 @@ python -m venv xkvenv
 激活虚拟环境（在Windows上使用PowerShell运行 `./xkvenv/Scripts/activate`, 在Unix或MacOS上使用 `source xkvenv/bin/activate`）
 
 ```bash
-xkvenv/Scripts/activate
+.\xkvenv\Scripts\activate
 ```
 ```bash
 source xkvenv/bin/activate
