@@ -1,5 +1,5 @@
 <template>
-图库
+  图库
 </template>
 
 <script setup>

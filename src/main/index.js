@@ -1,10 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain, Menu, MenuItem } from 'electron'
-import { join } from 'path'
-import path from 'node:path'
-import { spawn } from 'child_process'
+import { app, shell, BrowserWindow, ipcMain, Menu, MenuItem } from "electron";
+import { join } from "path";
+import path from "node:path";
+import { spawn } from "child_process";
 
-let mainWindow
-let pythonProcess = null
+let mainWindow;
+let pythonProcess = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -15,55 +15,55 @@ function createWindow() {
     maximizable: false, // 禁止最大化
     minimizable: false, // 禁止最小化
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, "../preload/index.js"),
       // devTools: false, // 禁用开发者工具快捷键
       webviewTag: false, // 禁用 webview 标签
       sandbox: false,
       accelerator: {
-        'Cmd+[': null,
-        'Cmd+]': null,
-        'Cmd+W': null,
-        'Ctrl+R': null
+        "Cmd+[": null,
+        "Cmd+]": null,
+        "Cmd+W": null,
+        "Ctrl+R": null
       }
     },
     autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
+    titleBarStyle: "hidden",
     titleBarOverlay: {
-      color: '#ffffff',
-      symbolColor: '#74b1be'
+      color: "#ffffff",
+      symbolColor: "#74b1be"
     },
-    title: 'XKnowledge',
-    icon: '../../resources/Knowledge.png'
-  })
+    title: "XKnowledge",
+    icon: "../../resources/Knowledge.png"
+  });
 
   const menu = Menu.buildFromTemplate([
     {
       label: app.name,
       submenu: [
         {
-          click: () => mainWindow.webContents.send('open-view', 'chart'),
-          label: '跳转'
+          click: () => mainWindow.webContents.send("open-view", "chart"),
+          label: "跳转"
         }
       ]
     }
 
-  ])
+  ]);
 
-  Menu.setApplicationMenu(menu)
+  Menu.setApplicationMenu(menu);
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
+  mainWindow.on("ready-to-show", () => {
+    mainWindow.show();
+  });
 
-  mainWindow.webContents.openDevTools({ mode: 'detach' }) // 打开控制台
+  mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
 
   // 设置窗口打开行为的处理程序。
   // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
   // 这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
+    shell.openExternal(details.url);
+    return { action: "deny" };
+  });
 
   // 在基于 electron-vite CLI 的渲染器热模块替换。
   // 在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
@@ -72,7 +72,7 @@ function createWindow() {
   // } else {
   //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   // }
-  mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
 }
 
 // 当 Electron 完成初始化并准备创建浏览器窗口时，将调用此方法。
@@ -88,53 +88,53 @@ app.whenReady().then(() => {
   //   optimizer.watchWindowShortcuts(window)
   // })
 
-  let lock = app.requestSingleInstanceLock()
+  let lock = app.requestSingleInstanceLock();
   if (!lock) {
-    app.quit()
+    app.quit();
   } else {
-    app.on('second-instance', (event, commandLine, workingDirectory) => {
+    app.on("second-instance", (event, commandLine, workingDirectory) => {
       if (mainWindow) {
         if (mainWindow.isMinimized()) {
-          mainWindow.restore()
+          mainWindow.restore();
         }
-        mainWindow.focus()
+        mainWindow.focus();
       }
-    })
-    let script
-    if (process.platform === 'win32') {
-      script = path.join(__dirname, '../../xk_main/xk_main.exe')
-    } else if (process.platform === 'darwin') {
-      script = path.join(__dirname, '../../xk_main/xk_main')
+    });
+    let script;
+    if (process.platform === "win32") {
+      script = path.join(__dirname, "../../xk_main/xk_main.exe");
+    } else if (process.platform === "darwin") {
+      script = path.join(__dirname, "../../xk_main/xk_main");
     } else {
-      script = path.join(__dirname, '../../xk_main/xk_main')
+      script = path.join(__dirname, "../../xk_main/xk_main");
     }
-    pythonProcess = spawn(script)
-    pythonProcess.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`)
-    })
-    Menu.setApplicationMenu(null)
-    createWindow()
+    pythonProcess = spawn(script);
+    pythonProcess.stdout.on("data", (data) => {
+      console.log(`stdout: ${data}`);
+    });
+    Menu.setApplicationMenu(null);
+    createWindow();
   }
 
-  app.on('activate', function () {
+  app.on("activate", function() {
     // 在 macOS 上，当单击应用程序的 Dock 图标且没有其他窗口打开时，重新创建窗口是常见的操作。
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
 
 // 当所有窗口关闭时退出，但在 macOS 上除外。
 // 在 macOS 上，通常应用程序和它们的菜单栏会保持活动状态，直到用户使用 Cmd + Q 明确退出应用程序。
-app.on('window-all-closed', () => {
-  if (pythonProcess !== null) pythonProcess.kill()
-  if (process.platform !== 'darwin') app.quit()
-})
+app.on("window-all-closed", () => {
+  if (pythonProcess !== null) pythonProcess.kill();
+  if (process.platform !== "darwin") app.quit();
+});
 
 // 在这个文件中，你可以包含你的应用程序特定的主进程代码。你也可以将它们放在单独的文件中，然后在这里进行引用。
 
-ipcMain.on('switch_window', (event, arg) => {
+ipcMain.on("switch_window", (event, arg) => {
   // arg里面存着信息
   if (mainWindow) {
-    mainWindow.close()
+    mainWindow.close();
   }
   // const preloadPath = join(__dirname, '../preload/index.js')
   // if (!fs.existsSync(preloadPath)) {
@@ -147,7 +147,7 @@ ipcMain.on('switch_window', (event, arg) => {
     width: 900,
     height: 670,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js')
+      preload: join(__dirname, "../preload/index.js")
       // devTools: false, // 禁用开发者工具快捷键
       // webviewTag: false, // 禁用 webview 标签
       // accelerator: {
@@ -157,19 +157,19 @@ ipcMain.on('switch_window', (event, arg) => {
       //     'Ctrl+R': null
       // }
     },
-    titleBarStyle: 'hidden',
+    titleBarStyle: "hidden",
     titleBarOverlay: {
-      color: '#ffffff',
-      symbolColor: '#74b1be'
+      color: "#ffffff",
+      symbolColor: "#74b1be"
     },
     trafficLightPosition: { x: 20, y: 18 },
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     minHeight: 600,
     minWidth: 600,
-    title: 'XKnowledge',
-    icon: 'static/icon.ico'
-  })
-  mainWindow.webContents.openDevTools({ mode: 'detach' })
+    title: "XKnowledge",
+    icon: "static/icon.ico"
+  });
+  mainWindow.webContents.openDevTools({ mode: "detach" });
 
   // const menu = new Menu()
   // menu.append(
@@ -218,15 +218,15 @@ ipcMain.on('switch_window', (event, arg) => {
   //   }))
   // Menu.setApplicationMenu(menu)
 
-  mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   // 监听渲染进程发出的 'did-finish-load' 事件
-  mainWindow.webContents.on('did-finish-load', () => {
+  mainWindow.webContents.on("did-finish-load", () => {
     // 页面加载完成后，发送消息到渲染进程
-    mainWindow.webContents.send('open-view', 'chart')
-  })
+    mainWindow.webContents.send("open-view", "chart");
+  });
 
   // mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-})
+  mainWindow.on("ready-to-show", () => {
+    mainWindow.show();
+  });
+});

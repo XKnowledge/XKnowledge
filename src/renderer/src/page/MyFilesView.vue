@@ -10,29 +10,29 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
-import MyCardList from '../components/MyCardList.vue'
-import myAxios from '../utils/myAxios'
+import { onMounted, ref } from "vue";
+import MyCardList from "../components/MyCardList.vue";
+import myAxios from "../utils/myAxios";
 
-const fileList = ref([])
+const fileList = ref([]);
 
 onMounted(async () => {
-  const fileListValue = []
-  let res = await myAxios.get('http://127.0.0.1:5000')
-  let counter = 0
-  console.log(res)
+  const fileListValue = [];
+  let res = await myAxios.get("http://127.0.0.1:5000");
+  let counter = 0;
+  console.log(res);
   res.forEach((file) => {
-    if (file.endsWith('.xk')) {
+    if (file.endsWith(".xk")) {
       fileListValue.push({
         id: counter++,
         // name: file.replace(/\.[^/.]+$/, ''),
         name: file,
-        src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
-      })
+        src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+      });
     }
-  })
-  fileList.value = fileListValue
-})
+  });
+  fileList.value = fileListValue;
+});
 </script>
 
 <style scoped>

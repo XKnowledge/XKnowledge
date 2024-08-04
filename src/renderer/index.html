@@ -1,27 +1,28 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>标题</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self' http://127.0.0.1:5000; script-src 'self'; style-src 'self' 'unsafe-inline';img-src 'self' data: https://img0.baidu.com;"
-    />
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <title>标题</title>
+  <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self' http://127.0.0.1:5000; script-src 'self'; style-src 'self' 'unsafe-inline';img-src 'self' data: https://img0.baidu.com;"
+  />
+</head>
 
-  <body>
-    <div id="app">
-    </div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
-  <style>
-    body{
-      margin: 0;
-      user-select: none; /*页面文字不可选中*/
-    }
-    img {
-      pointer-events: none;
-    }
-  </style>
+<body>
+<div id="app">
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+<style>
+  body {
+    margin: 0;
+    user-select: none; /*页面文字不可选中*/
+  }
+
+  img {
+    pointer-events: none;
+  }
+</style>
 </html>

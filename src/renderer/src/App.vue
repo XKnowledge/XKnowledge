@@ -4,7 +4,7 @@
 </template>
 
 <script setup lang="ts">
-import BasicLayout from '../src/layouts/BasicLayout.vue'
+import BasicLayout from "../src/layouts/BasicLayout.vue";
 </script>
 
 <style></style>
