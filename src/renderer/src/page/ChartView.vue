@@ -27,8 +27,11 @@
             <a-form-item label="所属类目">
               <a-textarea v-model:value="newNode.category" />
             </a-form-item>
+            <a-form-item label="节点大小">
+              <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
+            </a-form-item>
             <a-form-item>
-              <a-button @click="createNodeSubmit">创建</a-button>
+              <a-button @click="createNodeSubmit">创建节点</a-button>
             </a-form-item>
           </a-form>
 
@@ -42,8 +45,11 @@
             <a-form-item label="所属类目">
               <a-textarea v-model:value="currentNode.category" />
             </a-form-item>
+            <a-form-item label="节点大小">
+              <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
+            </a-form-item>
             <a-form-item>
-              <a-button @click="currentNodeSubmit">修改</a-button>
+              <a-button @click="currentNodeSubmit">修改节点</a-button>
             </a-form-item>
           </a-form>
 
@@ -140,6 +146,7 @@ const clickChart = event => {
     currentNodeVisible.value = true;
     currentNode.value = event.data;
     currentDataIndex = event.dataIndex;
+    console.log(currentNode);
 
     const pos = highlightNodeList.indexOf(event.dataIndex);
     if (pos !== -1 && highlightNodeList.length !== 0) {
@@ -179,34 +186,30 @@ const operateChart = (dataIndex, dataType, action) => {
   });
 };
 
+const resizeChart = () => {
+  chartInstance.resize();
+};
+
 const toggleSider = () => {
   /**
    * 显示侧边栏
    */
-  resetSider();
   siderVisible.value = !siderVisible.value; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   // 使用 nextTick 等待DOM更新完成后执行resize
-  nextTick(() => {
-    chartInstance.resize();
-  });
-};
-
-const resizeChart = () => {
-  chartInstance.resize();
+  nextTick(resizeChart);
 };
 
 const createNode = () => {
   /**
    * 创建新节点
    */
+  resetSider();
   siderVisible.value = true; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createNodeVisible.value = true;
   resetError();
-  nextTick(() => {
-    chartInstance.resize();
-  });
+  nextTick(resizeChart);
 };
 
 const resetNewNode = () => {
@@ -307,7 +310,7 @@ const currentNodeSubmit = () => {
 };
 
 const createEdge = () => {
-  chartInstance.resize();
+  resizeChart();
 };
 
 const headerStyle = {
