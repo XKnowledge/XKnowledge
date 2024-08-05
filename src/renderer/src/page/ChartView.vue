@@ -25,7 +25,26 @@
               <a-textarea v-model:value="newNode.des" />
             </a-form-item>
             <a-form-item label="所属类目">
-              <a-textarea v-model:value="newNode.category" />
+              <a-select
+                v-model:value="newNode.category"
+                placeholder="请选择类目"
+                style="width: 200px"
+                :options="items.map(item => ({ value: item }))"
+              >
+                <template #dropdownRender="{ menuNode: menu }">
+                  <v-nodes :vnodes="menu" />
+                  <a-divider style="margin: 4px 0" />
+                  <a-space style="padding: 4px 8px">
+                    <a-input ref="inputRef" v-model:value="name" placeholder="类目名" />
+                    <a-button type="text" @click="addItem">
+                      <template #icon>
+                        <plus-outlined />
+                      </template>
+                      新增类目
+                    </a-button>
+                  </a-space>
+                </template>
+              </a-select>
             </a-form-item>
             <a-form-item label="节点大小">
               <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
@@ -43,7 +62,26 @@
               <a-textarea v-model:value="currentNode.des" />
             </a-form-item>
             <a-form-item label="所属类目">
-              <a-textarea v-model:value="currentNode.category" />
+              <a-select
+                v-model:value="currentNode.category"
+                placeholder="请选择类目"
+                style="width: 200px"
+                :options="items.map(item => ({ value: item }))"
+              >
+                <template #dropdownRender="{ menuNode: menu }">
+                  <v-nodes :vnodes="menu" />
+                  <a-divider style="margin: 4px 0" />
+                  <a-space style="padding: 4px 8px">
+                    <a-input ref="inputRef" v-model:value="name" placeholder="类目名" />
+                    <a-button type="text" @click="addItem">
+                      <template #icon>
+                        <plus-outlined />
+                      </template>
+                      新增类目
+                    </a-button>
+                  </a-space>
+                </template>
+              </a-select>
             </a-form-item>
             <a-form-item label="节点大小">
               <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
@@ -61,7 +99,7 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref } from "vue";
+import { nextTick, defineComponent, onMounted, ref } from "vue";
 import * as echarts from "echarts";
 import createOption from "../utils/myOption.ts";
 
@@ -90,6 +128,33 @@ const currentNode = ref({
 });
 let currentDataIndex;
 
+const VNodes = defineComponent({
+  props: {
+    vnodes: {
+      type: Object,
+      required: true,
+    },
+  },
+  render() {
+    return this.vnodes;
+  },
+});
+
+let index = 0;
+// 新增时的类目
+const items = ref([]);
+const inputRef = ref();
+const name = ref();
+const addItem = e => {
+  e.preventDefault();
+  console.log('addItem');
+  items.value.push(name.value || `New item ${(index += 1)}`);
+  name.value = '';
+  setTimeout(() => {
+    inputRef.value?.focus();
+  }, 0);
+};
+
 // 基于准备好的dom，初始化echarts实例
 let chartDom = null;
 let chartInstance = null;
@@ -103,6 +168,8 @@ onMounted(() => {
   // 调用渲染图表逻辑
   getChart(chartData.value);
   window.addEventListener("resize", resizeChart);
+  // 初始化下拉框类目
+  updateLegend();
 });
 
 const resetSider = () => {
@@ -248,6 +315,8 @@ const updateLegend = () => {
   chartData.value.legend[0].data = categories.map((x) => {
     return x;
   });
+  // 更新选择下拉框类目
+  items.value = categories;
 };
 
 const createNodeSubmit = () => {
