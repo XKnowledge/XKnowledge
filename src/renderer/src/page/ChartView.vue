@@ -25,18 +25,14 @@
               <a-textarea v-model:value="newNode.des" />
             </a-form-item>
             <a-form-item label="所属类目">
-              <a-select
-                v-model:value="newNode.category"
-                placeholder="请选择类目"
-                style="width: 200px"
-                :options="items.map(item => ({ value: item }))"
-              >
+              <a-select v-model:value="newNode.category" placeholder="请选择类目" style="width: 200px"
+                :options="categoryItems.map(item => ({ value: item }))">
                 <template #dropdownRender="{ menuNode: menu }">
                   <v-nodes :vnodes="menu" />
                   <a-divider style="margin: 4px 0" />
                   <a-space style="padding: 4px 8px">
-                    <a-input ref="inputRef" v-model:value="name" placeholder="类目名" />
-                    <a-button type="text" @click="addItem">
+                    <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
+                    <a-button type="text" @click="addCategory">
                       <template #icon>
                         <plus-outlined />
                       </template>
@@ -62,18 +58,14 @@
               <a-textarea v-model:value="currentNode.des" />
             </a-form-item>
             <a-form-item label="所属类目">
-              <a-select
-                v-model:value="currentNode.category"
-                placeholder="请选择类目"
-                style="width: 200px"
-                :options="items.map(item => ({ value: item }))"
-              >
+              <a-select v-model:value="currentNode.category" placeholder="请选择类目" style="width: 200px"
+                :options="categoryItems.map(item => ({ value: item }))">
                 <template #dropdownRender="{ menuNode: menu }">
                   <v-nodes :vnodes="menu" />
                   <a-divider style="margin: 4px 0" />
                   <a-space style="padding: 4px 8px">
-                    <a-input ref="inputRef" v-model:value="name" placeholder="类目名" />
-                    <a-button type="text" @click="addItem">
+                    <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
+                    <a-button type="text" @click="addCategory">
                       <template #icon>
                         <plus-outlined />
                       </template>
@@ -140,19 +132,20 @@ const VNodes = defineComponent({
   },
 });
 
-let index = 0;
 // 新增时的类目
-const items = ref([]);
+const categoryItems = ref([]);
 const inputRef = ref();
-const name = ref();
-const addItem = e => {
+const categoryName = ref();
+const addCategory = e => {
   e.preventDefault();
-  console.log('addItem');
-  items.value.push(name.value || `New item ${(index += 1)}`);
-  name.value = '';
-  setTimeout(() => {
-    inputRef.value?.focus();
-  }, 0);
+  console.log(categoryName.value);
+  if (categoryName.value) {
+    categoryItems.value.push(categoryName.value);
+    categoryName.value = "";
+    setTimeout(() => {
+      inputRef.value?.focus();
+    }, 0);
+  }
 };
 
 // 基于准备好的dom，初始化echarts实例
@@ -316,7 +309,7 @@ const updateLegend = () => {
     return x;
   });
   // 更新选择下拉框类目
-  items.value = categories;
+  categoryItems.value = categories;
 };
 
 const createNodeSubmit = () => {
@@ -403,7 +396,7 @@ const echartsStyle = {
   width: "100%",
   height: "100%"
   // width: echartsWidth.value,
-  // height: 'calc(100vh - 86px)'
+  // height: "calc(100vh - 86px)"
 };
 
 </script>
