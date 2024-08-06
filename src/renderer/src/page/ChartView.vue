@@ -140,12 +140,16 @@ const addCategory = e => {
   e.preventDefault();
   console.log(categoryName.value);
   if (categoryName.value) {
-    categoryItems.value.push(categoryName.value);
-    categoryName.value = "";
-    setTimeout(() => {
-      inputRef.value?.focus();
-    }, 0);
+    currentNode.value.category = categoryName.value;
+    const pos = categoryItems.value.indexOf(categoryName.value);
+    if (pos === -1) {
+      categoryItems.value.push(categoryName.value);
+    }
   }
+  categoryName.value = "";
+  setTimeout(() => {
+    inputRef.value?.focus();
+  }, 0);
 };
 
 // 基于准备好的dom，初始化echarts实例
