@@ -3,7 +3,8 @@
     <a-layout style="height: 100vh">
       <a-layout-header :style="headerStyle" class="move-show">
         <a-button class="no-move-button" @click="createNode">创建节点</a-button>
-        <a-button class="no-move-button" @click="createEdge">创建边</a-button>
+        <a-button class="no-move-button" @click="deleteNode">删除节点</a-button>
+        <a-button class="no-move-button" @click="createEdge">创建连接</a-button>
         <a-button class="no-move-button" @click="toggleSider">编辑框</a-button>
         <!-- 控制按钮 -->
       </a-layout-header>
@@ -43,7 +44,7 @@
               </a-select>
             </a-form-item>
             <a-form-item label="节点大小">
-              <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
+              <a-input-number v-model:value="newNode.symbolSize" :min="1" :max="100" />
             </a-form-item>
             <a-form-item>
               <a-button @click="createNodeSubmit">创建节点</a-button>
@@ -83,6 +84,18 @@
             </a-form-item>
           </a-form>
 
+          <a-form v-show="createEdgeVisible">
+            <a-form-item label="名称">
+              <a-textarea v-model:value="newEdge.name" />
+            </a-form-item>
+            <a-form-item label="描述">
+              <a-textarea v-model:value="newEdge.des" />
+            </a-form-item>
+            <a-form-item>
+              <a-button @click="createNodeSubmit">创建连接</a-button>
+            </a-form-item>
+          </a-form>
+
         </a-layout-sider>
       </a-layout>
       <a-layout-footer class="footer-style">Footer</a-layout-footer>
@@ -118,7 +131,24 @@ const currentNode = ref({
   "symbolSize": 50,
   "category": ""
 });
-let currentDataIndex;
+let currentNodeDataIndex = -1;
+
+const createEdgeVisible = ref(false);
+const newEdge = ref({
+  "source": "",
+  "target": "",
+  "name": "",
+  "des": ""
+});
+
+const currentEdgeVisible = ref(false);
+const currentEdge = ref({
+  "source": "",
+  "target": "",
+  "name": "",
+  "des": ""
+});
+let currentEdgeDataIndex = -1;
 
 const VNodes = defineComponent({
   props: {
@@ -156,6 +186,9 @@ const addCategory = e => {
 let chartDom = null;
 let chartInstance = null;
 let highlightNodeList = []; // 高亮节点记录
+
+let highlightEdge = null;
+
 let history = []; // 记录历史
 let history_sequence_number = -1; // HSN：历史操作对应的目前的位置
 
@@ -209,7 +242,8 @@ const clickChart = event => {
   if (event.dataType === "node") {
     currentNodeVisible.value = true;
     currentNode.value = event.data;
-    currentDataIndex = event.dataIndex;
+    newNode.value.symbolSize = currentNode.value.symbolSize;
+    currentNodeDataIndex = event.dataIndex;
     console.log(currentNode);
 
     const pos = highlightNodeList.indexOf(event.dataIndex);
@@ -235,6 +269,8 @@ const clickChart = event => {
       }
     }
     console.log(highlightNodeList);
+  } else if (event.dataType === "edge") {
+
   }
 };
 
@@ -254,6 +290,10 @@ const resizeChart = () => {
   chartInstance.resize();
 };
 
+const refreshChart = () => {
+  chartInstance.setOption(chartData.value);
+}
+
 const toggleSider = () => {
   /**
    * 显示侧边栏
@@ -262,6 +302,11 @@ const toggleSider = () => {
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   // 使用 nextTick 等待DOM更新完成后执行resize
   nextTick(resizeChart);
+  if (!siderVisible.value) {
+    for (let i = 0; i < highlightNodeList.length; i++) {
+      operateChart(highlightNodeList[i], "node", "downplay");
+    }
+  }
 };
 
 const createNode = () => {
@@ -274,6 +319,45 @@ const createNode = () => {
   createNodeVisible.value = true;
   resetError();
   nextTick(resizeChart);
+};
+
+const deleteNode = () => {
+  /**
+   * 删除新节点
+   */
+  resetSider();
+  resetError();
+  if (currentNodeDataIndex >= 0) {
+    const series = chartData.value.series[0];
+
+    const oldName = series.data[currentNodeDataIndex].name;
+
+    // 删除节点
+    let data = []
+    let length = series.data.length;
+    for (let i = 0; i < length; i++) {
+      if (i !== currentNodeDataIndex) {
+        data.push(series.data[i])
+      }
+    }
+    chartData.value.series[0].data = data;
+
+    // 删除节点所在的边
+    let links = [];
+    length = series.links.length;
+    for (let i = 0; i < length; i++) {
+      if (series.links[i].source !== oldName && series.links[i].target !== oldName) {
+        links.push(series.links[i]);
+      }
+    }
+    chartData.value.series[0].links = links;
+
+    console.log("chartData");
+    console.log(chartData.value);
+
+    updateLegend();
+    refreshChart();
+  }
 };
 
 const resetNewNode = () => {
@@ -326,7 +410,7 @@ const createNodeSubmit = () => {
   if (names.indexOf(newNode.value.name) === -1) {
     chartData.value.series[0].data.push(jsonReactive(newNode.value));
     updateLegend();
-    chartInstance.setOption(chartData.value);
+    refreshChart();
     resetError();
     resetNewNode();
   } else {
@@ -341,14 +425,17 @@ const currentNodeSubmit = () => {
   let names = chartData.value.series[0].data.map((x) => {
     return x.name;
   });
-  const oldName = names[currentDataIndex];
+  const oldName = names[currentNodeDataIndex];
   const newName = currentNode.value.name;
 
   if (oldName !== newName) {
-    names.slice(0, currentDataIndex).push(...names.slice(currentDataIndex + 1)); // 去掉旧节点名称
+    // 修改节点的时候修改了节点名称
+    // names.slice(0, currentNodeDataIndex).push(...names.slice(currentNodeDataIndex + 1)); // 去掉旧节点名称
+    // 思考：为什么不需要去掉旧的节点名称？因为本身就不重名，所以不用去掉
+    // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
     if (names.indexOf(newName) === -1) {
-      chartData.value.series[0].data[currentDataIndex] = jsonReactive(currentNode.value);
-      updateLegend();
+      // 判断修改完的名称是否重名
+      chartData.value.series[0].data[currentNodeDataIndex] = jsonReactive(currentNode.value);
 
       // 修改新节点所在的边
       const links = chartData.value.series[0].links;
@@ -362,15 +449,17 @@ const currentNodeSubmit = () => {
         }
       }
 
-      chartInstance.setOption(chartData.value);
+      updateLegend();
+      refreshChart();
       resetError();
     } else {
       setError("不能创建同名节点");
     }
   } else {
-    chartData.value.series[0].data[currentDataIndex] = jsonReactive(currentNode.value);
+    // 修改节点时没有修改节点名称
+    chartData.value.series[0].data[currentNodeDataIndex] = jsonReactive(currentNode.value);
     updateLegend();
-    chartInstance.setOption(chartData.value);
+    refreshChart();
     resetError();
   }
 };
