@@ -5,6 +5,7 @@
         <a-button class="no-move-button" @click="createNode">创建节点</a-button>
         <a-button class="no-move-button" @click="deleteNode">删除节点</a-button>
         <a-button class="no-move-button" @click="createEdge">创建连接</a-button>
+        <a-button class="no-move-button" @click="deleteEdge">删除连接</a-button>
         <a-button class="no-move-button" @click="toggleSider">编辑框</a-button>
         <!-- 控制按钮 -->
       </a-layout-header>
@@ -27,7 +28,7 @@
             </a-form-item>
             <a-form-item label="所属类目">
               <a-select v-model:value="newNode.category" placeholder="请选择类目" style="width: 200px"
-                :options="categoryItems.map(item => ({ value: item }))">
+                        :options="categoryItems.map(item => ({ value: item }))">
                 <template #dropdownRender="{ menuNode: menu }">
                   <v-nodes :vnodes="menu" />
                   <a-divider style="margin: 4px 0" />
@@ -60,7 +61,7 @@
             </a-form-item>
             <a-form-item label="所属类目">
               <a-select v-model:value="currentNode.category" placeholder="请选择类目" style="width: 200px"
-                :options="categoryItems.map(item => ({ value: item }))">
+                        :options="categoryItems.map(item => ({ value: item }))">
                 <template #dropdownRender="{ menuNode: menu }">
                   <v-nodes :vnodes="menu" />
                   <a-divider style="margin: 4px 0" />
@@ -92,13 +93,25 @@
               <a-textarea v-model:value="newEdge.des" />
             </a-form-item>
             <a-form-item>
-              <a-button @click="createNodeSubmit">创建连接</a-button>
+              <a-button @click="createEdgeSubmit">创建连接</a-button>
+            </a-form-item>
+          </a-form>
+
+          <a-form v-show="currentEdgeVisible">
+            <a-form-item label="名称">
+              <a-textarea v-model:value="currentEdge.name" />
+            </a-form-item>
+            <a-form-item label="描述">
+              <a-textarea v-model:value="currentEdge.des" />
+            </a-form-item>
+            <a-form-item>
+              <a-button @click="currentEdgeSubmit">修改连接</a-button>
             </a-form-item>
           </a-form>
 
         </a-layout-sider>
       </a-layout>
-      <a-layout-footer class="footer-style">Footer</a-layout-footer>
+      <a-layout-footer class="footer-style" v-show=false>Footer</a-layout-footer>
     </a-layout>
   </a-space>
 </template>
@@ -131,7 +144,7 @@ const currentNode = ref({
   "symbolSize": 50,
   "category": ""
 });
-let currentNodeDataIndex = -1;
+let currentNodeDataIndex = -1; // todo 这块有一个优化，可以和highlightNodeList合并，相当于highlightNodeList的最后一个值，不确定能不能替换，替换之后如果highlightNodeList中没有节点，会有问题？
 
 const createEdgeVisible = ref(false);
 const newEdge = ref({
@@ -154,12 +167,12 @@ const VNodes = defineComponent({
   props: {
     vnodes: {
       type: Object,
-      required: true,
-    },
+      required: true
+    }
   },
   render() {
     return this.vnodes;
-  },
+  }
 });
 
 // 新增时的类目
@@ -206,6 +219,8 @@ const resetSider = () => {
   errorMessageVisible.value = false;
   createNodeVisible.value = false;
   currentNodeVisible.value = false;
+  createEdgeVisible.value = false;
+  currentEdgeVisible.value = false;
 };
 
 const getChart = (option) => {
@@ -270,7 +285,23 @@ const clickChart = event => {
     }
     console.log(highlightNodeList);
   } else if (event.dataType === "edge") {
+    currentEdgeVisible.value = true;
+    currentEdge.value = event.data;
+    currentEdgeDataIndex = event.dataIndex;
 
+    if (highlightEdge === null) {
+      highlightEdge = event.dataIndex;
+      operateChart(highlightEdge, "edge", "highlight");
+    } else {
+      if (highlightEdge !== event.dataIndex) {
+        operateChart(highlightEdge, "edge", "downplay");
+        highlightEdge = event.dataIndex;
+        operateChart(highlightEdge, "edge", "highlight");
+      } else {
+        operateChart(highlightEdge, "edge", "downplay");
+        highlightEdge = null;
+      }
+    }
   }
 };
 
@@ -292,7 +323,7 @@ const resizeChart = () => {
 
 const refreshChart = () => {
   chartInstance.setOption(chartData.value);
-}
+};
 
 const toggleSider = () => {
   /**
@@ -306,6 +337,7 @@ const toggleSider = () => {
     for (let i = 0; i < highlightNodeList.length; i++) {
       operateChart(highlightNodeList[i], "node", "downplay");
     }
+    currentNodeDataIndex = -1;
   }
 };
 
@@ -333,11 +365,11 @@ const deleteNode = () => {
     const oldName = series.data[currentNodeDataIndex].name;
 
     // 删除节点
-    let data = []
+    let data = [];
     let length = series.data.length;
     for (let i = 0; i < length; i++) {
       if (i !== currentNodeDataIndex) {
-        data.push(series.data[i])
+        data.push(series.data[i]);
       }
     }
     chartData.value.series[0].data = data;
@@ -358,6 +390,7 @@ const deleteNode = () => {
     updateLegend();
     refreshChart();
   }
+  currentNodeDataIndex = -1;
 };
 
 const resetNewNode = () => {
@@ -464,8 +497,74 @@ const currentNodeSubmit = () => {
   }
 };
 
+const resetNewEdge = () => {
+  newEdge.value = {
+    "source": "",
+    "target": "",
+    "name": "",
+    "des": ""
+  };
+};
+
 const createEdge = () => {
-  resizeChart();
+  /**
+   * 创建新连接
+   */
+  resetSider();
+  siderVisible.value = true; // 切换侧边栏的显示状态
+  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
+  createEdgeVisible.value = true;
+  resetError();
+  nextTick(resizeChart);
+};
+
+const createEdgeSubmit = () => {
+  /**
+   * 响应创建新连接的提交
+   */
+  if (highlightNodeList.length === 2) {
+    const data = chartData.value.series[0].data;
+    newEdge.value.source = data[highlightNodeList[0]].name;
+    newEdge.value.target = data[highlightNodeList[1]].name;
+    chartData.value.series[0].links.push(jsonReactive(newEdge.value));
+    refreshChart();
+    resetError();
+    resetNewEdge();
+  } else {
+    setError("请选中2个节点");
+  }
+};
+
+const currentEdgeSubmit = () => {
+  /**
+   * 实现连接的动态修改
+   */
+  resetError();
+  chartData.value.series[0].links[currentEdgeDataIndex] = jsonReactive(currentEdge.value);
+  refreshChart();
+};
+
+const deleteEdge = () => {
+  /**
+   * 删除连接
+   */
+  resetSider();
+  resetError();
+  if (currentEdgeDataIndex >= 0) {
+    const series = chartData.value.series[0];
+
+    // 删除连接
+    let links = [];
+    let length = series.links.length;
+    for (let i = 0; i < length; i++) {
+      if (i !== currentEdgeDataIndex) {
+        links.push(series.links[i]);
+      }
+    }
+    chartData.value.series[0].links = links;
+    refreshChart();
+  }
+  currentEdgeDataIndex = -1;
 };
 
 const headerStyle = {
