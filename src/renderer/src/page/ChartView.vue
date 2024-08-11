@@ -212,8 +212,43 @@ onMounted(() => {
   getChart(chartData.value);
   window.addEventListener("resize", resizeChart);
   // 初始化下拉框类目
-  updateLegend();
+  updateLegend(); // 复用了函数里面的种类去重，并且这样做不影响加载，因为getChart就已经加载完了
+  window.addEventListener("keydown", shortcut);
 });
+
+const shortcut = (event) => {
+  if (event.ctrlKey && event.key === "s") {
+    console.log("save file");
+  }
+
+  if (event.ctrlKey && event.key === "r") {
+  }
+
+  if (event.key === "Insert") {
+    createNode();
+  }
+
+  if (event.key === "Delete") {
+    deleteNode();
+  }
+
+  if (event.ctrlKey && event.key === "z") {
+    undo();
+  }
+
+  if (event.ctrlKey && event.key === "y") {
+    console.log("redo");
+    redo();
+  }
+};
+
+const undo = () => {
+
+};
+
+const redo = () => {
+
+};
 
 const resetSider = () => {
   errorMessageVisible.value = false;
@@ -334,10 +369,14 @@ const toggleSider = () => {
   // 使用 nextTick 等待DOM更新完成后执行resize
   nextTick(resizeChart);
   if (!siderVisible.value) {
+    // 收起编辑框，就可以重置图表
     for (let i = 0; i < highlightNodeList.length; i++) {
       operateChart(highlightNodeList[i], "node", "downplay");
     }
     currentNodeDataIndex = -1;
+    operateChart(currentEdgeDataIndex, "edge", "downplay");
+    currentEdgeDataIndex = -1;
+    resetSider();
   }
 };
 
@@ -362,6 +401,13 @@ const deleteNode = () => {
   if (currentNodeDataIndex >= 0) {
     const series = chartData.value.series[0];
 
+    history_sequence_number++;
+    history[history_sequence_number] = {
+      "act": "deleteNode",
+      "data": jsonReactive(series.data[currentNodeDataIndex]),
+      "links": []
+    };
+
     const oldName = series.data[currentNodeDataIndex].name;
 
     // 删除节点
@@ -380,6 +426,8 @@ const deleteNode = () => {
     for (let i = 0; i < length; i++) {
       if (series.links[i].source !== oldName && series.links[i].target !== oldName) {
         links.push(series.links[i]);
+      } else {
+        history[history_sequence_number].links.push(jsonReactive(series.links[i]));
       }
     }
     chartData.value.series[0].links = links;
@@ -441,7 +489,13 @@ const createNodeSubmit = () => {
     return x.name;
   });
   if (names.indexOf(newNode.value.name) === -1) {
-    chartData.value.series[0].data.push(jsonReactive(newNode.value));
+    const newNodeJson = jsonReactive(newNode.value);
+    chartData.value.series[0].data.push(newNodeJson);
+    history_sequence_number++;
+    history[history_sequence_number] = {
+      "act": "createNode",
+      "data": newNodeJson
+    };
     updateLegend();
     refreshChart();
     resetError();
@@ -460,6 +514,13 @@ const currentNodeSubmit = () => {
   });
   const oldName = names[currentNodeDataIndex];
   const newName = currentNode.value.name;
+  const currentNodeJson = jsonReactive(currentNode.value);
+  history_sequence_number++;
+  history[history_sequence_number] = {
+    "act": "changeNode",
+    "old": jsonReactive(chartData.value.series[0].data[currentNodeDataIndex]),
+    "new": currentNodeJson
+  };
 
   if (oldName !== newName) {
     // 修改节点的时候修改了节点名称
@@ -468,7 +529,7 @@ const currentNodeSubmit = () => {
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
     if (names.indexOf(newName) === -1) {
       // 判断修改完的名称是否重名
-      chartData.value.series[0].data[currentNodeDataIndex] = jsonReactive(currentNode.value);
+      chartData.value.series[0].data[currentNodeDataIndex] = currentNodeJson;
 
       // 修改新节点所在的边
       const links = chartData.value.series[0].links;
@@ -490,7 +551,7 @@ const currentNodeSubmit = () => {
     }
   } else {
     // 修改节点时没有修改节点名称
-    chartData.value.series[0].data[currentNodeDataIndex] = jsonReactive(currentNode.value);
+    chartData.value.series[0].data[currentNodeDataIndex] = currentNodeJson;
     updateLegend();
     refreshChart();
     resetError();
@@ -526,7 +587,13 @@ const createEdgeSubmit = () => {
     const data = chartData.value.series[0].data;
     newEdge.value.source = data[highlightNodeList[0]].name;
     newEdge.value.target = data[highlightNodeList[1]].name;
-    chartData.value.series[0].links.push(jsonReactive(newEdge.value));
+    const newEdgeJson = jsonReactive(newEdge.value);
+    history_sequence_number++;
+    history[history_sequence_number] = {
+      "act": "createEdge",
+      "data": newEdgeJson
+    };
+    chartData.value.series[0].links.push(newEdgeJson);
     refreshChart();
     resetError();
     resetNewEdge();
@@ -540,7 +607,15 @@ const currentEdgeSubmit = () => {
    * 实现连接的动态修改
    */
   resetError();
-  chartData.value.series[0].links[currentEdgeDataIndex] = jsonReactive(currentEdge.value);
+  const currentEdgeJson = jsonReactive(currentEdge.value);
+  history_sequence_number++;
+  history[history_sequence_number] = {
+    "act": "changeEdge",
+    "old": jsonReactive(chartData.value.series[0].links[currentEdgeDataIndex]),
+    "new": currentEdgeJson
+  };
+  chartData.value.series[0].links[currentEdgeDataIndex] = currentEdgeJson;
+  console.log(history);
   refreshChart();
 };
 
@@ -552,6 +627,11 @@ const deleteEdge = () => {
   resetError();
   if (currentEdgeDataIndex >= 0) {
     const series = chartData.value.series[0];
+    history_sequence_number++;
+    history[history_sequence_number] = {
+      "act": "deleteEdge",
+      "data": jsonReactive(series.links[currentEdgeDataIndex])
+    };
 
     // 删除连接
     let links = [];
