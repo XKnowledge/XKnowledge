@@ -22,9 +22,10 @@ onMounted(async () => {
   let counter = 0;
   console.log(res);
   res.forEach((file) => {
+    counter++;
     if (file.endsWith(".xk")) {
       fileListValue.push({
-        id: counter++,
+        id: counter,
         // name: file.replace(/\.[^/.]+$/, ''),
         name: file,
         src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
