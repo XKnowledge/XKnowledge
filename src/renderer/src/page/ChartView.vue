@@ -119,7 +119,7 @@
 <script setup>
 import { nextTick, defineComponent, onMounted, ref } from "vue";
 import * as echarts from "echarts";
-import createOption from "../utils/myOption.ts";
+// import createOption from "../utils/myOption.ts";
 
 const chartData = ref();
 
@@ -205,15 +205,21 @@ let highlightEdge = null;
 let history = []; // 记录历史
 let history_sequence_number = -1; // HSN：历史操作对应的目前的位置
 
-onMounted(() => {
+onMounted(async () => {
   // 获取数据
-  chartData.value = createOption();
+  // chartData.value = createOption();
   // 调用渲染图表逻辑
-  getChart(chartData.value);
+
   window.addEventListener("resize", resizeChart);
+  window.addEventListener("keydown", shortcut);
+});
+
+window.electronAPI.receiveData((data) => {
+  chartData.value = JSON.parse(data.value);
+  console.log(data.path);
   // 初始化下拉框类目
   updateLegend(); // 复用了函数里面的种类去重，并且这样做不影响加载，因为getChart就已经加载完了
-  window.addEventListener("keydown", shortcut);
+  getChart(chartData.value);
 });
 
 const shortcut = (event) => {

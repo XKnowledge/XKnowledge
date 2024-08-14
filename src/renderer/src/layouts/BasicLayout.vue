@@ -13,7 +13,7 @@
           @click="handleClick"
         />
         <div style="position: fixed; bottom: -30px; width: 200px;">
-          <a-button id="uploadFile">打开本地文件</a-button>
+          <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
         </div>
       </a-layout-sider>
       <a-layout>
@@ -74,14 +74,14 @@ const items = reactive([
   getItem("最近", "history", () => h(HistoryOutlined)),
   getItem("图库", "gallery", () => h(BookOutlined)),
   // getItem('测试页面', 'chart', () => h(BookOutlined)),
-  getItem("我的文件", "myFiles", () => h(FileTextOutlined))
+  // getItem("我的文件", "myFiles", () => h(FileTextOutlined))
 ]);
 
 
-window.electronAPI.openView((value) => {
-  console.log(value);
-  router.push(value);
-});
+// window.electronAPI.openView((value) => {
+//   console.log(value);
+//   router.push(value);
+// });
 
 const handleClick = e => {
   // console.log('click', e)
@@ -89,6 +89,17 @@ const handleClick = e => {
   title.value = itemObj.label;
   router.push(e.key);
 };
+
+const openFile = () => {
+  window.electronAPI.sendAct("open_file");
+};
+
+window.electronAPI.receiveAct((act) => {
+  if (act === "chart") {
+    router.push("chart");
+  }
+});
+
 watch(openKeys, val => {
   console.log("openKeys", val);
 });

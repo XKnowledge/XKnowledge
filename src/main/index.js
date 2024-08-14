@@ -1,7 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain, Menu, MenuItem } from "electron";
+import { app, shell, BrowserWindow, ipcMain, Menu, MenuItem, dialog } from "electron";
 import { join } from "path";
 import path from "node:path";
 import { spawn } from "child_process";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+const fs = require("fs-extra");
 
 let mainWindow;
 let pythonProcess = null;
@@ -129,104 +133,40 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-// 在这个文件中，你可以包含你的应用程序特定的主进程代码。你也可以将它们放在单独的文件中，然后在这里进行引用。
-
-ipcMain.on("switch_window", (event, arg) => {
-  // arg里面存着信息
-  if (mainWindow) {
-    mainWindow.close();
+function handleFileOpen() {
+  const { canceled, filePaths } = dialog.showOpenDialog(mainWindow);
+  if (!canceled) {
+    fs.readFile(filePaths[0], "utf-8", (err, data) => {
+      mainWindow.webContents.send("act", "chart");
+      return {
+        value: data,
+        path: filePaths[0]
+      };
+    });
   }
-  // const preloadPath = join(__dirname, '../preload/index.js')
-  // if (!fs.existsSync(preloadPath)) {
-  //   console.error(`Preload script not found at path: ${preloadPath}`);
-  // } else {
-  //   console.log(`Preload script found at path: ${preloadPath}`);
-  // }
-  // console.log(preloadPath)
-  mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    webPreferences: {
-      preload: join(__dirname, "../preload/index.js")
-      // devTools: false, // 禁用开发者工具快捷键
-      // webviewTag: false, // 禁用 webview 标签
-      // accelerator: {
-      //     'Cmd+[': null,
-      //     'Cmd+]': null,
-      //     'Cmd+W': null,
-      //     'Ctrl+R': null
-      // }
-    },
-    titleBarStyle: "hidden",
-    titleBarOverlay: {
-      color: "#ffffff",
-      symbolColor: "#74b1be"
-    },
-    trafficLightPosition: { x: 20, y: 18 },
-    backgroundColor: "#fff",
-    minHeight: 600,
-    minWidth: 600,
-    title: "XKnowledge",
-    icon: "static/icon.ico"
-  });
-  mainWindow.webContents.openDevTools({ mode: "detach" });
+}
 
-  // const menu = new Menu()
-  // menu.append(
-  //   new MenuItem({
-  //     label: '菜单',
-  //     submenu: [
-  //       {
-  //         label: '保存',
-  //         accelerator: 'Ctrl+S',
-  //         click: () => {
-  //           mainWindow.webContents.send('act', 'save')
-  //         }
-  //       },
-  //       {
-  //         type: 'separator'
-  //       },
-  //       {
-  //         label: '撤销',
-  //         accelerator: 'Ctrl+Z',
-  //         click: () => {
-  //           mainWindow.webContents.send('act', 'undo')
-  //         }
-  //       },
-  //       {
-  //         label: '重做',
-  //         accelerator: 'Ctrl+Y',
-  //         click: () => {
-  //           mainWindow.webContents.send('act', 'redo')
-  //         }
-  //       },
-  //       {
-  //         type: 'separator'
-  //       },
-  //       {
-  //         label: '导出文件',
-  //         click: () => {
-  //           mainWindow.webContents.send('act', 'export')
-  //         }
-  //       },
-  //       {
-  //         label: '跳转页面',
-  //         click: () => {
-  //           mainWindow.webContents.send('open-view', 'chart')
-  //         }
-  //       }]
-  //   }))
-  // Menu.setApplicationMenu(menu)
-
-  mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
-  // 监听渲染进程发出的 'did-finish-load' 事件
-  mainWindow.webContents.on("did-finish-load", () => {
-    // 页面加载完成后，发送消息到渲染进程
-    mainWindow.webContents.send("open-view", "chart");
-  });
-
-  // mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
-  });
+ipcMain.on("act", (event, act) => {
+  console.log(act);
+  if (act === "open_file") {
+    dialog.showOpenDialog(mainWindow, {
+      title: "打开",
+      properties: ["openFile"],
+      filters: [
+        { name: "XKnowledge", extensions: ["xk"] }
+      ]
+    }).then((res) => {
+      if (!res.canceled) {
+        fs.readFile(res.filePaths[0], "utf-8", (err, data) => {
+          mainWindow.webContents.send("act", "chart");
+          mainWindow.webContents.send("data", {
+            value: data,
+            path: res.filePaths[0]
+          });
+        });
+      }
+    }).catch((err) => {
+      console.log(err);
+    });
+  }
 });
