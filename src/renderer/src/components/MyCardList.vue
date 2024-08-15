@@ -18,7 +18,9 @@
 <script setup>
 import { ref } from "vue";
 import { defineProps } from "vue";
-import myAxios from "../utils/myAxios";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const props = defineProps({
   historyList: {
@@ -76,16 +78,16 @@ const handleDoubleClick = async (id, fileName) => {
   // formData.append("operationType", "openFile");
   // formData.append("fileName", JSON.stringify(fileName));
 
-  myAxios.post("http://127.0.0.1:5000/", {
-    operationType: "openFile",
-    fileName: fileName
-  }).then(response => {
-    console.log(response);
-    if (response === "ok") {
-      console.log("跳转打开");
-      window.electronAPI.ipcSend();
-    }
-  });
+  // myAxios.post("http://127.0.0.1:5000/", {
+  //   operationType: "openFile",
+  //   fileName: fileName
+  // }).then(response => {
+  //   console.log(response);
+  //   if (response === "ok") {
+  //     console.log("跳转打开");
+  //     window.electronAPI.ipcSend();
+  //   }
+  // });
 };
 
 /**

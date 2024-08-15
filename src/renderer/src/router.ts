@@ -1,9 +1,9 @@
 import { createRouter, createWebHashHistory } from "vue-router";
-import AddView from "../page/AddView.vue";
-import GalleryView from "../page/GalleryView.vue";
-import HistoryView from "../page/HistoryView.vue";
-import MyFilesView from "../page/MyFilesView.vue";
-import ChartView from "../page/ChartView.vue";
+import AddView from "./page/AddView.vue";
+import GalleryView from "./page/GalleryView.vue";
+import HistoryView from "./page/HistoryView.vue";
+import MyFilesView from "./page/MyFilesView.vue";
+import ChartView from "./page/ChartView.vue";
 
 const routes = [
   { path: "/", name: "index", component: AddView },
