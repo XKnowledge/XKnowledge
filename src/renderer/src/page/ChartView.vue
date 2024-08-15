@@ -15,7 +15,7 @@
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
 
-          <a-space v-show="errorMessageVisible" direction="vertical" style="width: 100%">
+          <a-space v-show="errorMessageVisible" direction="vertical" style="width: 80%">
             <a-alert :message="errorMessage" type="error" />
           </a-space>
 
@@ -134,7 +134,8 @@ const newNode = ref({
   "name": "",
   "des": "",
   "symbolSize": 50,
-  "category": ""
+  // placeholder 只有在 value = undefined 才会显示
+  "category": undefined
 });
 
 const currentNodeVisible = ref(false);
@@ -493,6 +494,16 @@ const updateLegend = () => {
 };
 
 const createNodeSubmit = () => {
+  if (
+    newNode.value.category === undefined ||
+    newNode.value.category === null ||
+    newNode.value.category === '' ||
+    newNode.value.category.length === 0
+  ) {
+    setError('该节点所属类目错误')
+    // 如果不 return 会导致每次都会创建一个空类目
+    return
+  }
   /**
    * 响应创建新节点的提交
    */
@@ -729,8 +740,29 @@ const echartsStyle = {
   max-width: 270px !important;
   min-width: 270px !important;
   background-color: #f5f5f5 !important;
+  overflow-y: scroll; /* 添加垂直滚动条 */
+  overflow-x: hidden; /* 隐藏水平滚动条 */
+  box-sizing: border-box; /* 使宽度包括内容、内边距和边框 */
+}
+/* 针对Webkit内核浏览器的滚动条样式 */
+.sider-style::-webkit-scrollbar {
+  width: 5px; /* 设置滚动条的宽度为2px */
 }
 
+/* 滚动条轨道的样式 */
+.sider-style::-webkit-scrollbar-track {
+  background-color: transparent; /* 轨道颜色，可以设置为透明或你想要的颜色 */
+}
+
+/* 滚动条滑块的样式 */
+.sider-style::-webkit-scrollbar-thumb {
+  background-color: #888; /* 滑块颜色，可以设置为你想要的颜色 */
+}
+
+/* 解决框架本身获取高度错误而显示进度条Bug */
+.ant-layout .ant-layout-sider-children {
+  height: calc(100% - 33px);
+}
 .form-style {
   background-color: #f5f5f5 !important;
 }
