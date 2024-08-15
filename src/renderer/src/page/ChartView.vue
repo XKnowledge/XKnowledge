@@ -226,11 +226,15 @@ window.electronAPI.receiveData((data) => {
   getChart(chartData.value);
 });
 
+const saveFile = () => {
+  console.log("save file");
+  window.electronAPI.sendAct("save_file");
+  window.electronAPI.sendData({ path: file_path, file: jsonReactive(chartData.value) });
+};
+
 const shortcut = (event) => {
   if (event.ctrlKey && event.key === "s") {
-    console.log("save file");
-    window.electronAPI.sendAct("save_file");
-    window.electronAPI.sendData({ path: file_path, file: jsonReactive(chartData.value) });
+    saveFile();
   }
 
   if (event.ctrlKey && event.key === "r") {
@@ -480,6 +484,7 @@ const updateLegend = () => {
   /**
    * 更新图例，比如节点类别
    */
+  // 生成类目和图例
   let categories = [...new Set(chartData.value.series[0].data.map((x) => {
     return x.category;
   }))]; // 将类型去重
@@ -489,6 +494,19 @@ const updateLegend = () => {
   chartData.value.legend[0].data = categories.map((x) => {
     return x;
   });
+  // 增加水印
+  chartData.value.graphic = [
+    {
+      "type": "text",
+      "left": "center",
+      "bottom": "5%",
+      "style": {
+        "fill": "rgba(0,0,0,1)",
+        "text": "By XKnowledge",
+        "font": "bold 18px sans-serif"
+      }
+    }
+  ];
   // 更新选择下拉框类目
   categoryItems.value = categories;
 };
@@ -497,12 +515,12 @@ const createNodeSubmit = () => {
   if (
     newNode.value.category === undefined ||
     newNode.value.category === null ||
-    newNode.value.category === '' ||
+    newNode.value.category === "" ||
     newNode.value.category.length === 0
   ) {
-    setError('该节点所属类目错误')
+    setError("该节点所属类目错误");
     // 如果不 return 会导致每次都会创建一个空类目
-    return
+    return;
   }
   /**
    * 响应创建新节点的提交
@@ -744,6 +762,7 @@ const echartsStyle = {
   overflow-x: hidden; /* 隐藏水平滚动条 */
   box-sizing: border-box; /* 使宽度包括内容、内边距和边框 */
 }
+
 /* 针对Webkit内核浏览器的滚动条样式 */
 .sider-style::-webkit-scrollbar {
   width: 5px; /* 设置滚动条的宽度为2px */
@@ -763,6 +782,7 @@ const echartsStyle = {
 .ant-layout .ant-layout-sider-children {
   height: calc(100% - 33px);
 }
+
 .form-style {
   background-color: #f5f5f5 !important;
 }

@@ -70,9 +70,9 @@ function getItem(label, key, icon, children, type) {
 }
 
 const items = reactive([
-  getItem("新建", "add", () => h(AppstoreAddOutlined)),
-  getItem("最近", "history", () => h(HistoryOutlined)),
-  getItem("图库", "gallery", () => h(BookOutlined)),
+  // getItem("新建", "add", () => h(AppstoreAddOutlined)),
+  // getItem("最近", "history", () => h(HistoryOutlined)),
+  // getItem("图库", "gallery", () => h(BookOutlined)),
   // getItem('测试页面', 'chart', () => h(BookOutlined)),
   // getItem("我的文件", "myFiles", () => h(FileTextOutlined))
 ]);
