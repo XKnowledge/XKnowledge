@@ -168,5 +168,15 @@ ipcMain.on("act", (event, act) => {
     }).catch((err) => {
       console.log(err);
     });
+  } else if (act === "save_file") {
+    ipcMain.on("data", (event, arg) => {
+      console.log(arg);
+      fs.writeFile(arg.path, JSON.stringify(arg.file), (err) => {
+        if (err) {
+          console.log(err);
+        }
+        console.log("data saved");
+      });
+    });
   }
 });

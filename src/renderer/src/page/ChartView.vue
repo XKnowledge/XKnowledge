@@ -205,6 +205,8 @@ let highlightEdge = null;
 let history = []; // 记录历史
 let history_sequence_number = -1; // HSN：历史操作对应的目前的位置
 
+let file_path = "";
+
 onMounted(async () => {
   // 获取数据
   // chartData.value = createOption();
@@ -216,6 +218,7 @@ onMounted(async () => {
 
 window.electronAPI.receiveData((data) => {
   chartData.value = JSON.parse(data.value);
+  file_path = data.path;
   console.log(data.path);
   // 初始化下拉框类目
   updateLegend(); // 复用了函数里面的种类去重，并且这样做不影响加载，因为getChart就已经加载完了
@@ -225,6 +228,8 @@ window.electronAPI.receiveData((data) => {
 const shortcut = (event) => {
   if (event.ctrlKey && event.key === "s") {
     console.log("save file");
+    window.electronAPI.sendAct("save_file");
+    window.electronAPI.sendData({ path: file_path, file: jsonReactive(chartData.value) });
   }
 
   if (event.ctrlKey && event.key === "r") {
