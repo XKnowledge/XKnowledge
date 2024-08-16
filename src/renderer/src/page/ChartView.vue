@@ -233,6 +233,8 @@ const saveFile = () => {
 };
 
 const shortcut = (event) => {
+  const tagName = event.target.tagName;
+  // 全局的快捷键
   if (event.ctrlKey && event.key === "s") {
     saveFile();
   }
@@ -240,21 +242,24 @@ const shortcut = (event) => {
   if (event.ctrlKey && event.key === "r") {
   }
 
-  if (event.key === "Insert") {
-    createNode();
-  }
+  // 只有chart的快捷键
+  if (tagName === "BODY") {
+    if (event.key === "Insert") {
+      createNode();
+    }
 
-  if (event.key === "Delete") {
-    deleteNode();
-  }
+    if (event.key === "Delete") {
+      deleteNode();
+    }
 
-  if (event.ctrlKey && event.key === "z") {
-    undo();
-  }
+    if (event.ctrlKey && event.key === "z") {
+      undo();
+    }
 
-  if (event.ctrlKey && event.key === "y") {
-    console.log("redo");
-    redo();
+    if (event.ctrlKey && event.key === "y") {
+      console.log("redo");
+      redo();
+    }
   }
 };
 
@@ -283,17 +288,12 @@ const getChart = (option) => {
   // 基于准备好的dom，初始化echarts实例
   chartDom = document.getElementById("chart");
   console.log(option);
-  if (!chartDom) {
-    console.error("chart图表容器不存在，请检查HTML代码！");
-  } else {
+  if (chartDom) {
     // 初始化 ECharts 图表
     chartInstance = echarts.init(chartDom);
-    if (!option) {
-      console.error("图表信息为空，请联系管理员！");
-    } else {
+    if (option) {
       // 使用刚指定的配置项和数据显示图表。
       chartInstance.setOption(option);
-
       chartInstance.on("click", clickChart);
     }
   }
@@ -484,10 +484,10 @@ const updateLegend = () => {
   /**
    * 更新图例，比如节点类别
    */
-  // 生成类目和图例
+    // 生成类目和图例
   let categories = [...new Set(chartData.value.series[0].data.map((x) => {
-    return x.category;
-  }))]; // 将类型去重
+      return x.category;
+    }))]; // 将类型去重
   chartData.value.series[0].categories = categories.map((x) => {
     return { "name": x };
   });
