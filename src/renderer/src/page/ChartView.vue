@@ -227,12 +227,20 @@ window.electronAPI.receiveData((data) => {
 });
 
 const saveFile = () => {
+  /**
+   * 实现文件保存，electronAPI详见/src/preload/index.js
+   */
   console.log("save file");
   window.electronAPI.sendAct("save_file");
   window.electronAPI.sendData({ path: file_path, file: jsonReactive(chartData.value) });
 };
 
 const shortcut = (event) => {
+  /**
+   * 实现快捷键
+   * 分为两个部分，一个部分是聚焦于编辑栏的时候，此时的redo和undo都是针对于输入的文字的
+   * 当提交之后，聚焦于chart的时候，redo和undo就针对对图的修改进行操作。
+   */
   const tagName = event.target.tagName;
   // 全局的快捷键
   if (event.ctrlKey && event.key === "s") {
@@ -263,6 +271,9 @@ const shortcut = (event) => {
 };
 
 const resetRefData = () => {
+  /**
+   * 重置各种ref，配合侧边栏显示一块用
+   */
   resetNodeRef(newNode);
   resetEdgeRef(newEdge);
   currentNodeDataIndex = -1;
@@ -272,7 +283,9 @@ const resetRefData = () => {
 };
 
 const undo = () => {
-  // ctrl+z
+  /**
+   * 实现快捷键Ctrl+Z
+   */
   if (-1 < history_sequence_number) {
     const current_history = history[history_sequence_number];
     history_sequence_number--;
@@ -339,7 +352,9 @@ const undo = () => {
 };
 
 const redo = () => {
-  // ctrl+y
+  /**
+   * 实现快捷键Ctrl+Y
+   */
   history_sequence_number++;
   if (history_sequence_number < history.length) {
     const current_history = history[history_sequence_number];
@@ -422,6 +437,9 @@ const redo = () => {
 };
 
 const resetSider = () => {
+  /**
+   * 将侧边栏中显示的信息全部隐藏
+   */
   errorMessageVisible.value = false;
   createNodeVisible.value = false;
   currentNodeVisible.value = false;
