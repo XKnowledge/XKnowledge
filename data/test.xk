@@ -17,22 +17,10 @@
     {
       "data": [
         "类目0",
-        "类目2",
         "类目1",
+        "类目2",
         "类目3"
       ]
-    }
-  ],
-  "graphic": [
-    {
-      "type": "text",
-      "left": "center",
-      "bottom": "5%",
-      "style": {
-        "fill": "rgba(0,0,0,1)",
-        "text": "By XKnowledge",
-        "font": "bold 18px sans-serif"
-      }
     }
   ],
   "series": [
@@ -78,6 +66,12 @@
           "category": "类目0"
         },
         {
+          "name": "node02",
+          "des": "nodedes02",
+          "symbolSize": 50,
+          "category": "类目1"
+        },
+        {
           "name": "node03",
           "des": "nodedes3",
           "symbolSize": 50,
@@ -97,6 +91,12 @@
         }
       ],
       "links": [
+        {
+          "source": "node01",
+          "target": "node02",
+          "name": "link01",
+          "des": "link01des"
+        },
         {
           "source": "node01",
           "target": "node03",
@@ -121,15 +121,27 @@
           "name": "类目0"
         },
         {
-          "name": "类目2"
+          "name": "类目1"
         },
         {
-          "name": "类目1"
+          "name": "类目2"
         },
         {
           "name": "类目3"
         }
       ]
+    }
+  ],
+  "graphic": [
+    {
+      "type": "text",
+      "left": "center",
+      "bottom": "5%",
+      "style": {
+        "fill": "rgba(0,0,0,1)",
+        "text": "By XKnowledge",
+        "font": "bold 18px sans-serif"
+      }
     }
   ]
 }

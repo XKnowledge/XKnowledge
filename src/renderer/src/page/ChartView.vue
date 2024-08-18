@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import { nextTick, defineComponent, onMounted, ref } from "vue";
+import { defineComponent, nextTick, onMounted, ref } from "vue";
 import * as echarts from "echarts";
 // import createOption from "../utils/myOption.ts";
 
@@ -226,43 +226,220 @@ window.electronAPI.receiveData((data) => {
   getChart(chartData.value);
 });
 
+const saveFile = () => {
+  /**
+   * 实现文件保存，electronAPI详见/src/preload/index.js
+   */
+  console.log("save file");
+  window.electronAPI.sendAct("save_file");
+  window.electronAPI.sendData({ path: file_path, file: jsonReactive(chartData.value) });
+};
+
 const shortcut = (event) => {
+  /**
+   * 实现快捷键
+   * 分为两个部分，一个部分是聚焦于编辑栏的时候，此时的redo和undo都是针对于输入的文字的
+   * 当提交之后，聚焦于chart的时候，redo和undo就针对对图的修改进行操作。
+   */
+  const tagName = event.target.tagName;
+  // 全局的快捷键
   if (event.ctrlKey && event.key === "s") {
-    console.log("save file");
-    window.electronAPI.sendAct("save_file");
-    window.electronAPI.sendData({ path: file_path, file: jsonReactive(chartData.value) });
+    saveFile();
   }
 
   if (event.ctrlKey && event.key === "r") {
   }
 
-  if (event.key === "Insert") {
-    createNode();
-  }
+  // 只有chart的快捷键
+  if (tagName === "BODY") {
+    if (event.key === "Insert") {
+      createNode();
+    }
 
-  if (event.key === "Delete") {
-    deleteNode();
-  }
+    if (event.key === "Delete") {
+      deleteNode();
+    }
 
-  if (event.ctrlKey && event.key === "z") {
-    undo();
-  }
+    if (event.ctrlKey && event.key === "z") {
+      undo();
+    }
 
-  if (event.ctrlKey && event.key === "y") {
-    console.log("redo");
-    redo();
+    if (event.ctrlKey && event.key === "y") {
+      redo();
+    }
   }
+};
+
+const resetRefData = () => {
+  /**
+   * 重置各种ref，配合侧边栏显示一块用
+   */
+  resetNodeRef(newNode);
+  resetEdgeRef(newEdge);
+  currentNodeDataIndex = -1;
+  resetNodeRef(currentNode);
+  currentEdgeDataIndex = -1;
+  resetEdgeRef(currentEdge);
 };
 
 const undo = () => {
+  /**
+   * 实现快捷键Ctrl+Z
+   */
+  if (-1 < history_sequence_number) {
+    const current_history = history[history_sequence_number];
+    history_sequence_number--;
 
+    const old_data = chartData.value.series[0].data;
+    const node_length = old_data.length;
+    const old_links = chartData.value.series[0].links;
+    const links_length = old_links.length;
+
+    if (current_history.act === "createNode") {
+      const new_data = [];
+
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.data.name !== old_data[i].name) {
+          new_data.push(old_data[i]);
+        }
+      }
+      chartData.value.series[0].data = new_data;
+    } else if (current_history.act === "changeNode") {
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.new.name === old_data[i].name) {
+          chartData.value.series[0].data[i] = current_history.old;
+          break;
+        }
+      }
+      if (current_history.new.name !== current_history.old.name) {
+        const links = chartData.value.series[0].links;
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].source === current_history.new.name) {
+            chartData.value.series[0].links[i].source = current_history.old.name;
+          }
+          if (links[i].target === current_history.new.name) {
+            chartData.value.series[0].links[i].target = current_history.old.name;
+          }
+        }
+      }
+    } else if (current_history.act === "deleteNode") {
+      chartData.value.series[0].data.push(current_history.data);
+      chartData.value.series[0].links.push(...current_history.links);
+    } else if (current_history.act === "createEdge") {
+      const new_links = [];
+      for (let i = 0; i < links_length; i++) {
+        if (current_history.data.source !== old_links[i].source || current_history.data.target !== old_links[i].target) {
+          new_links.push(old_links[i]);
+        }
+      }
+      chartData.value.series[0].links = new_links;
+    } else if (current_history.act === "changeEdge") {
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.new.source === chartData.value.series[0].links[i].source && current_history.new.target === chartData.value.series[0].links[i].target) {
+          chartData.value.series[0].links[i] = current_history.old;
+          break;
+        }
+      }
+    } else if (current_history.act === "deleteEdge") {
+      chartData.value.series[0].links.push(current_history.data);
+    }
+    updateLegend();
+    refreshChart();
+    resetSider();
+    resetError();
+    resetRefData();
+  }
 };
 
 const redo = () => {
+  /**
+   * 实现快捷键Ctrl+Y
+   */
+  history_sequence_number++;
+  if (history_sequence_number < history.length) {
+    const current_history = history[history_sequence_number];
 
+    if (current_history.act === "createNode") {
+      chartData.value.series[0].data.push(current_history.data);
+    } else if (current_history.act === "changeNode") {
+      const old_data = chartData.value.series[0].data;
+      const length = old_data.length;
+
+      for (let i = 0; i < length; i++) {
+        if (current_history.old.name === old_data[i].name) {
+          chartData.value.series[0].data[i] = current_history.new;
+          break;
+        }
+      }
+      if (current_history.new.name !== current_history.old.name) {
+        const links = chartData.value.series[0].links;
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].source === current_history.old.name) {
+            chartData.value.series[0].links[i].source = current_history.new.name;
+          }
+          if (links[i].target === current_history.old.name) {
+            chartData.value.series[0].links[i].target = current_history.new.name;
+          }
+        }
+      }
+    } else if (current_history.act === "deleteNode") {
+      const series = chartData.value.series[0];
+      const oldName = current_history.data.name;
+
+      // 删除节点
+      let data = [];
+      let length = series.data.length;
+      for (let i = 0; i < length; i++) {
+        if (series.data[i].name !== oldName) {
+          data.push(series.data[i]);
+        }
+      }
+      chartData.value.series[0].data = data;
+
+      // 删除节点所在的边
+      let links = [];
+      length = series.links.length;
+      for (let i = 0; i < length; i++) {
+        if (series.links[i].source !== oldName && series.links[i].target !== oldName) {
+          links.push(series.links[i]);
+        }
+      }
+      chartData.value.series[0].links = links;
+    } else if (current_history.act === "createEdge") {
+      chartData.value.series[0].links.push(current_history.data);
+    } else if (current_history.act === "changeEdge") {
+      const node_length = chartData.value.series[0].links.length;
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.old.source === chartData.value.series[0].links[i].source && current_history.old.target === chartData.value.series[0].links[i].target) {
+          chartData.value.series[0].links[i] = current_history.new;
+          break;
+        }
+      }
+    } else if (current_history.act === "deleteEdge") {
+      const old_links = chartData.value.series[0].links;
+      const node_length = old_links.length;
+      const new_links = [];
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.data.source !== old_links[i].source || current_history.data.target !== old_links[i].target) {
+          new_links.push(old_links[i]);
+        }
+      }
+      chartData.value.series[0].links = new_links;
+    }
+    updateLegend();
+    refreshChart();
+    resetSider();
+    resetError();
+    resetRefData();
+  } else {
+    history_sequence_number--;
+  }
 };
 
 const resetSider = () => {
+  /**
+   * 将侧边栏中显示的信息全部隐藏
+   */
   errorMessageVisible.value = false;
   createNodeVisible.value = false;
   currentNodeVisible.value = false;
@@ -279,17 +456,12 @@ const getChart = (option) => {
   // 基于准备好的dom，初始化echarts实例
   chartDom = document.getElementById("chart");
   console.log(option);
-  if (!chartDom) {
-    console.error("chart图表容器不存在，请检查HTML代码！");
-  } else {
+  if (chartDom) {
     // 初始化 ECharts 图表
     chartInstance = echarts.init(chartDom);
-    if (!option) {
-      console.error("图表信息为空，请联系管理员！");
-    } else {
+    if (option) {
       // 使用刚指定的配置项和数据显示图表。
       chartInstance.setOption(option);
-
       chartInstance.on("click", clickChart);
     }
   }
@@ -385,9 +557,9 @@ const toggleSider = () => {
     for (let i = 0; i < highlightNodeList.length; i++) {
       operateChart(highlightNodeList[i], "node", "downplay");
     }
-    currentNodeDataIndex = -1;
     operateChart(currentEdgeDataIndex, "edge", "downplay");
-    currentEdgeDataIndex = -1;
+
+    resetRefData();
     resetSider();
   }
 };
@@ -450,11 +622,11 @@ const deleteNode = () => {
     updateLegend();
     refreshChart();
   }
-  currentNodeDataIndex = -1;
+  resetRefData();
 };
 
-const resetNewNode = () => {
-  newNode.value = {
+const resetNodeRef = (node) => {
+  node.value = {
     "name": "",
     "des": "",
     "symbolSize": 50,
@@ -480,15 +652,29 @@ const updateLegend = () => {
   /**
    * 更新图例，比如节点类别
    */
+    // 生成类目和图例
   let categories = [...new Set(chartData.value.series[0].data.map((x) => {
-    return x.category;
-  }))]; // 将类型去重
+      return x.category;
+    }))]; // 将类型去重
   chartData.value.series[0].categories = categories.map((x) => {
     return { "name": x };
   });
   chartData.value.legend[0].data = categories.map((x) => {
     return x;
   });
+  // 增加水印
+  chartData.value.graphic = [
+    {
+      "type": "text",
+      "left": "center",
+      "bottom": "5%",
+      "style": {
+        "fill": "rgba(0,0,0,1)",
+        "text": "By XKnowledge",
+        "font": "bold 18px sans-serif"
+      }
+    }
+  ];
   // 更新选择下拉框类目
   categoryItems.value = categories;
 };
@@ -497,12 +683,12 @@ const createNodeSubmit = () => {
   if (
     newNode.value.category === undefined ||
     newNode.value.category === null ||
-    newNode.value.category === '' ||
+    newNode.value.category === "" ||
     newNode.value.category.length === 0
   ) {
-    setError('该节点所属类目错误')
+    setError("该节点所属类目错误");
     // 如果不 return 会导致每次都会创建一个空类目
-    return
+    return;
   }
   /**
    * 响应创建新节点的提交
@@ -521,7 +707,7 @@ const createNodeSubmit = () => {
     updateLegend();
     refreshChart();
     resetError();
-    resetNewNode();
+    resetNodeRef(newNode);
   } else {
     setError("不能创建同名节点");
   }
@@ -535,14 +721,9 @@ const currentNodeSubmit = () => {
     return x.name;
   });
   const oldName = names[currentNodeDataIndex];
+  const oldNodeJson = jsonReactive(chartData.value.series[0].data[currentNodeDataIndex]);
   const newName = currentNode.value.name;
   const currentNodeJson = jsonReactive(currentNode.value);
-  history_sequence_number++;
-  history[history_sequence_number] = {
-    "act": "changeNode",
-    "old": jsonReactive(chartData.value.series[0].data[currentNodeDataIndex]),
-    "new": currentNodeJson
-  };
 
   if (oldName !== newName) {
     // 修改节点的时候修改了节点名称
@@ -570,6 +751,7 @@ const currentNodeSubmit = () => {
       resetError();
     } else {
       setError("不能创建同名节点");
+      return;
     }
   } else {
     // 修改节点时没有修改节点名称
@@ -578,10 +760,16 @@ const currentNodeSubmit = () => {
     refreshChart();
     resetError();
   }
+  history_sequence_number++;
+  history[history_sequence_number] = {
+    "act": "changeNode",
+    "old": oldNodeJson,
+    "new": currentNodeJson
+  };
 };
 
-const resetNewEdge = () => {
-  newEdge.value = {
+const resetEdgeRef = (edge) => {
+  edge.value = {
     "source": "",
     "target": "",
     "name": "",
@@ -618,7 +806,7 @@ const createEdgeSubmit = () => {
     chartData.value.series[0].links.push(newEdgeJson);
     refreshChart();
     resetError();
-    resetNewEdge();
+    resetEdgeRef(newEdge);
   } else {
     setError("请选中2个节点");
   }
@@ -666,7 +854,7 @@ const deleteEdge = () => {
     chartData.value.series[0].links = links;
     refreshChart();
   }
-  currentEdgeDataIndex = -1;
+  resetRefData();
 };
 
 const headerStyle = {
@@ -744,6 +932,7 @@ const echartsStyle = {
   overflow-x: hidden; /* 隐藏水平滚动条 */
   box-sizing: border-box; /* 使宽度包括内容、内边距和边框 */
 }
+
 /* 针对Webkit内核浏览器的滚动条样式 */
 .sider-style::-webkit-scrollbar {
   width: 5px; /* 设置滚动条的宽度为2px */
@@ -763,6 +952,7 @@ const echartsStyle = {
 .ant-layout .ant-layout-sider-children {
   height: calc(100% - 33px);
 }
+
 .form-style {
   background-color: #f5f5f5 !important;
 }
