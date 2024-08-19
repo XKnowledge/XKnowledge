@@ -2,10 +2,8 @@ import { app, shell, BrowserWindow, ipcMain, Menu, MenuItem, dialog } from "elec
 import { join } from "path";
 import path from "node:path";
 import { spawn } from "child_process";
-import { useRouter } from "vue-router";
 
-const router = useRouter();
-const fs = require("fs-extra");
+const fs = require("fs");
 
 let mainWindow;
 let pythonProcess = null;
@@ -120,7 +118,7 @@ app.whenReady().then(() => {
     createWindow();
   }
 
-  app.on("activate", function() {
+  app.on("activate", () => {
     // 在 macOS 上，当单击应用程序的 Dock 图标且没有其他窗口打开时，重新创建窗口是常见的操作。
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -132,19 +130,6 @@ app.on("window-all-closed", () => {
   if (pythonProcess !== null) pythonProcess.kill();
   if (process.platform !== "darwin") app.quit();
 });
-
-function handleFileOpen() {
-  const { canceled, filePaths } = dialog.showOpenDialog(mainWindow);
-  if (!canceled) {
-    fs.readFile(filePaths[0], "utf-8", (err, data) => {
-      mainWindow.webContents.send("act", "chart");
-      return {
-        value: data,
-        path: filePaths[0]
-      };
-    });
-  }
-}
 
 ipcMain.on("act", (event, act) => {
   console.log(act);
@@ -159,6 +144,10 @@ ipcMain.on("act", (event, act) => {
       if (!res.canceled) {
         fs.readFile(res.filePaths[0], "utf-8", (err, data) => {
           mainWindow.webContents.send("act", "chart");
+          mainWindow.setMaximizable(true);
+          mainWindow.setMinimizable(true);
+          mainWindow.setResizable(true);
+          mainWindow.setMinimumSize(900, 670);
           mainWindow.webContents.send("data", {
             value: data,
             path: res.filePaths[0]
