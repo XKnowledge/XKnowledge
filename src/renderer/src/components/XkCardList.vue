@@ -1,16 +1,16 @@
 <template>
   <a-space :size="[8, 16]" wrap>
     <div
-      v-for="history in props.historyList"
-      :id="history.id"
-      :key="history.id"
-      class="my-card"
-      @click="handleClick(history.id)"
-      @dblclick="handleDoubleClick(history.id, history.name)"
-      @contextmenu.prevent="handleRightClick(history.id, $event)"
+      v-for="file in props.fileList"
+      :id="file.id"
+      :key="file.id"
+      class="xk-card"
+      @click="handleClick(file.id)"
+      @dblclick="handleDoubleClick(file.id, file.name)"
+      @contextmenu.prevent="handleRightClick(file.id, $event)"
     >
-      <img :src="history.src" />
-      <a-button type="link">{{ history.name }}</a-button>
+      <img :src="file.src" />
+      <a-button type="link">{{ file.name }}</a-button>
     </div>
   </a-space>
 </template>
@@ -20,7 +20,7 @@ import { ref } from "vue";
 import { defineProps } from "vue";
 
 const props = defineProps({
-  historyList: {
+  fileList: {
     type: Array,
     required: true,
     default: () => []
@@ -35,14 +35,15 @@ let timer = null;
 const selected = ref("");
 
 const handleClick = (id) => {
+  console.log(id);
   //清除未执行的定时器
   clearTimeout(timer);
   timer = setTimeout(function() {
     if (id === selected.value) return;
     var card = document.getElementById(id);
     // 添加选中样式
-    // card.classList.remove('my-card')
-    card.classList.add("my-card-selected");
+    // card.classList.remove('xk-card')
+    card.classList.add("xk-card-selected");
 
     unHandleClick();
 
@@ -55,8 +56,8 @@ const unHandleClick = () => {
     return;
   }
   var card = document.getElementById(selected.value);
-  card.classList.remove("my-card-selected");
-  // card.classList.add('my-card')
+  card.classList.remove("xk-card-selected");
+  // card.classList.add('xk-card')
   selected.value = "";
 };
 
@@ -113,7 +114,7 @@ const handleRightClick = async (id, event) => {
 
 <style scoped>
 
-.my-card {
+.xk-card {
   position: relative;
   width: 200px;
   height: 150px;
@@ -123,7 +124,7 @@ const handleRightClick = async (id, event) => {
   align-items: center;
 }
 
-.my-card img {
+.xk-card img {
   display: block;
   width: 200px;
   height: 120px;
@@ -131,17 +132,17 @@ const handleRightClick = async (id, event) => {
   margin-bottom: 10px;
 }
 
-.my-card button {
+.xk-card button {
   color: #535353;
   font-size: 13px;
   padding: 0 2px 0 2px;
 }
 
-.my-card-selected img {
+.xk-card-selected img {
   box-shadow: 0 0 0 2px #2e64d6; /* 设置图片周围的边框效果 */
 }
 
-.my-card-selected button {
+.xk-card-selected button {
   background-color: #2e64d6;
   color: #ffffff;
   padding: 0 2px 0 2px;

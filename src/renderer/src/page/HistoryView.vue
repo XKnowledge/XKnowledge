@@ -2,7 +2,7 @@
   <div class="inner-div">
     <div class="content">
       <a-typography-title :level="1">最近</a-typography-title>
-      <my-card-list :history-list="myHistory" />
+      <XkCardList :fileList="templates" />
       <!--      <button type="button" id="btn" @click="ipcHandle">Open a File</button>-->
       <!--      File path: <strong id="filePath">{{ filePath }}</strong>-->
     </div>
@@ -11,22 +11,22 @@
 
 <script setup>
 import { ref } from "vue";
-import MyCardList from "../components/MyCardList.vue";
+import XkCardList from "../components/XkCardList.vue";
 
-const myHistory = ref([
+const templates = ref([
   {
-    id: "test1",
-    name: "思维导图1",
+    id: "template1",
+    name: "知识图谱1",
     src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
   },
   {
-    id: "test2",
-    name: "思维导图2",
+    id: "template2",
+    name: "知识图谱2",
     src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
   },
   {
-    id: "test3",
-    name: "思维导图3",
+    id: "template3",
+    name: "知识图谱3",
     src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
   }
 ]);
