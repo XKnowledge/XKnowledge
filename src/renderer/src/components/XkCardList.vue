@@ -1,14 +1,7 @@
 <template>
   <a-space :size="[8, 16]" wrap>
-    <div
-      v-for="file in props.fileList"
-      :id="file.id"
-      :key="file.id"
-      class="xk-card"
-      @click="handleClick(file.id)"
-      @dblclick="handleDoubleClick(file.id, file.name)"
-      @contextmenu.prevent="handleRightClick(file.id, $event)"
-    >
+    <div v-for="file in props.fileList" :id="file.id" :key="file.id" class="xk-card" @click="handleClick(file.id)"
+      @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
       <img :src="file.src" />
       <a-button type="link">{{ file.name }}</a-button>
     </div>
@@ -16,7 +9,6 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
 import { defineProps } from "vue";
 
 const props = defineProps({
@@ -27,65 +19,31 @@ const props = defineProps({
   }
 });
 
-/**
- * 检测双击事件和单击事件使用
- */
-let timer = null;
-
-const selected = ref("");
+let selected = ""; // 用于记录前一个点击的id
 
 const handleClick = (id) => {
-  console.log(id);
-  //清除未执行的定时器
-  clearTimeout(timer);
-  timer = setTimeout(function() {
-    if (id === selected.value) return;
-    var card = document.getElementById(id);
-    // 添加选中样式
-    // card.classList.remove('xk-card')
-    card.classList.add("xk-card-selected");
-
-    unHandleClick();
-
-    selected.value = id;
-  }, 400);
-};
-
-const unHandleClick = () => {
-  if (selected.value === "") {
-    return;
+  if (id !== selected) {
+    // 前一个单击和当前单击不同，将前一个点击高亮去掉，将现在点击的id加上高亮
+    if (selected !== "") {
+      // 将前一个点击高亮去掉
+      document.getElementById(selected).classList.remove("xk-card-selected");
+    }
+    // 添加选中样式，将现在点击的id加上高亮
+    document.getElementById(id).classList.add("xk-card-selected");
+    selected = id;
   }
-  var card = document.getElementById(selected.value);
-  card.classList.remove("xk-card-selected");
-  // card.classList.add('xk-card')
-  selected.value = "";
 };
 
 /**
  * 双击事件打开这个 文件 or 模板
- * @param id
  */
+import createTemplate1 from "../utils/template1.ts";
+
 const handleDoubleClick = async (id, fileName) => {
-  clearTimeout(timer); //清除未执行的定时器
-  // handleClick(id)
-  // console.log('fileName', fileName + '.xk')
-  // const file_content = await window.electronAPI.openFileByName(fileName + '.xk')
-  // console.log(file_content)
-
-  // const formData = new FormData();
-  // formData.append("operationType", "openFile");
-  // formData.append("fileName", JSON.stringify(fileName));
-
-  // myAxios.post("http://127.0.0.1:5000/", {
-  //   operationType: "openFile",
-  //   fileName: fileName
-  // }).then(response => {
-  //   console.log(response);
-  //   if (response === "ok") {
-  //     console.log("跳转打开");
-  //     window.electronAPI.ipcSend();
-  //   }
-  // });
+  if (id === "template1") {
+    window.electronAPI.sendAct("save_as");
+    window.electronAPI.sendData(createTemplate1());
+  }
 };
 
 /**
@@ -113,7 +71,6 @@ const handleRightClick = async (id, event) => {
 </script>
 
 <style scoped>
-
 .xk-card {
   position: relative;
   width: 200px;
@@ -139,7 +96,8 @@ const handleRightClick = async (id, event) => {
 }
 
 .xk-card-selected img {
-  box-shadow: 0 0 0 2px #2e64d6; /* 设置图片周围的边框效果 */
+  box-shadow: 0 0 0 2px #2e64d6;
+  /* 设置图片周围的边框效果 */
 }
 
 .xk-card-selected button {

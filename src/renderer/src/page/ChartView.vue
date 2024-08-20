@@ -119,7 +119,6 @@
 <script setup>
 import { defineComponent, nextTick, onMounted, ref } from "vue";
 import * as echarts from "echarts";
-// import createOption from "../utils/myOption.ts";
 
 const chartData = ref();
 
@@ -675,6 +674,12 @@ const updateLegend = () => {
       }
     }
   ];
+  // 提示框的配置
+  chartData.value.tooltip = {
+    formatter: function (x) {
+      return x.data.des;
+    }
+  };
   // 更新选择下拉框类目
   categoryItems.value = categories;
 };
