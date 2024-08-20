@@ -39,7 +39,7 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
+  mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
 
   // 设置窗口打开行为的处理程序。
   // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
@@ -150,43 +150,50 @@ ipcMain.on("act", (event, act) => {
   }
 });
 
+function saveFile(file_path, data) {
+  fs.writeFile(file_path, data, (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+}
+
 ipcMain.on("data", (event, arg) => {
   // console.log(arg);
   if (current_act === "save_file") {
-    fs.writeFile(arg.path, JSON.stringify(arg.file), (err) => {
-      if (err) {
+    const data = JSON.stringify(arg.file);
+    if (arg.path === "") {
+      dialog.showSaveDialog(mainWindow, {
+        title: "将文件保存到...",
+        properties: ["createDirectory"],
+        filters: [
+          { name: "XKnowledge", extensions: ["xk"] }
+        ]
+      }).then((res) => {
+        console.log(res);
+        if (!res.canceled) {
+          saveFile(res.filePath, data);
+          mainWindow.webContents.send("data", {
+            value: data,
+            path: res.filePath
+          });
+        }
+      }).catch((err) => {
         console.log(err);
-      }
-    });
+      });
+    } else {
+      console.log("save_file");
+      saveFile(arg.path, data);
+    }
   } else if (current_act === "save_as") {
-    const data_json = JSON.stringify(arg);
-    dialog.showSaveDialog(mainWindow, {
-      title: "将文件保存到...",
-      properties: ["createDirectory"],
-      filters: [
-        { name: "XKnowledge", extensions: ["xk"] }
-      ]
-    }).then((res) => {
-      console.log(res);
-      if (!res.canceled) {
-        fs.writeFile(res.filePath, data_json, (err) => {
-          if (err) {
-            console.log(err);
-          } else {
-            mainWindow.webContents.send("act", "chart");
-            mainWindow.setMaximizable(true);
-            mainWindow.setMinimizable(true);
-            mainWindow.setResizable(true);
-            mainWindow.setMinimumSize(900, 670);
-            mainWindow.webContents.send("data", {
-              value: data_json,
-              path: res.filePath
-            });
-          }
-        });
-      }
-    }).catch((err) => {
-      console.log(err);
+    mainWindow.webContents.send("act", "chart");
+    mainWindow.setMaximizable(true);
+    mainWindow.setMinimizable(true);
+    mainWindow.setResizable(true);
+    mainWindow.setMinimumSize(900, 670);
+    mainWindow.webContents.send("data", {
+      value: JSON.stringify(arg),
+      path: ""
     });
   }
 });
