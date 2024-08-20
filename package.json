@@ -17,16 +17,15 @@
   "build": {
     "appId": "com.xknowledge.xknowledge",
     "productName": "XKnowledge",
-    "icon": "static/XKnowledge_icon.ico",
+    "icon": "./resources/XKnowledge.png",
     "compression": "store",
     "directories": {
       "output": "release"
     },
-    "asar": false,
+    "asar": true,
     "files": [
-      "data/*",
       "out/**/*",
-      "xk_main/**/*",
+      "resources/**/*",
       "!**/node_modules/**/*"
     ]
   },

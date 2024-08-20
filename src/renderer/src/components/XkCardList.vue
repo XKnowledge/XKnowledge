@@ -1,7 +1,8 @@
 <template>
   <a-space :size="[8, 16]" wrap>
-    <div v-for="file in props.fileList" :id="file.id" :key="file.id" class="xk-card" @click="handleClick(file.id)"
-      @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
+    <div v-for="file in props.fileList" :id="file.id" :key="file.id"
+         :class="[file.id!==selected?'xk-card':'xk-card xk-card-selected']" @click="handleClick(file.id)"
+         @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
       <img :src="file.src" />
       <a-button type="link">{{ file.name }}</a-button>
     </div>
@@ -9,7 +10,8 @@
 </template>
 
 <script setup>
-import { defineProps } from "vue";
+import { defineProps, ref } from "vue";
+import createTemplate1 from "../utils/template1.ts";
 
 const props = defineProps({
   fileList: {
@@ -19,26 +21,17 @@ const props = defineProps({
   }
 });
 
-let selected = ""; // 用于记录前一个点击的id
+let selected = ref(""); // 用于记录前一个点击的id
 
 const handleClick = (id) => {
-  if (id !== selected) {
-    // 前一个单击和当前单击不同，将前一个点击高亮去掉，将现在点击的id加上高亮
-    if (selected !== "") {
-      // 将前一个点击高亮去掉
-      document.getElementById(selected).classList.remove("xk-card-selected");
-    }
-    // 添加选中样式，将现在点击的id加上高亮
-    document.getElementById(id).classList.add("xk-card-selected");
-    selected = id;
+  if (id !== selected.value) {
+    selected.value = id;
   }
 };
 
 /**
  * 双击事件打开这个 文件 or 模板
  */
-import createTemplate1 from "../utils/template1.ts";
-
 const handleDoubleClick = async (id, fileName) => {
   if (id === "template1") {
     window.electronAPI.sendAct("save_as");

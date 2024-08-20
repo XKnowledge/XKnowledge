@@ -676,7 +676,7 @@ const updateLegend = () => {
   ];
   // 提示框的配置
   chartData.value.tooltip = {
-    formatter: function (x) {
+    formatter: function(x) {
       return x.data.des;
     }
   };

@@ -29,7 +29,7 @@ import { UnorderedListOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
 
 import XkCardList from "../components/XkCardList.vue";
-import imgUrl from "../assets/template.png"
+import imgUrl from "../assets/template.png";
 
 const MENU = [
   { key: "1", name: "全部" }
@@ -61,12 +61,12 @@ const templates = ref([
   // {
   //   id: "template2",
   //   name: "思维导图2",
-  //   src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+  //   src: imgUrl
   // },
   // {
   //   id: "template3",
   //   name: "思维导图3",
-  //   src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+  //   src: imgUrl
   // }
 ]);
 
