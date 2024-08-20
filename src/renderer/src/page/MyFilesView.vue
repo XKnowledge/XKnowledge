@@ -2,7 +2,7 @@
   <div class="inner-div">
     <div class="content">
       <a-typography-title :level="1">我的文件</a-typography-title>
-      <my-card-list :history-list="fileList" />
+      <XkCardList :fileList="fileList" />
       <!--      <button type="button" id="btn" @click="ipcHandle">Open a File</button>-->
       <!--      File path: <strong id="filePath">{{ filePath }}</strong>-->
     </div>
@@ -11,14 +11,14 @@
 
 <script setup>
 import { onMounted, ref } from "vue";
-import MyCardList from "../components/MyCardList.vue";
-import myAxios from "../utils/myAxios";
+import XkCardList from "../components/XkCardList.vue";
 
 const fileList = ref([]);
 
 onMounted(async () => {
   const fileListValue = [];
-  let res = await myAxios.get("http://127.0.0.1:5000");
+  // let res = await myAxios.get("http://127.0.0.1:5000");
+  res = ["test"];
   let counter = 0;
   console.log(res);
   res.forEach((file) => {

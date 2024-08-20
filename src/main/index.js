@@ -102,18 +102,18 @@ app.whenReady().then(() => {
         mainWindow.focus();
       }
     });
-    let script;
-    if (process.platform === "win32") {
-      script = path.join(__dirname, "../../xk_main/xk_main.exe");
-    } else if (process.platform === "darwin") {
-      script = path.join(__dirname, "../../xk_main/xk_main");
-    } else {
-      script = path.join(__dirname, "../../xk_main/xk_main");
-    }
-    pythonProcess = spawn(script);
-    pythonProcess.stdout.on("data", (data) => {
-      console.log(`stdout: ${data}`);
-    });
+    // let script;
+    // if (process.platform === "win32") {
+    //   script = path.join(__dirname, "../../xk_main/xk_main.exe");
+    // } else if (process.platform === "darwin") {
+    //   script = path.join(__dirname, "../../xk_main/xk_main");
+    // } else {
+    //   script = path.join(__dirname, "../../xk_main/xk_main");
+    // }
+    // pythonProcess = spawn(script);
+    // pythonProcess.stdout.on("data", (data) => {
+    //   console.log(`stdout: ${data}`);
+    // });
     Menu.setApplicationMenu(null);
     createWindow();
   }
@@ -165,6 +165,39 @@ ipcMain.on("act", (event, act) => {
           console.log(err);
         }
         console.log("data saved");
+      });
+    });
+  } else if (act === "save_as") {
+    ipcMain.on("data", (event, data) => {
+      const data_json = JSON.stringify(data);
+      dialog.showSaveDialog(mainWindow, {
+        title: "将文件保存到...",
+        properties: ["createDirectory"],
+        filters: [
+          { name: "XKnowledge", extensions: ["xk"] }
+        ]
+      }).then((res) => {
+        console.log(res);
+        if (!res.canceled) {
+          fs.writeFile(res.filePath, data_json, (err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              mainWindow.webContents.send("act", "chart");
+              mainWindow.setMaximizable(true);
+              mainWindow.setMinimizable(true);
+              mainWindow.setResizable(true);
+              mainWindow.setMinimumSize(900, 670);
+              mainWindow.webContents.send("data", {
+                value: data_json,
+                path: res.filePath
+              });
+            }
+            console.log("data saved");
+          });
+        }
+      }).catch((err) => {
+        console.log(err);
       });
     });
   }
