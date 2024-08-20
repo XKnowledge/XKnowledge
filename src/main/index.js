@@ -32,30 +32,14 @@ function createWindow() {
       color: "#ffffff",
       symbolColor: "#74b1be"
     },
-    title: "XKnowledge",
-    icon: "../../resources/Knowledge.png"
+    title: "XKnowledge"
   });
-
-  const menu = Menu.buildFromTemplate([
-    {
-      label: app.name,
-      submenu: [
-        {
-          click: () => mainWindow.webContents.send("open-view", "chart"),
-          label: "跳转"
-        }
-      ]
-    }
-
-  ]);
-
-  Menu.setApplicationMenu(menu);
 
   mainWindow.on("ready-to-show", () => {
     mainWindow.show();
   });
 
-  mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
+  // mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
 
   // 设置窗口打开行为的处理程序。
   // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
@@ -118,7 +102,9 @@ app.whenReady().then(() => {
 
   app.on("activate", () => {
     // 在 macOS 上，当单击应用程序的 Dock 图标且没有其他窗口打开时，重新创建窗口是常见的操作。
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
@@ -129,74 +115,78 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
+let current_act;
+
+function openFile() {
+  dialog.showOpenDialog(mainWindow, {
+    title: "打开",
+    properties: ["openFile"],
+    filters: [
+      { name: "XKnowledge", extensions: ["xk"] }
+    ]
+  }).then((res) => {
+    if (!res.canceled) {
+      fs.readFile(res.filePaths[0], "utf-8", (err, data) => {
+        mainWindow.webContents.send("act", "chart");
+        mainWindow.setMaximizable(true);
+        mainWindow.setMinimizable(true);
+        mainWindow.setResizable(true);
+        mainWindow.setMinimumSize(900, 670);
+        mainWindow.webContents.send("data", {
+          value: data,
+          path: res.filePaths[0]
+        });
+      });
+    }
+  }).catch((err) => {
+    console.log(err);
+  });
+};
+
 ipcMain.on("act", (event, act) => {
-  console.log(act);
+  current_act = act;
   if (act === "open_file") {
-    dialog.showOpenDialog(mainWindow, {
-      title: "打开",
-      properties: ["openFile"],
+    openFile();
+  }
+});
+
+ipcMain.on("data", (event, arg) => {
+  // console.log(arg);
+  if (current_act === "save_file") {
+    fs.writeFile(arg.path, JSON.stringify(arg.file), (err) => {
+      if (err) {
+        console.log(err);
+      }
+    });
+  } else if (current_act === "save_as") {
+    const data_json = JSON.stringify(arg);
+    dialog.showSaveDialog(mainWindow, {
+      title: "将文件保存到...",
+      properties: ["createDirectory"],
       filters: [
         { name: "XKnowledge", extensions: ["xk"] }
       ]
     }).then((res) => {
+      console.log(res);
       if (!res.canceled) {
-        fs.readFile(res.filePaths[0], "utf-8", (err, data) => {
-          mainWindow.webContents.send("act", "chart");
-          mainWindow.setMaximizable(true);
-          mainWindow.setMinimizable(true);
-          mainWindow.setResizable(true);
-          mainWindow.setMinimumSize(900, 670);
-          mainWindow.webContents.send("data", {
-            value: data,
-            path: res.filePaths[0]
-          });
+        fs.writeFile(res.filePath, data_json, (err) => {
+          if (err) {
+            console.log(err);
+          } else {
+            mainWindow.webContents.send("act", "chart");
+            mainWindow.setMaximizable(true);
+            mainWindow.setMinimizable(true);
+            mainWindow.setResizable(true);
+            mainWindow.setMinimumSize(900, 670);
+            mainWindow.webContents.send("data", {
+              value: data_json,
+              path: res.filePath
+            });
+          }
         });
       }
     }).catch((err) => {
       console.log(err);
-    });
-  } else if (act === "save_file") {
-    ipcMain.on("data", (event, arg) => {
-      console.log(arg);
-      fs.writeFile(arg.path, JSON.stringify(arg.file), (err) => {
-        if (err) {
-          console.log(err);
-        }
-        console.log("data saved");
-      });
-    });
-  } else if (act === "save_as") {
-    ipcMain.on("data", (event, data) => {
-      const data_json = JSON.stringify(data);
-      dialog.showSaveDialog(mainWindow, {
-        title: "将文件保存到...",
-        properties: ["createDirectory"],
-        filters: [
-          { name: "XKnowledge", extensions: ["xk"] }
-        ]
-      }).then((res) => {
-        console.log(res);
-        if (!res.canceled) {
-          fs.writeFile(res.filePath, data_json, (err) => {
-            if (err) {
-              console.log(err);
-            } else {
-              mainWindow.webContents.send("act", "chart");
-              mainWindow.setMaximizable(true);
-              mainWindow.setMinimizable(true);
-              mainWindow.setResizable(true);
-              mainWindow.setMinimumSize(900, 670);
-              mainWindow.webContents.send("data", {
-                value: data_json,
-                path: res.filePath
-              });
-            }
-            console.log("data saved");
-          });
-        }
-      }).catch((err) => {
-        console.log(err);
-      });
     });
   }
 });
