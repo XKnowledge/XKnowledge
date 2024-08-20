@@ -29,7 +29,7 @@ import { UnorderedListOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
 
 import XkCardList from "../components/XkCardList.vue";
-import imgUrl from "../assets/template.png"
+import imgUrl from "../assets/template.png";
 
 const MENU = [
   { key: "1", name: "全部" }

@@ -1,7 +1,5 @@
-import { app, shell, BrowserWindow, ipcMain, Menu, MenuItem, dialog } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { join } from "path";
-import path from "node:path";
-import { spawn } from "child_process";
 
 const fs = require("fs");
 

@@ -1,7 +1,7 @@
 <template>
   <a-space :size="[8, 16]" wrap>
     <div v-for="file in props.fileList" :id="file.id" :key="file.id" class="xk-card" @click="handleClick(file.id)"
-      @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
+         @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
       <img :src="file.src" />
       <a-button type="link">{{ file.name }}</a-button>
     </div>
@@ -10,6 +10,7 @@
 
 <script setup>
 import { defineProps } from "vue";
+import createTemplate1 from "../utils/template1.ts";
 
 const props = defineProps({
   fileList: {
@@ -37,8 +38,6 @@ const handleClick = (id) => {
 /**
  * 双击事件打开这个 文件 or 模板
  */
-import createTemplate1 from "../utils/template1.ts";
-
 const handleDoubleClick = async (id, fileName) => {
   if (id === "template1") {
     window.electronAPI.sendAct("save_as");
