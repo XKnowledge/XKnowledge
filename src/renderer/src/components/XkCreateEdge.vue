@@ -18,32 +18,28 @@ import { jsonReactive, resetEdgeRef } from "../utils/XkUtils";
 const newEdge = defineModel("newEdge");
 const highlightNodeList = defineModel("highlightNodeList");
 
-const errorMessage = defineModel("errorMessage");
-const chartData = defineModel("chartData");
-const updateChart = defineModel("updateChart");
-const historySequenceNumber = defineModel("historySequenceNumber");
-const history = defineModel("history");
+const xkContext = defineModel("xkContext");
 
 const createEdgeSubmit = () => {
   /**
    * 响应创建新连接的提交
    */
   if (highlightNodeList.value.length === 2) {
-    const data = chartData.value.series[0].data;
+    const data = xkContext.value.chartData.series[0].data;
     newEdge.value.source = data[highlightNodeList.value[0]].name;
     newEdge.value.target = data[highlightNodeList.value[1]].name;
     const newEdgeJson = jsonReactive(newEdge.value);
-    history.value[historySequenceNumber.value + 1] = {
+    xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
       "act": "createEdge",
       "data": newEdgeJson
     };
-    historySequenceNumber.value++;
-    chartData.value.series[0].links.push(newEdgeJson);
-    updateChart.value = true;
-    errorMessage.value = "";
+    xkContext.value.historySequenceNumber++;
+    xkContext.value.chartData.series[0].links.push(newEdgeJson);
+    xkContext.value.updateChart = true;
+    xkContext.value.errorMessage = "";
     resetEdgeRef(newEdge);
   } else {
-    errorMessage.value = "请选中2个节点";
+    xkContext.value.errorMessage = "请选中2个节点";
   }
 };
 </script>

@@ -3,7 +3,7 @@
     <div v-for="file in props.fileList" :id="file.id" :key="file.id"
          :class="[file.id!==selected?'xk-card':'xk-card xk-card-selected']" @click="handleClick(file.id)"
          @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
-      <img :src="file.src" />
+      <img :src="file.src" alt="" />
       <a-button type="link">{{ file.name }}</a-button>
     </div>
   </a-space>
