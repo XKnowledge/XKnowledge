@@ -11,7 +11,7 @@
       </a-layout-header>
       <a-layout>
         <a-layout-content :style="contentStyle">
-          <div id="chart" :style="echartsStyle"></div>
+          <div :style="echartsStyle" ref="chartDom"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
 
@@ -196,7 +196,7 @@ const addCategory = e => {
 };
 
 // 基于准备好的dom，初始化echarts实例
-let chartDom = null;
+let chartDom = ref(null);
 let chartInstance = null;
 let highlightNodeList = []; // 高亮节点记录
 
@@ -453,11 +453,10 @@ const getChart = (option) => {
   console.log("option");
 
   // 基于准备好的dom，初始化echarts实例
-  chartDom = document.getElementById("chart");
   console.log(option);
-  if (chartDom) {
+  if (chartDom.value) {
     // 初始化 ECharts 图表
-    chartInstance = echarts.init(chartDom);
+    chartInstance = echarts.init(chartDom.value);
     if (option) {
       // 使用刚指定的配置项和数据显示图表。
       chartInstance.setOption(option);
