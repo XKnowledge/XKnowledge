@@ -10,3 +10,12 @@ export function resetNodeRef(node) {
     "category": ""
   };
 }
+
+export function resetEdgeRef(edge) {
+  edge.value = {
+    "source": "",
+    "target": "",
+    "name": "",
+    "des": ""
+  };
+}

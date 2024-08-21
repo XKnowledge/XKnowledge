@@ -19,95 +19,49 @@
             <a-alert :message="errorMessage" type="error" />
           </a-space>
 
-          <a-form v-show="createNodeVisible">
-            <a-form-item label="名称">
-              <a-textarea v-model:value="newNode.name" />
-            </a-form-item>
-            <a-form-item label="描述">
-              <a-textarea v-model:value="newNode.des" />
-            </a-form-item>
-            <a-form-item label="所属类目">
-              <a-select v-model:value="newNode.category" placeholder="请选择类目" style="width: 200px"
-                        :options="categoryItems.map(item => ({ value: item }))">
-                <template #dropdownRender="{ menuNode: menu }">
-                  <v-nodes :vnodes="menu" />
-                  <a-divider style="margin: 4px 0" />
-                  <a-space style="padding: 4px 8px">
-                    <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
-                    <a-button type="text" @click="addCategory">
-                      <template #icon>
-                        <plus-outlined />
-                      </template>
-                      新增类目
-                    </a-button>
-                  </a-space>
-                </template>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="节点大小">
-              <a-input-number v-model:value="newNode.symbolSize" :min="1" :max="100" />
-            </a-form-item>
-            <a-form-item>
-              <a-button @click="createNodeSubmit">创建节点</a-button>
-            </a-form-item>
-          </a-form>
+          <XkCreateNode v-show="createNodeVisible"
+                        v-model:newNode="newNode"
+                        v-model:categoryItems="categoryItems"
+                        v-model:categoryName="categoryName"
+                        v-model:currentNode="currentNode"
 
-          <a-form v-show="currentNodeVisible">
-            <a-form-item label="名称">
-              <a-textarea v-model:value="currentNode.name" />
-            </a-form-item>
-            <a-form-item label="描述">
-              <a-textarea v-model:value="currentNode.des" />
-            </a-form-item>
-            <a-form-item label="所属类目">
-              <a-select v-model:value="currentNode.category" placeholder="请选择类目" style="width: 200px"
-                        :options="categoryItems.map(item => ({ value: item }))">
-                <template #dropdownRender="{ menuNode: menu }">
-                  <v-nodes :vnodes="menu" />
-                  <a-divider style="margin: 4px 0" />
-                  <a-space style="padding: 4px 8px">
-                    <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
-                    <a-button type="text" @click="addCategory">
-                      <template #icon>
-                        <plus-outlined />
-                      </template>
-                      新增类目
-                    </a-button>
-                  </a-space>
-                </template>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="节点大小">
-              <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
-            </a-form-item>
-            <a-form-item>
-              <a-button @click="currentNodeSubmit">修改节点</a-button>
-            </a-form-item>
-          </a-form>
+                        v-model:errorMessage="errorMessage"
+                        v-model:chartData="chartData"
+                        v-model:updateChart="updateChart"
+                        v-model:historySequenceNumber="historySequenceNumber"
+                        v-model:history="history"></XkCreateNode>
 
-          <a-form v-show="createEdgeVisible">
-            <a-form-item label="名称">
-              <a-textarea v-model:value="newEdge.name" />
-            </a-form-item>
-            <a-form-item label="描述">
-              <a-textarea v-model:value="newEdge.des" />
-            </a-form-item>
-            <a-form-item>
-              <a-button @click="createEdgeSubmit">创建连接</a-button>
-            </a-form-item>
-          </a-form>
+          <XkCurrentNode v-show="currentNodeVisible"
+                         v-model:currentNode="currentNode"
+                         v-model:categoryItems="categoryItems"
+                         v-model:categoryName="categoryName"
+                         v-model:currentNodeDataIndex="currentNodeDataIndex"
 
-          <a-form v-show="currentEdgeVisible">
-            <a-form-item label="名称">
-              <a-textarea v-model:value="currentEdge.name" />
-            </a-form-item>
-            <a-form-item label="描述">
-              <a-textarea v-model:value="currentEdge.des" />
-            </a-form-item>
-            <a-form-item>
-              <a-button @click="currentEdgeSubmit">修改连接</a-button>
-            </a-form-item>
-          </a-form>
+                         v-model:errorMessage="errorMessage"
+                         v-model:chartData="chartData"
+                         v-model:updateChart="updateChart"
+                         v-model:historySequenceNumber="historySequenceNumber"
+                         v-model:history="history"></XkCurrentNode>
+
+          <XkCreateEdge v-show="createEdgeVisible"
+                        v-model:newEdge="newEdge"
+                        v-model:highlightNodeList="highlightNodeList"
+
+                        v-model:errorMessage="errorMessage"
+                        v-model:chartData="chartData"
+                        v-model:updateChart="updateChart"
+                        v-model:historySequenceNumber="historySequenceNumber"
+                        v-model:history="history"></XkCreateEdge>
+
+          <XkCurrentEdge v-show="currentEdgeVisible"
+                         v-model:currentEdge="currentEdge"
+                         v-model:currentEdgeDataIndex="currentEdgeDataIndex"
+
+                         v-model:errorMessage="errorMessage"
+                         v-model:chartData="chartData"
+                         v-model:updateChart="updateChart"
+                         v-model:historySequenceNumber="historySequenceNumber"
+                         v-model:history="history"></XkCurrentEdge>
 
         </a-layout-sider>
       </a-layout>
@@ -117,9 +71,15 @@
 </template>
 
 <script setup>
-import { defineComponent, nextTick, onMounted, ref, watch } from "vue";
+import { nextTick, onMounted, ref, watch } from "vue";
 import * as echarts from "echarts";
-import { jsonReactive, resetNodeRef } from "../utils/XkUtils";
+import { jsonReactive, resetEdgeRef, resetNodeRef } from "../utils/XkUtils";
+
+import XkCreateNode from "../components/XkCreateNode.vue";
+import XkCurrentNode from "../components/XkCurrentNode.vue";
+import XkCreateEdge from "../components/XkCreateEdge.vue";
+import XkCurrentEdge from "../components/XkCurrentEdge.vue";
+
 
 const chartData = ref();
 const updateChart = ref(false);
@@ -145,7 +105,7 @@ const currentNode = ref({
   "symbolSize": 50,
   "category": ""
 });
-let currentNodeDataIndex = -1; // todo 这块有一个优化，可以和highlightNodeList合并，相当于highlightNodeList的最后一个值，不确定能不能替换，替换之后如果highlightNodeList中没有节点，会有问题？
+let currentNodeDataIndex = ref(-1); // todo 这块有一个优化，可以和highlightNodeList合并，相当于highlightNodeList的最后一个值，不确定能不能替换，替换之后如果highlightNodeList中没有节点，会有问题？
 
 const createEdgeVisible = ref(false);
 const newEdge = ref({
@@ -162,77 +122,16 @@ const currentEdge = ref({
   "name": "",
   "des": ""
 });
-let currentEdgeDataIndex = -1;
-
-const VNodes = defineComponent({
-  props: {
-    vnodes: {
-      type: Object,
-      required: true
-    }
-  },
-  render() {
-    return this.vnodes;
-  }
-});
+let currentEdgeDataIndex = ref(-1);
 
 // 新增时的类目
 const categoryItems = ref([]);
-const inputRef = ref();
 const categoryName = ref();
-const addCategory = e => {
-  e.preventDefault();
-  console.log(categoryName.value);
-  if (categoryName.value) {
-    currentNode.value.category = categoryName.value;
-    const pos = categoryItems.value.indexOf(categoryName.value);
-    if (pos === -1) {
-      categoryItems.value.push(categoryName.value);
-    }
-  }
-  categoryName.value = "";
-  setTimeout(() => {
-    inputRef.value?.focus();
-  }, 0);
-};
-
-const createNodeSubmit = () => {
-  if (
-    newNode.value.category === undefined ||
-    newNode.value.category === null ||
-    newNode.value.category === "" ||
-    newNode.value.category.length === 0
-  ) {
-    errorMessage.value = "该节点所属类目错误";
-    // 如果不 return 会导致每次都会创建一个空类目
-    return;
-  }
-  /**
-   * 响应创建新节点的提交
-   */
-  const names = chartData.value.series[0].data.map((x) => {
-    return x.name;
-  });
-  if (names.indexOf(newNode.value.name) === -1) {
-    const newNodeJson = jsonReactive(newNode.value);
-    chartData.value.series[0].data.push(newNodeJson);
-    historySequenceNumber.value++;
-    history.value[historySequenceNumber.value] = {
-      "act": "createNode",
-      "data": newNodeJson
-    };
-    updateChart.value = true;
-    errorMessage.value = "";
-    resetNodeRef(newNode);
-  } else {
-    errorMessage.value = "不能创建同名节点";
-  }
-};
 
 // 基于准备好的dom，初始化echarts实例
 let chartDom = ref(null);
 let chartInstance = null;
-let highlightNodeList = []; // 高亮节点记录
+let highlightNodeList = ref([]); // 高亮节点记录
 
 let highlightEdge = null;
 
@@ -358,9 +257,9 @@ const resetRefData = () => {
    */
   resetNodeRef(newNode);
   resetEdgeRef(newEdge);
-  currentNodeDataIndex = -1;
+  currentNodeDataIndex.value = -1;
   resetNodeRef(currentNode);
-  currentEdgeDataIndex = -1;
+  currentEdgeDataIndex.value = -1;
   resetEdgeRef(currentEdge);
 };
 
@@ -368,6 +267,7 @@ const undo = () => {
   /**
    * 实现快捷键Ctrl+Z
    */
+  console.log("history", history.value);
   if (-1 < historySequenceNumber.value) {
     const current_history = history.value[historySequenceNumber.value];
     historySequenceNumber.value--;
@@ -533,38 +433,38 @@ const clickChart = event => {
   resetSider();
   if (event.dataType === "node") {
     currentNodeVisible.value = true;
-    currentNode.value = event.data;
+    currentNode.value = jsonReactive(event.data); // 一定要用深拷贝
     newNode.value.symbolSize = currentNode.value.symbolSize;
-    currentNodeDataIndex = event.dataIndex;
-    console.log(currentNode);
+    currentNodeDataIndex.value = event.dataIndex;
+    console.log("currentNode", currentNode.value);
 
-    const pos = highlightNodeList.indexOf(event.dataIndex);
-    if (pos !== -1 && highlightNodeList.length !== 0) {
+    const pos = highlightNodeList.value.indexOf(event.dataIndex);
+    if (pos !== -1 && highlightNodeList.value.length !== 0) {
       // 当重复点击节点的时候，将节点高亮去掉，并且更新highlightNodeList
-      if (highlightNodeList.length === 1) {
+      if (highlightNodeList.value.length === 1) {
         operateChart(event.dataIndex, "node", "downplay");
-        highlightNodeList = [];
+        highlightNodeList.value = [];
       } else {
         operateChart(event.dataIndex, "node", "downplay");
-        highlightNodeList = [highlightNodeList[(pos + 1) % 2]];// 取pos对应的另一个节点
+        highlightNodeList.value = [highlightNodeList.value[(pos + 1) % 2]];// 取pos对应的另一个节点
       }
     } else {
-      if (highlightNodeList.length < 2) {
+      if (highlightNodeList.value.length < 2) {
         // 点击第一个节点时，高亮点击的那个节点，点击第二个节点时，高亮新点击的节点
-        highlightNodeList[highlightNodeList.length] = event.dataIndex;
+        highlightNodeList.value[highlightNodeList.value.length] = event.dataIndex;
         operateChart(event.dataIndex, "node", "highlight");
       } else {
         // 点击第三个节点时，将第一个节点高亮取消，并把第二个节点放到第一个位置上，为了后面的有向链接做准备
-        operateChart(highlightNodeList[0], "node", "downplay");
+        operateChart(highlightNodeList.value[0], "node", "downplay");
         operateChart(event.dataIndex, "node", "highlight");
-        highlightNodeList = [highlightNodeList[1], event.dataIndex];
+        highlightNodeList.value = [highlightNodeList.value[1], event.dataIndex];
       }
     }
-    console.log(highlightNodeList);
+    console.log(highlightNodeList.value);
   } else if (event.dataType === "edge") {
     currentEdgeVisible.value = true;
-    currentEdge.value = event.data;
-    currentEdgeDataIndex = event.dataIndex;
+    currentEdge.value = jsonReactive(event.data);
+    currentEdgeDataIndex.value = event.dataIndex;
 
     if (highlightEdge === null) {
       highlightEdge = event.dataIndex;
@@ -608,10 +508,10 @@ const toggleSider = () => {
   nextTick(resizeChart);
   if (!siderVisible.value) {
     // 收起编辑框，就可以重置图表
-    for (let i = 0; i < highlightNodeList.length; i++) {
-      operateChart(highlightNodeList[i], "node", "downplay");
+    for (let i = 0; i < highlightNodeList.value.length; i++) {
+      operateChart(highlightNodeList.value[i], "node", "downplay");
     }
-    operateChart(currentEdgeDataIndex, "edge", "downplay");
+    operateChart(currentEdgeDataIndex.value, "edge", "downplay");
 
     resetRefData();
     resetSider();
@@ -634,23 +534,23 @@ const deleteNode = () => {
    * 删除新节点
    */
   resetSider();
-  if (currentNodeDataIndex >= 0) {
+  if (currentNodeDataIndex.value >= 0) {
     const series = chartData.value.series[0];
 
     historySequenceNumber.value++;
     history.value[historySequenceNumber.value] = {
       "act": "deleteNode",
-      "data": jsonReactive(series.data[currentNodeDataIndex]),
+      "data": jsonReactive(series.data[currentNodeDataIndex.value]),
       "links": []
     };
 
-    const oldName = series.data[currentNodeDataIndex].name;
+    const oldName = series.data[currentNodeDataIndex.value].name;
 
     // 删除节点
     let data = [];
     let length = series.data.length;
     for (let i = 0; i < length; i++) {
-      if (i !== currentNodeDataIndex) {
+      if (i !== currentNodeDataIndex.value) {
         data.push(series.data[i]);
       }
     }
@@ -676,68 +576,6 @@ const deleteNode = () => {
   resetRefData();
 };
 
-const currentNodeSubmit = () => {
-  /**
-   * 实现节点的动态修改
-   */
-  let names = chartData.value.series[0].data.map((x) => {
-    return x.name;
-  });
-  const oldName = names[currentNodeDataIndex];
-  const oldNodeJson = jsonReactive(chartData.value.series[0].data[currentNodeDataIndex]);
-  const newName = currentNode.value.name;
-  const currentNodeJson = jsonReactive(currentNode.value);
-
-  if (oldName !== newName) {
-    // 修改节点的时候修改了节点名称
-    // names.slice(0, currentNodeDataIndex).push(...names.slice(currentNodeDataIndex + 1)); // 去掉旧节点名称
-    // 思考：为什么不需要去掉旧的节点名称？因为本身就不重名，所以不用去掉
-    // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
-    if (names.indexOf(newName) === -1) {
-      // 判断修改完的名称是否重名
-      chartData.value.series[0].data[currentNodeDataIndex] = currentNodeJson;
-
-      // 修改新节点所在的边
-      const links = chartData.value.series[0].links;
-      const length = links.length;
-      for (let i = 0; i < length; i++) {
-        if (links[i].source === oldName) {
-          chartData.value.series[0].links[i].source = newName;
-        }
-        if (links[i].target === oldName) {
-          chartData.value.series[0].links[i].target = newName;
-        }
-      }
-
-      updateChart.value = true;
-      errorMessage.value = "";
-    } else {
-      errorMessage.value = "不能创建同名节点";
-      return;
-    }
-  } else {
-    // 修改节点时没有修改节点名称
-    chartData.value.series[0].data[currentNodeDataIndex] = currentNodeJson;
-    updateChart.value = true;
-    errorMessage.value = "";
-  }
-  historySequenceNumber.value++;
-  history.value[historySequenceNumber.value] = {
-    "act": "changeNode",
-    "old": oldNodeJson,
-    "new": currentNodeJson
-  };
-};
-
-const resetEdgeRef = (edge) => {
-  edge.value = {
-    "source": "",
-    "target": "",
-    "name": "",
-    "des": ""
-  };
-};
-
 const createEdge = () => {
   /**
    * 创建新连接
@@ -749,64 +587,24 @@ const createEdge = () => {
   nextTick(resizeChart);
 };
 
-const createEdgeSubmit = () => {
-  /**
-   * 响应创建新连接的提交
-   */
-  if (highlightNodeList.length === 2) {
-    const data = chartData.value.series[0].data;
-    newEdge.value.source = data[highlightNodeList[0]].name;
-    newEdge.value.target = data[highlightNodeList[1]].name;
-    const newEdgeJson = jsonReactive(newEdge.value);
-    historySequenceNumber.value++;
-    history.value[historySequenceNumber.value] = {
-      "act": "createEdge",
-      "data": newEdgeJson
-    };
-    chartData.value.series[0].links.push(newEdgeJson);
-    updateChart.value = true;
-    errorMessage.value = "";
-    resetEdgeRef(newEdge);
-  } else {
-    errorMessage.value = "请选中2个节点";
-  }
-};
-
-const currentEdgeSubmit = () => {
-  /**
-   * 实现连接的动态修改
-   */
-  errorMessage.value = "";
-  const currentEdgeJson = jsonReactive(currentEdge.value);
-  historySequenceNumber.value++;
-  history.value[historySequenceNumber.value] = {
-    "act": "changeEdge",
-    "old": jsonReactive(chartData.value.series[0].links[currentEdgeDataIndex]),
-    "new": currentEdgeJson
-  };
-  chartData.value.series[0].links[currentEdgeDataIndex] = currentEdgeJson;
-  console.log(history.value);
-  updateChart.value = true;
-};
-
 const deleteEdge = () => {
   /**
    * 删除连接
    */
   resetSider();
-  if (currentEdgeDataIndex >= 0) {
+  if (currentEdgeDataIndex.value >= 0) {
     const series = chartData.value.series[0];
     historySequenceNumber.value++;
     history.value[historySequenceNumber.value] = {
       "act": "deleteEdge",
-      "data": jsonReactive(series.links[currentEdgeDataIndex])
+      "data": jsonReactive(series.links[currentEdgeDataIndex.value])
     };
 
     // 删除连接
     let links = [];
     let length = series.links.length;
     for (let i = 0; i < length; i++) {
-      if (i !== currentEdgeDataIndex) {
+      if (i !== currentEdgeDataIndex.value) {
         links.push(series.links[i]);
       }
     }
