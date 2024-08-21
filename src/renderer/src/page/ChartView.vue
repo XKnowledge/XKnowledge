@@ -15,7 +15,7 @@
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
 
-          <a-space v-show="errorMessageVisible" direction="vertical" style="width: 80%">
+          <a-space v-show="errorMessage !== ''" direction="vertical" style="width: 80%">
             <a-alert :message="errorMessage" type="error" />
           </a-space>
 
@@ -117,12 +117,13 @@
 </template>
 
 <script setup>
-import { defineComponent, nextTick, onMounted, ref } from "vue";
+import { defineComponent, nextTick, onMounted, ref, watch } from "vue";
 import * as echarts from "echarts";
+import { jsonReactive, resetNodeRef } from "../utils/XkUtils";
 
 const chartData = ref();
+const updateChart = ref(false);
 
-const errorMessageVisible = ref(false);
 const errorMessage = ref("");
 
 const echartsWidth = ref("100vh");
@@ -195,6 +196,39 @@ const addCategory = e => {
   }, 0);
 };
 
+const createNodeSubmit = () => {
+  if (
+    newNode.value.category === undefined ||
+    newNode.value.category === null ||
+    newNode.value.category === "" ||
+    newNode.value.category.length === 0
+  ) {
+    errorMessage.value = "该节点所属类目错误";
+    // 如果不 return 会导致每次都会创建一个空类目
+    return;
+  }
+  /**
+   * 响应创建新节点的提交
+   */
+  const names = chartData.value.series[0].data.map((x) => {
+    return x.name;
+  });
+  if (names.indexOf(newNode.value.name) === -1) {
+    const newNodeJson = jsonReactive(newNode.value);
+    chartData.value.series[0].data.push(newNodeJson);
+    historySequenceNumber.value++;
+    history.value[historySequenceNumber.value] = {
+      "act": "createNode",
+      "data": newNodeJson
+    };
+    updateChart.value = true;
+    errorMessage.value = "";
+    resetNodeRef(newNode);
+  } else {
+    errorMessage.value = "不能创建同名节点";
+  }
+};
+
 // 基于准备好的dom，初始化echarts实例
 let chartDom = ref(null);
 let chartInstance = null;
@@ -202,16 +236,13 @@ let highlightNodeList = []; // 高亮节点记录
 
 let highlightEdge = null;
 
-let history = []; // 记录历史
-let history_sequence_number = -1; // HSN：历史操作对应的目前的位置
+let history = ref([]); // 记录历史
+let historySequenceNumber = ref(-1); // HSN：历史操作对应的目前的位置
 
 let file_path = "";
 
 onMounted(async () => {
-  // 获取数据
-  // chartData.value = createOption();
   // 调用渲染图表逻辑
-
   window.addEventListener("resize", resizeChart);
   window.addEventListener("keydown", shortcut);
 });
@@ -220,9 +251,61 @@ window.electronAPI.receiveData((data) => {
   chartData.value = JSON.parse(data.value);
   file_path = data.path;
   console.log(data.path);
-  // 初始化下拉框类目
-  updateLegend(); // 复用了函数里面的种类去重，并且这样做不影响加载，因为getChart就已经加载完了
-  getChart(chartData.value);
+  // 图表初始化
+  console.log("option");
+  // 基于准备好的dom，初始化echarts实例
+  if (chartDom.value) {
+    // 初始化 ECharts 图表
+    chartInstance = echarts.init(chartDom.value);
+    if (chartData.value) {
+      // 使用刚指定的配置项和数据显示图表。
+      updateChart.value = true;
+      chartInstance.on("click", clickChart);
+    }
+  }
+});
+
+watch(updateChart, () => {
+  // 自动监听，刷新图表
+  // 保证chartInstance在当前文件中
+  console.log("updateChart", updateChart.value);
+  // 让操作变重了，但是为了后面文件拆分做准备
+  if (updateChart.value) {
+    // 更新图例，比如节点类别
+    // 生成类目和图例
+    let categories = [...new Set(chartData.value.series[0].data.map((x) => {
+      return x.category;
+    }))]; // 将类型去重
+    chartData.value.series[0].categories = categories.map((x) => {
+      return { "name": x };
+    });
+    chartData.value.legend[0].data = categories.map((x) => {
+      return x;
+    });
+    // 增加水印
+    chartData.value.graphic = [
+      {
+        "type": "text",
+        "left": "center",
+        "bottom": "5%",
+        "style": {
+          "fill": "rgba(0,0,0,1)",
+          "text": "By XKnowledge",
+          "font": "bold 18px sans-serif"
+        }
+      }
+    ];
+    // 提示框的配置
+    chartData.value.tooltip = {
+      formatter: function(x) {
+        return x.data.des;
+      }
+    };
+    // 更新选择下拉框类目
+    categoryItems.value = categories;
+    chartInstance.setOption(chartData.value);
+    updateChart.value = false;
+  }
 });
 
 const saveFile = () => {
@@ -285,9 +368,9 @@ const undo = () => {
   /**
    * 实现快捷键Ctrl+Z
    */
-  if (-1 < history_sequence_number) {
-    const current_history = history[history_sequence_number];
-    history_sequence_number--;
+  if (-1 < historySequenceNumber.value) {
+    const current_history = history.value[historySequenceNumber.value];
+    historySequenceNumber.value--;
 
     const old_data = chartData.value.series[0].data;
     const node_length = old_data.length;
@@ -342,10 +425,8 @@ const undo = () => {
     } else if (current_history.act === "deleteEdge") {
       chartData.value.series[0].links.push(current_history.data);
     }
-    updateLegend();
-    refreshChart();
+    updateChart.value = true;
     resetSider();
-    resetError();
     resetRefData();
   }
 };
@@ -354,9 +435,9 @@ const redo = () => {
   /**
    * 实现快捷键Ctrl+Y
    */
-  history_sequence_number++;
-  if (history_sequence_number < history.length) {
-    const current_history = history[history_sequence_number];
+  historySequenceNumber.value++;
+  if (historySequenceNumber.value < history.value.length) {
+    const current_history = history.value[historySequenceNumber.value];
 
     if (current_history.act === "createNode") {
       chartData.value.series[0].data.push(current_history.data);
@@ -425,13 +506,11 @@ const redo = () => {
       }
       chartData.value.series[0].links = new_links;
     }
-    updateLegend();
-    refreshChart();
+    updateChart.value = true;
     resetSider();
-    resetError();
     resetRefData();
   } else {
-    history_sequence_number--;
+    historySequenceNumber.value--;
   }
 };
 
@@ -439,30 +518,11 @@ const resetSider = () => {
   /**
    * 将侧边栏中显示的信息全部隐藏
    */
-  errorMessageVisible.value = false;
+  errorMessage.value = "";
   createNodeVisible.value = false;
   currentNodeVisible.value = false;
   createEdgeVisible.value = false;
   currentEdgeVisible.value = false;
-};
-
-const getChart = (option) => {
-  /**
-   * 图表初始化
-   */
-  console.log("option");
-
-  // 基于准备好的dom，初始化echarts实例
-  console.log(option);
-  if (chartDom.value) {
-    // 初始化 ECharts 图表
-    chartInstance = echarts.init(chartDom.value);
-    if (option) {
-      // 使用刚指定的配置项和数据显示图表。
-      chartInstance.setOption(option);
-      chartInstance.on("click", clickChart);
-    }
-  }
 };
 
 const clickChart = event => {
@@ -538,10 +598,6 @@ const resizeChart = () => {
   chartInstance.resize();
 };
 
-const refreshChart = () => {
-  chartInstance.setOption(chartData.value);
-};
-
 const toggleSider = () => {
   /**
    * 显示侧边栏
@@ -570,7 +626,6 @@ const createNode = () => {
   siderVisible.value = true; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createNodeVisible.value = true;
-  resetError();
   nextTick(resizeChart);
 };
 
@@ -579,12 +634,11 @@ const deleteNode = () => {
    * 删除新节点
    */
   resetSider();
-  resetError();
   if (currentNodeDataIndex >= 0) {
     const series = chartData.value.series[0];
 
-    history_sequence_number++;
-    history[history_sequence_number] = {
+    historySequenceNumber.value++;
+    history.value[historySequenceNumber.value] = {
       "act": "deleteNode",
       "data": jsonReactive(series.data[currentNodeDataIndex]),
       "links": []
@@ -609,7 +663,7 @@ const deleteNode = () => {
       if (series.links[i].source !== oldName && series.links[i].target !== oldName) {
         links.push(series.links[i]);
       } else {
-        history[history_sequence_number].links.push(jsonReactive(series.links[i]));
+        history.value[historySequenceNumber.value].links.push(jsonReactive(series.links[i]));
       }
     }
     chartData.value.series[0].links = links;
@@ -617,104 +671,9 @@ const deleteNode = () => {
     console.log("chartData");
     console.log(chartData.value);
 
-    updateLegend();
-    refreshChart();
+    updateChart.value = true;
   }
   resetRefData();
-};
-
-const resetNodeRef = (node) => {
-  node.value = {
-    "name": "",
-    "des": "",
-    "symbolSize": 50,
-    "category": ""
-  };
-};
-
-const resetError = () => {
-  errorMessageVisible.value = false;
-  errorMessage.value = "";
-};
-
-const setError = (message) => {
-  errorMessageVisible.value = true;
-  errorMessage.value = message;
-};
-
-const jsonReactive = (x) => {
-  return JSON.parse(JSON.stringify(x));
-};
-
-const updateLegend = () => {
-  /**
-   * 更新图例，比如节点类别
-   */
-    // 生成类目和图例
-  let categories = [...new Set(chartData.value.series[0].data.map((x) => {
-      return x.category;
-    }))]; // 将类型去重
-  chartData.value.series[0].categories = categories.map((x) => {
-    return { "name": x };
-  });
-  chartData.value.legend[0].data = categories.map((x) => {
-    return x;
-  });
-  // 增加水印
-  chartData.value.graphic = [
-    {
-      "type": "text",
-      "left": "center",
-      "bottom": "5%",
-      "style": {
-        "fill": "rgba(0,0,0,1)",
-        "text": "By XKnowledge",
-        "font": "bold 18px sans-serif"
-      }
-    }
-  ];
-  // 提示框的配置
-  chartData.value.tooltip = {
-    formatter: function(x) {
-      return x.data.des;
-    }
-  };
-  // 更新选择下拉框类目
-  categoryItems.value = categories;
-};
-
-const createNodeSubmit = () => {
-  if (
-    newNode.value.category === undefined ||
-    newNode.value.category === null ||
-    newNode.value.category === "" ||
-    newNode.value.category.length === 0
-  ) {
-    setError("该节点所属类目错误");
-    // 如果不 return 会导致每次都会创建一个空类目
-    return;
-  }
-  /**
-   * 响应创建新节点的提交
-   */
-  const names = chartData.value.series[0].data.map((x) => {
-    return x.name;
-  });
-  if (names.indexOf(newNode.value.name) === -1) {
-    const newNodeJson = jsonReactive(newNode.value);
-    chartData.value.series[0].data.push(newNodeJson);
-    history_sequence_number++;
-    history[history_sequence_number] = {
-      "act": "createNode",
-      "data": newNodeJson
-    };
-    updateLegend();
-    refreshChart();
-    resetError();
-    resetNodeRef(newNode);
-  } else {
-    setError("不能创建同名节点");
-  }
 };
 
 const currentNodeSubmit = () => {
@@ -750,22 +709,20 @@ const currentNodeSubmit = () => {
         }
       }
 
-      updateLegend();
-      refreshChart();
-      resetError();
+      updateChart.value = true;
+      errorMessage.value = "";
     } else {
-      setError("不能创建同名节点");
+      errorMessage.value = "不能创建同名节点";
       return;
     }
   } else {
     // 修改节点时没有修改节点名称
     chartData.value.series[0].data[currentNodeDataIndex] = currentNodeJson;
-    updateLegend();
-    refreshChart();
-    resetError();
+    updateChart.value = true;
+    errorMessage.value = "";
   }
-  history_sequence_number++;
-  history[history_sequence_number] = {
+  historySequenceNumber.value++;
+  history.value[historySequenceNumber.value] = {
     "act": "changeNode",
     "old": oldNodeJson,
     "new": currentNodeJson
@@ -789,7 +746,6 @@ const createEdge = () => {
   siderVisible.value = true; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createEdgeVisible.value = true;
-  resetError();
   nextTick(resizeChart);
 };
 
@@ -802,17 +758,17 @@ const createEdgeSubmit = () => {
     newEdge.value.source = data[highlightNodeList[0]].name;
     newEdge.value.target = data[highlightNodeList[1]].name;
     const newEdgeJson = jsonReactive(newEdge.value);
-    history_sequence_number++;
-    history[history_sequence_number] = {
+    historySequenceNumber.value++;
+    history.value[historySequenceNumber.value] = {
       "act": "createEdge",
       "data": newEdgeJson
     };
     chartData.value.series[0].links.push(newEdgeJson);
-    refreshChart();
-    resetError();
+    updateChart.value = true;
+    errorMessage.value = "";
     resetEdgeRef(newEdge);
   } else {
-    setError("请选中2个节点");
+    errorMessage.value = "请选中2个节点";
   }
 };
 
@@ -820,17 +776,17 @@ const currentEdgeSubmit = () => {
   /**
    * 实现连接的动态修改
    */
-  resetError();
+  errorMessage.value = "";
   const currentEdgeJson = jsonReactive(currentEdge.value);
-  history_sequence_number++;
-  history[history_sequence_number] = {
+  historySequenceNumber.value++;
+  history.value[historySequenceNumber.value] = {
     "act": "changeEdge",
     "old": jsonReactive(chartData.value.series[0].links[currentEdgeDataIndex]),
     "new": currentEdgeJson
   };
   chartData.value.series[0].links[currentEdgeDataIndex] = currentEdgeJson;
-  console.log(history);
-  refreshChart();
+  console.log(history.value);
+  updateChart.value = true;
 };
 
 const deleteEdge = () => {
@@ -838,11 +794,10 @@ const deleteEdge = () => {
    * 删除连接
    */
   resetSider();
-  resetError();
   if (currentEdgeDataIndex >= 0) {
     const series = chartData.value.series[0];
-    history_sequence_number++;
-    history[history_sequence_number] = {
+    historySequenceNumber.value++;
+    history.value[historySequenceNumber.value] = {
       "act": "deleteEdge",
       "data": jsonReactive(series.links[currentEdgeDataIndex])
     };
@@ -856,7 +811,7 @@ const deleteEdge = () => {
       }
     }
     chartData.value.series[0].links = links;
-    refreshChart();
+    updateChart.value = true;
   }
   resetRefData();
 };
