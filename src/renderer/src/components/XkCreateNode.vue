@@ -15,9 +15,6 @@
           <a-space style="padding: 4px 8px">
             <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
             <a-button type="text" @click="addCategory">
-              <template #icon>
-                <plus-outlined />
-              </template>
               新增类目
             </a-button>
           </a-space>
@@ -42,11 +39,7 @@ const categoryItems = defineModel("categoryItems");
 const categoryName = defineModel("categoryName");
 const currentNode = defineModel("currentNode");
 
-const errorMessage = defineModel("errorMessage");
-const chartData = defineModel("chartData");
-const updateChart = defineModel("updateChart");
-const historySequenceNumber = defineModel("historySequenceNumber");
-const history = defineModel("history");
+const xkContext = defineModel("xkContext");
 
 const inputRef = ref();
 
@@ -85,23 +78,23 @@ const createNodeSubmit = () => {
     newNode.value.category === "" ||
     newNode.value.category.length === 0
   ) {
-    errorMessage.value = "该节点所属类目错误";
+    xkContext.value.errorMessage = "该节点所属类目错误";
     // 如果不 return 会导致每次都会创建一个空类目
     return;
   }
   /**
    * 响应创建新节点的提交
    */
-  const names = chartData.value.series[0].data.map((x) => {
+  const names = xkContext.value.chartData.series[0].data.map((x) => {
     return x.name;
   });
   if (names.indexOf(newNode.value.name) === -1) {
     const newNodeJson = jsonReactive(newNode.value);
-    chartData.value.series[0].data.push(newNodeJson);
+    xkContext.value.chartData.series[0].data.push(newNodeJson);
 
     // 不能写成下面这个样子，会导致数据被赋值在数组index=-1的位置上
-    // historySequenceNumber.value++;
-    // history.value[historySequenceNumber.value] = {
+    // xkContext.value.historySequenceNumber++;
+    // xkContext.value.historyList[xkContext.value.historySequenceNumber] = {
     //   "act": "createNode",
     //   "data": newNodeJson
     // };
@@ -109,17 +102,17 @@ const createNodeSubmit = () => {
     // Vue会在第一个tick更新父组件中的historySequenceNumber
     // 下一个tick父组件发送prop来更新子组件
 
-    history.value[historySequenceNumber.value + 1] = {
+    xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
       "act": "createNode",
       "data": newNodeJson
     };
-    historySequenceNumber.value++;
+    xkContext.value.historySequenceNumber++;
 
-    updateChart.value = true;
-    errorMessage.value = "";
+    xkContext.value.updateChart = true;
+    xkContext.value.errorMessage = "";
     resetNodeRef(newNode);
   } else {
-    errorMessage.value = "不能创建同名节点";
+    xkContext.value.errorMessage = "不能创建同名节点";
   }
 };
 </script>

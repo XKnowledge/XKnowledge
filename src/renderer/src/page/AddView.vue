@@ -29,7 +29,7 @@ import { UnorderedListOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
 
 import XkCardList from "../components/XkCardList.vue";
-import imgUrl from "../assets/template.png";
+import TemplatePreview from "../assets/template.png";
 
 const MENU = [
   { key: "1", name: "全部" }
@@ -56,7 +56,7 @@ const templates = ref([
   {
     id: "template1",
     name: "思维导图",
-    src: imgUrl
+    src: TemplatePreview
   }
   // {
   //   id: "template2",

@@ -42,11 +42,7 @@ const categoryItems = defineModel("categoryItems");
 const categoryName = defineModel("categoryName");
 const currentNodeDataIndex = defineModel("currentNodeDataIndex");
 
-const errorMessage = defineModel("errorMessage");
-const chartData = defineModel("chartData");
-const updateChart = defineModel("updateChart");
-const historySequenceNumber = defineModel("historySequenceNumber");
-const history = defineModel("history");
+const xkContext = defineModel("xkContext");
 
 const inputRef = ref();
 
@@ -82,11 +78,11 @@ const currentNodeSubmit = () => {
   /**
    * 实现节点的动态修改
    */
-  let names = chartData.value.series[0].data.map((x) => {
+  let names = xkContext.value.chartData.series[0].data.map((x) => {
     return x.name;
   });
   const oldName = names[currentNodeDataIndex.value];
-  const oldNodeJson = jsonReactive(chartData.value.series[0].data[currentNodeDataIndex.value]);
+  const oldNodeJson = jsonReactive(xkContext.value.chartData.series[0].data[currentNodeDataIndex.value]);
   const newName = currentNode.value.name;
   const currentNodeJson = jsonReactive(currentNode.value);
 
@@ -97,38 +93,38 @@ const currentNodeSubmit = () => {
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
     if (names.indexOf(newName) === -1) {
       // 判断修改完的名称是否重名
-      chartData.value.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
+      xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
 
       // 修改新节点所在的边
-      const links = chartData.value.series[0].links;
+      const links = xkContext.value.chartData.series[0].links;
       const length = links.length;
       for (let i = 0; i < length; i++) {
         if (links[i].source === oldName) {
-          chartData.value.series[0].links[i].source = newName;
+          xkContext.value.chartData.series[0].links[i].source = newName;
         }
         if (links[i].target === oldName) {
-          chartData.value.series[0].links[i].target = newName;
+          xkContext.value.chartData.series[0].links[i].target = newName;
         }
       }
 
-      updateChart.value = true;
-      errorMessage.value = "";
+      xkContext.value.updateChart = true;
+      xkContext.value.errorMessage = "";
     } else {
-      errorMessage.value = "不能创建同名节点";
+      xkContext.value.errorMessage = "不能创建同名节点";
       return;
     }
   } else {
     // 修改节点时没有修改节点名称
-    chartData.value.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
-    updateChart.value = true;
-    errorMessage.value = "";
+    xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
+    xkContext.value.updateChart = true;
+    xkContext.value.errorMessage = "";
   }
-  history.value[historySequenceNumber.value + 1] = {
+  xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
     "act": "changeNode",
     "old": oldNodeJson,
     "new": currentNodeJson
   };
-  historySequenceNumber.value++;
+  xkContext.value.historySequenceNumber++;
 };
 </script>
 

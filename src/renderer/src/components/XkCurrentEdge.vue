@@ -18,26 +18,22 @@ import { jsonReactive } from "../utils/XkUtils";
 const currentEdge = defineModel("currentEdge");
 const currentEdgeDataIndex = defineModel("currentEdgeDataIndex");
 
-const errorMessage = defineModel("errorMessage");
-const chartData = defineModel("chartData");
-const updateChart = defineModel("updateChart");
-const historySequenceNumber = defineModel("historySequenceNumber");
-const history = defineModel("history");
+const xkContext = defineModel("xkContext");
 
 const currentEdgeSubmit = () => {
   /**
    * 实现连接的动态修改
    */
   const currentEdgeJson = jsonReactive(currentEdge.value);
-  history.value[historySequenceNumber.value + 1] = {
+  xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
     "act": "changeEdge",
-    "old": jsonReactive(chartData.value.series[0].links[currentEdgeDataIndex.value]),
+    "old": jsonReactive(xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value]),
     "new": currentEdgeJson
   };
-  historySequenceNumber.value++;
-  chartData.value.series[0].links[currentEdgeDataIndex.value] = currentEdgeJson;
-  updateChart.value = true;
-  errorMessage.value = "";
+  xkContext.value.historySequenceNumber++;
+  xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value] = currentEdgeJson;
+  xkContext.value.updateChart = true;
+  xkContext.value.errorMessage = "";
 };
 </script>
 
