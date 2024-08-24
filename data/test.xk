@@ -1,6 +1,6 @@
 {
   "tooltip": {
-    "show": false
+    "show": true
   },
   "toolbox": {
     "show": true,
@@ -38,7 +38,7 @@
         "color": "#4b565b"
       },
       "edgeLabel": {
-        "show": false
+        "show": true
       },
       "label": {
         "show": true
