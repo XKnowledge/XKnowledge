@@ -1,25 +1,23 @@
 <template>
-  <a-layout-sider class="sider-menu-style">
-    <a-dropdown>
-      <a class="no-move" @click.prevent>
-        <img :src="MenuIcon" alt="MenuIcon" :style="{ width: '20px', height: '20px'}" />
-      </a>
-      <template #overlay>
-        <a-menu>
-          <a-menu-item key="1" @click="undo">
-            撤销
-          </a-menu-item>
-          <a-menu-item key="2" @click="redo">
-            重做
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="3" @click="saveFile">
-            保存
-          </a-menu-item>
-        </a-menu>
-      </template>
-    </a-dropdown>
-  </a-layout-sider>
+  <a-dropdown>
+    <a class="no-move" @click.prevent>
+      <img :src="MenuIcon" alt="MenuIcon" :style="{ width: '20px', height: '20px'}" />
+    </a>
+    <template #overlay>
+      <a-menu>
+        <a-menu-item key="1" @click="undo">
+          撤销 Ctrl+Z
+        </a-menu-item>
+        <a-menu-item key="2" @click="redo">
+          重做 Ctrl+Y
+        </a-menu-item>
+        <a-menu-divider />
+        <a-menu-item key="3" @click="saveFile">
+          保存 Ctrl+S
+        </a-menu-item>
+      </a-menu>
+    </template>
+  </a-dropdown>
 </template>
 
 <script setup>
