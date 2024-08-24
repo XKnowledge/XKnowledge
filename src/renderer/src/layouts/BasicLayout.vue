@@ -23,7 +23,6 @@
         <a-layout-content :style="contentStyle">
           <RouterView />
         </a-layout-content>
-        <!--      <a-layout-footer :style="footerStyle">Footer</a-layout-footer>-->
       </a-layout>
     </a-layout>
   </a-space>
@@ -31,7 +30,6 @@
 
 <script setup>
 import { reactive, ref, watch, h } from "vue";
-import { AppstoreAddOutlined, BookOutlined, HistoryOutlined, FileTextOutlined } from "@ant-design/icons-vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();

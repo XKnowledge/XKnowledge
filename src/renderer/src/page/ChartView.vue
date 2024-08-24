@@ -1,6 +1,6 @@
 <template>
   <a-space direction="vertical" :style="{ width: '100%' }" :size="[0, 48]">
-    <a-layout style="height: 100vh">
+    <a-layout :style="{height: '100vh'}">
       <a-layout-header :style="headerStyle" class="move-show">
         <a-layout>
 
@@ -86,7 +86,7 @@ const xkContext = ref({
 });
 
 const echartsWidth = ref("100vh");
-const siderVisible = ref(true); // 初始状态为显示
+const siderVisible = ref(false);
 
 const createNodeVisible = ref(false);
 const newNode = ref({
@@ -194,8 +194,15 @@ watch(() => xkContext.value.updateChart, () => {
     ];
     // 提示框的配置
     xkContext.value.chartData.tooltip = {
+      show: true,
       formatter: function(x) {
         return x.data.des;
+      }
+    };
+    xkContext.value.chartData.series[0].edgeLabel = {
+      show: true,
+      formatter: function(x) {
+        return x.data.name;
       }
     };
     // 更新选择下拉框类目
@@ -329,6 +336,9 @@ const clickChart = event => {
         highlightEdge = null;
       }
     }
+  }
+  if (!siderVisible.value) {
+    toggleSider();
   }
 };
 
