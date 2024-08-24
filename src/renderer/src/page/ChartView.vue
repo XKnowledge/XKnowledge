@@ -3,19 +3,18 @@
     <a-layout :style="{height: '100vh'}">
       <a-layout-header :style="headerStyle" class="move-show">
         <a-layout>
+          <a-layout-sider class="sider-menu-style">
+            <XkMenu v-model:shortcutActive="shortcutActive"
+                    v-model:shortcutWatch="shortcutWatch"
+                    v-model:filePath="filePath"
 
-          <XkMenu v-model:shortcutActive="shortcutActive"
-                  v-model:shortcutWatch="shortcutWatch"
-                  v-model:filePath="filePath"
-
-                  v-model:xkContext="xkContext"></XkMenu>
-
+                    v-model:xkContext="xkContext"></XkMenu>
+          </a-layout-sider>
           <a-layout-content :style="headerStyle" class="move-show">
             <a-button class="no-move-button" @click="createNode">创建节点</a-button>
             <a-button class="no-move-button" @click="deleteNode">删除节点</a-button>
             <a-button class="no-move-button" @click="createEdge">创建连接</a-button>
             <a-button class="no-move-button" @click="deleteEdge">删除连接</a-button>
-            <a-button class="no-move-button" @click="resizeChart">重置位置</a-button>
             <a-button class="no-move-button" @click="toggleSider">编辑框</a-button>
             <!-- 控制按钮 -->
           </a-layout-content>
@@ -553,6 +552,22 @@ const echartsStyle = {
 /* 滚动条滑块的样式 */
 .sider-style::-webkit-scrollbar-thumb {
   background-color: #888; /* 滑块颜色，可以设置为你想要的颜色 */
+}
+
+.sider-menu-style {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  background-color: #f5f5f5 !important;
+  text-align: center;
+  width: 53px !important;
+  max-width: 53px !important;
+  min-width: 53px !important;
+  height: 53px !important;
+  font: 13px sans-serif;
+  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  border-right: none;
 }
 
 /* 解决框架本身获取高度错误而显示进度条Bug */

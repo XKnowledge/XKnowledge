@@ -18,7 +18,7 @@ const fileList = ref([]);
 onMounted(async () => {
   const fileListValue = [];
   // let res = await myAxios.get("http://127.0.0.1:5000");
-  res = ["test"];
+  const res = ["test"];
   let counter = 0;
   console.log(res);
   res.forEach((file) => {
