@@ -15,11 +15,11 @@ const createOption = () => {
       // 显示工具箱
       show: true,
       feature: {
-        mark: {
-          show: true
-        },
         // 保存为图片
         saveAsImage: {
+          show: true
+        },
+        restore: {
           show: true
         }
       }

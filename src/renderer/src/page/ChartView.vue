@@ -15,6 +15,7 @@
             <a-button class="no-move-button" @click="deleteNode">删除节点</a-button>
             <a-button class="no-move-button" @click="createEdge">创建连接</a-button>
             <a-button class="no-move-button" @click="deleteEdge">删除连接</a-button>
+            <a-button class="no-move-button" @click="resizeChart">重置位置</a-button>
             <a-button class="no-move-button" @click="toggleSider">编辑框</a-button>
             <!-- 控制按钮 -->
           </a-layout-content>
