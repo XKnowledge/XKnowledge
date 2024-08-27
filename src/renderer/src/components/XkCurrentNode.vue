@@ -107,7 +107,7 @@ const currentNodeSubmit = () => {
         }
       }
 
-      xkContext.value.updateChart = true;
+      xkContext.value.updateChart = !xkContext.value.updateChart;
       xkContext.value.errorMessage = "";
     } else {
       xkContext.value.errorMessage = "不能创建同名节点";
@@ -116,7 +116,7 @@ const currentNodeSubmit = () => {
   } else {
     // 修改节点时没有修改节点名称
     xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
-    xkContext.value.updateChart = true;
+    xkContext.value.updateChart = !xkContext.value.updateChart;
     xkContext.value.errorMessage = "";
   }
   xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {

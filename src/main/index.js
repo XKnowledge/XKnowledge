@@ -26,6 +26,7 @@ function createWindow() {
         "Ctrl+R": null
       }
     },
+    trafficLightPosition: { x: 20, y: 18 },
     autoHideMenuBar: true,
     titleBarStyle: "hidden",
     titleBarOverlay: {

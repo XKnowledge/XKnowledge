@@ -108,7 +108,7 @@ const createNodeSubmit = () => {
     };
     xkContext.value.historySequenceNumber++;
 
-    xkContext.value.updateChart = true;
+    xkContext.value.updateChart = !xkContext.value.updateChart;
     xkContext.value.errorMessage = "";
     resetNodeRef(newNode);
   } else {

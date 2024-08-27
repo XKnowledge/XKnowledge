@@ -11,7 +11,7 @@
 
 <script setup>
 import { ref } from "vue";
-import createTemplate1 from "../utils/template1.ts";
+import createTemplate1 from "../template/template1.ts";
 
 const props = defineProps({
   fileList: {
