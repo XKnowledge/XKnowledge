@@ -85,18 +85,6 @@ app.whenReady().then(() => {
         mainWindow.focus();
       }
     });
-    // let script;
-    // if (process.platform === "win32") {
-    //   script = path.join(__dirname, "../../xk_main/xk_main.exe");
-    // } else if (process.platform === "darwin") {
-    //   script = path.join(__dirname, "../../xk_main/xk_main");
-    // } else {
-    //   script = path.join(__dirname, "../../xk_main/xk_main");
-    // }
-    // pythonProcess = spawn(script);
-    // pythonProcess.stdout.on("data", (data) => {
-    //   console.log(`stdout: ${data}`);
-    // });
     Menu.setApplicationMenu(null);
     createWindow();
   }
@@ -140,7 +128,6 @@ function openFile() {
       });
     }
   }).catch((err) => {
-    console.log(err);
   });
 };
 
@@ -154,13 +141,11 @@ ipcMain.on("act", (event, act) => {
 function saveFile(file_path, data) {
   fs.writeFile(file_path, data, (err) => {
     if (err) {
-      console.log(err);
     }
   });
 }
 
 ipcMain.on("data", (event, arg) => {
-  // console.log(arg);
   if (current_act === "save_file") {
     const data = JSON.stringify(arg.file);
     if (arg.path === "") {
@@ -171,7 +156,6 @@ ipcMain.on("data", (event, arg) => {
           { name: "XKnowledge", extensions: ["xk"] }
         ]
       }).then((res) => {
-        console.log(res);
         if (!res.canceled) {
           saveFile(res.filePath, data);
           mainWindow.webContents.send("data", {
@@ -180,10 +164,8 @@ ipcMain.on("data", (event, arg) => {
           });
         }
       }).catch((err) => {
-        console.log(err);
       });
     } else {
-      console.log("save_file");
       saveFile(arg.path, data);
     }
   } else if (current_act === "save_as") {

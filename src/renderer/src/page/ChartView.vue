@@ -143,9 +143,6 @@ onMounted(async () => {
 window.electronAPI.receiveData((data) => {
   xkContext.value.chartData = JSON.parse(data.value);
   filePath.value = data.path;
-  console.log(data.path);
-  // 图表初始化
-  console.log("option");
   // 基于准备好的dom，初始化echarts实例
   if (chartDom.value) {
     // 初始化 ECharts 图表
@@ -306,14 +303,12 @@ const clickChart = event => {
   /**
    * 点击表格，产生事件，对事件进行响应
    */
-  console.log(event);
   resetSider();
   if (event.dataType === "node") {
     currentNodeVisible.value = true;
     currentNode.value = jsonReactive(event.data); // 一定要用深拷贝
     newNode.value.symbolSize = currentNode.value.symbolSize;
     currentNodeDataIndex.value = event.dataIndex;
-    console.log("currentNode", currentNode.value);
 
     const pos = highlightNodeList.value.indexOf(event.dataIndex);
     if (pos !== -1 && highlightNodeList.value.length !== 0) {
@@ -337,7 +332,6 @@ const clickChart = event => {
         highlightNodeList.value = [highlightNodeList.value[1], event.dataIndex];
       }
     }
-    console.log(highlightNodeList.value);
   } else if (event.dataType === "edge") {
     currentEdgeVisible.value = true;
     currentEdge.value = jsonReactive(event.data);
