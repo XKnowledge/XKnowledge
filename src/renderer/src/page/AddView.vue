@@ -33,14 +33,6 @@ import TemplatePreview from "../assets/template.png";
 
 const MENU = [
   { key: "1", name: "全部" }
-  // { key: "2", name: "基本" }
-  // { key: "3", name: "知识管理" },
-  // { key: "4", name: "会议和计划" },
-  // { key: "5", name: "学习和教育" },
-  // { key: "6", name: "项目管理" },
-  // { key: "7", name: "娱乐和生活" },
-  // { key: "8", name: "分析和决策" },
-  // { key: "9", name: "创造力" }
 ];
 
 const MenuList = ref(MENU);
@@ -48,7 +40,6 @@ const MenuList = ref(MENU);
 const curMenu = ref("全部");
 
 const onClick = ({ key }) => {
-  console.log(`Click on item ${key}`);
   curMenu.value = MenuList.value[key].name;
 };
 
@@ -58,16 +49,6 @@ const templates = ref([
     name: "思维导图",
     src: TemplatePreview
   }
-  // {
-  //   id: "template2",
-  //   name: "思维导图2",
-  //   src: imgUrl
-  // },
-  // {
-  //   id: "template3",
-  //   name: "思维导图3",
-  //   src: imgUrl
-  // }
 ]);
 
 </script>

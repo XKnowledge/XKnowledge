@@ -32,7 +32,6 @@ const filePath = defineModel("filePath");
 const xkContext = defineModel("xkContext");
 
 watch(shortcutWatch, () => {
-  console.log(shortcutActive.value);
   if (shortcutActive.value === "save_file") {
     saveFile();
   } else if (shortcutActive.value === "insert") {
@@ -50,7 +49,6 @@ const saveFile = () => {
   /**
    * 实现文件保存，electronAPI详见/src/preload/index.js
    */
-  console.log("save file");
   window.electronAPI.sendAct("save_file");
   window.electronAPI.sendData({ path: filePath.value, file: jsonReactive(xkContext.value.chartData) });
 };
@@ -59,7 +57,6 @@ const undo = () => {
   /**
    * 实现快捷键Ctrl+Z
    */
-  console.log("menu history", xkContext.value.historyList, xkContext.value.historySequenceNumber);
   if (-1 < xkContext.value.historySequenceNumber) {
     const current_history = xkContext.value.historyList[xkContext.value.historySequenceNumber];
     xkContext.value.historySequenceNumber--;

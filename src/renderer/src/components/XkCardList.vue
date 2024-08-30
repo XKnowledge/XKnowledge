@@ -46,18 +46,6 @@ const handleDoubleClick = async (id, fileName) => {
 const handleRightClick = async (id, event) => {
   // 阻止默认右键事件
   event.preventDefault();
-
-  // 在控制台输出鼠标右键点击的位置
-  console.log("Right clicked at:", { x: event.clientX, y: event.clientY });
-
-  // 在这里执行其他你想要的操作，比如显示自定义右键菜单等
-  console.log("右键", id);
-
-  // const content = 'test_save_content'
-  //
-  // const fileName = 'test_save'
-  // const saveAns = await window.electronAPI.saveFile(fileName + '.xk', content)
-  // console.log('保存结果:', saveAns)
 };
 
 
