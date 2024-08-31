@@ -4,7 +4,6 @@ import { join } from "path";
 const fs = require("fs");
 
 let mainWindow;
-let pythonProcess = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -85,18 +84,6 @@ app.whenReady().then(() => {
         mainWindow.focus();
       }
     });
-    // let script;
-    // if (process.platform === "win32") {
-    //   script = path.join(__dirname, "../../xk_main/xk_main.exe");
-    // } else if (process.platform === "darwin") {
-    //   script = path.join(__dirname, "../../xk_main/xk_main");
-    // } else {
-    //   script = path.join(__dirname, "../../xk_main/xk_main");
-    // }
-    // pythonProcess = spawn(script);
-    // pythonProcess.stdout.on("data", (data) => {
-    //   console.log(`stdout: ${data}`);
-    // });
     Menu.setApplicationMenu(null);
     createWindow();
   }
@@ -112,8 +99,9 @@ app.whenReady().then(() => {
 // 当所有窗口关闭时退出，但在 macOS 上除外。
 // 在 macOS 上，通常应用程序和它们的菜单栏会保持活动状态，直到用户使用 Cmd + Q 明确退出应用程序。
 app.on("window-all-closed", () => {
-  if (pythonProcess !== null) pythonProcess.kill();
-  if (process.platform !== "darwin") app.quit();
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
 
 let current_act;
