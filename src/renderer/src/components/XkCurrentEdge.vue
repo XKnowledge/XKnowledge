@@ -32,7 +32,7 @@ const currentEdgeSubmit = () => {
   };
   xkContext.value.historySequenceNumber++;
   xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value] = currentEdgeJson;
-  xkContext.value.updateChart = true;
+  xkContext.value.updateChart = !xkContext.value.updateChart;
   xkContext.value.errorMessage = "";
 };
 </script>

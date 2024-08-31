@@ -4,11 +4,7 @@
       <a-layout-header :style="headerStyle" class="move-show">
         <a-layout>
           <a-layout-sider class="sider-menu-style">
-            <XkMenu v-model:shortcutActive="shortcutActive"
-                    v-model:shortcutWatch="shortcutWatch"
-                    v-model:filePath="filePath"
-
-                    v-model:xkContext="xkContext"></XkMenu>
+            <XkMenu v-model:shortcutActive="shortcutActive" v-model:shortcutWatch="shortcutWatch" />
           </a-layout-sider>
           <a-layout-content :style="headerStyle" class="move-show">
             <a-button class="no-move-button" @click="createNode">创建节点</a-button>
@@ -156,7 +152,7 @@ window.electronAPI.receiveData((data) => {
     chartInstance = echarts.init(chartDom.value);
     if (xkContext.value.chartData) {
       // 使用刚指定的配置项和数据显示图表。
-      xkContext.value.updateChart = true;
+      xkContext.value.updateChart = !xkContext.value.updateChart;
       chartInstance.on("click", clickChart);
     }
   }
@@ -165,56 +161,47 @@ window.electronAPI.receiveData((data) => {
 watch(() => xkContext.value.updateChart, () => {
   // 自动监听，刷新图表
   // 保证chartInstance在当前文件中
-  console.log("updateChart", xkContext.value.updateChart);
   // 让操作变重了，但是为了后面文件拆分做准备
-  if (xkContext.value.updateChart) {
-    // 更新图例，比如节点类别
-    // 生成类目和图例
-    let categories = [...new Set(xkContext.value.chartData.series[0].data.map((x) => {
-      return x.category;
-    }))]; // 将类型去重
-    xkContext.value.chartData.series[0].categories = categories.map((x) => {
-      return { "name": x };
-    });
-    xkContext.value.chartData.legend[0].data = categories.map((x) => {
-      return x;
-    });
-    // 增加水印
-    xkContext.value.chartData.graphic = [
-      {
-        "type": "text",
-        "left": "center",
-        "bottom": "5%",
-        "style": {
-          "fill": "rgba(0,0,0,1)",
-          "text": "By XKnowledge",
-          "font": "bold 18px sans-serif"
-        }
+  // 更新图例，比如节点类别
+  // 生成类目和图例
+  let categories = [...new Set(xkContext.value.chartData.series[0].data.map((x) => {
+    return x.category;
+  }))]; // 将类型去重
+  xkContext.value.chartData.series[0].categories = categories.map((x) => {
+    return { "name": x };
+  });
+  xkContext.value.chartData.legend[0].data = categories.map((x) => {
+    return x;
+  });
+  // 增加水印
+  xkContext.value.chartData.graphic = [
+    {
+      "type": "text",
+      "left": "center",
+      "bottom": "5%",
+      "style": {
+        "fill": "rgba(0,0,0,1)",
+        "text": "By XKnowledge",
+        "font": "bold 18px sans-serif"
       }
-    ];
-    // 提示框的配置
-    xkContext.value.chartData.tooltip = {
-      show: true,
-      formatter: function(x) {
-        return x.data.des;
-      }
-    };
-    xkContext.value.chartData.series[0].edgeLabel = {
-      show: true,
-      formatter: function(x) {
-        return x.data.name;
-      }
-    };
-    // 更新选择下拉框类目
-    categoryItems.value = categories;
-    chartInstance.setOption(xkContext.value.chartData);
-    xkContext.value.updateChart = false;
-  }
-});
-
-watch(shortcutActive, () => {
-  resetSider();
-  resetRefData();
+    }
+  ];
+  // 提示框的配置
+  xkContext.value.chartData.tooltip = {
+    show: true,
+    formatter: function (x) {
+      return x.data.des;
+    }
+  };
+  xkContext.value.chartData.series[0].edgeLabel = {
+    show: true,
+    formatter: function (x) {
+      return x.data.name;
+    }
+  };
+  // 更新选择下拉框类目
+  categoryItems.value = categories;
+  chartInstance.setOption(xkContext.value.chartData);
 });
 
 const shortcut = (event) => {
@@ -235,29 +222,62 @@ const shortcut = (event) => {
 
   // 只有chart的快捷键
   if (tagName === "BODY") {
-    if (event.key === "Insert") {
-      shortcutActive.value = "insert";
-      // shortcutWatch.value = !shortcutWatch.value;
-      createNode();
-    }
-
-    if (event.key === "Delete") {
-      shortcutActive.value = "delete";
-      // shortcutWatch.value = !shortcutWatch.value;
-      deleteNode();
-    }
-
-    if (event.ctrlKey && event.key === "z") {
-      shortcutActive.value = "undo";
-      shortcutWatch.value = !shortcutWatch.value;
-    }
-
-    if (event.ctrlKey && event.key === "y") {
-      shortcutActive.value = "redo";
-      shortcutWatch.value = !shortcutWatch.value;
+    switch (event.key) {
+      case "Insert":
+        shortcutActive.value = "create_node";
+        shortcutWatch.value = !shortcutWatch.value;
+        break;
+      case "Delete":
+        shortcutActive.value = "delete_node";
+        shortcutWatch.value = !shortcutWatch.value;
+        break;
+      case "z":
+        if (event.ctrlKey) {
+          shortcutActive.value = "undo";
+          shortcutWatch.value = !shortcutWatch.value;
+        }
+        break;
+      case "y":
+        if (event.ctrlKey) {
+          shortcutActive.value = "redo";
+          shortcutWatch.value = !shortcutWatch.value;
+        }
     }
   }
 };
+
+watch(shortcutWatch, () => {
+  let needReset = true;
+  switch (shortcutActive.value) {
+    case "save_file":
+      saveFile();
+      break;
+    case "create_node":
+      needReset = false;
+      createNode();
+      break;
+    case "delete_node":
+      deleteNode();
+      break;
+    case "create_edge":
+      needReset = false;
+      createEdge();
+      break;
+    case "delete_edge":
+      deleteEdge();
+      break;
+    case "undo":
+      undo();
+      break;
+    case "redo":
+      redo();
+      break;
+  }
+  if (needReset) {
+    resetSider();
+    resetRefData();
+  }
+});
 
 const resetRefData = () => {
   /**
@@ -378,6 +398,161 @@ const toggleSider = () => {
   }
 };
 
+const saveFile = () => {
+  /**
+   * 实现文件保存，electronAPI详见/src/preload/index.js
+   */
+  console.log("save file");
+  window.electronAPI.sendAct("save_file");
+  window.electronAPI.sendData({ path: filePath.value, file: jsonReactive(xkContext.value.chartData) });
+};
+
+const undo = () => {
+  /**
+   * 实现快捷键Ctrl+Z
+   */
+  console.log("menu history", xkContext.value.historyList, xkContext.value.historySequenceNumber);
+  if (-1 < xkContext.value.historySequenceNumber) {
+    const current_history = xkContext.value.historyList[xkContext.value.historySequenceNumber];
+    xkContext.value.historySequenceNumber--;
+
+    const old_data = xkContext.value.chartData.series[0].data;
+    const node_length = old_data.length;
+    const old_links = xkContext.value.chartData.series[0].links;
+    const links_length = old_links.length;
+
+    if (current_history.act === "createNode") {
+      const new_data = [];
+
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.data.name !== old_data[i].name) {
+          new_data.push(old_data[i]);
+        }
+      }
+      xkContext.value.chartData.series[0].data = new_data;
+    } else if (current_history.act === "changeNode") {
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.new.name === old_data[i].name) {
+          xkContext.value.chartData.series[0].data[i] = current_history.old;
+          break;
+        }
+      }
+      if (current_history.new.name !== current_history.old.name) {
+        const links = xkContext.value.chartData.series[0].links;
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].source === current_history.new.name) {
+            xkContext.value.chartData.series[0].links[i].source = current_history.old.name;
+          }
+          if (links[i].target === current_history.new.name) {
+            xkContext.value.chartData.series[0].links[i].target = current_history.old.name;
+          }
+        }
+      }
+    } else if (current_history.act === "deleteNode") {
+      xkContext.value.chartData.series[0].data.push(current_history.data);
+      xkContext.value.chartData.series[0].links.push(...current_history.links);
+    } else if (current_history.act === "createEdge") {
+      const new_links = [];
+      for (let i = 0; i < links_length; i++) {
+        if (current_history.data.source !== old_links[i].source || current_history.data.target !== old_links[i].target) {
+          new_links.push(old_links[i]);
+        }
+      }
+      xkContext.value.chartData.series[0].links = new_links;
+    } else if (current_history.act === "changeEdge") {
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.new.source === xkContext.value.chartData.series[0].links[i].source && current_history.new.target === xkContext.value.chartData.series[0].links[i].target) {
+          xkContext.value.chartData.series[0].links[i] = current_history.old;
+          break;
+        }
+      }
+    } else if (current_history.act === "deleteEdge") {
+      xkContext.value.chartData.series[0].links.push(current_history.data);
+    }
+    xkContext.value.updateChart = !xkContext.value.updateChart;
+  }
+};
+
+const redo = () => {
+  /**
+   * 实现快捷键Ctrl+Y
+   */
+  const currentHSN = xkContext.value.historySequenceNumber + 1;
+  if (currentHSN < xkContext.value.historyList.length) {
+    const current_history = xkContext.value.historyList[currentHSN];
+    xkContext.value.historySequenceNumber = currentHSN;
+
+    if (current_history.act === "createNode") {
+      xkContext.value.chartData.series[0].data.push(current_history.data);
+    } else if (current_history.act === "changeNode") {
+      const old_data = xkContext.value.chartData.series[0].data;
+      const length = old_data.length;
+
+      for (let i = 0; i < length; i++) {
+        if (current_history.old.name === old_data[i].name) {
+          xkContext.value.chartData.series[0].data[i] = current_history.new;
+          break;
+        }
+      }
+      if (current_history.new.name !== current_history.old.name) {
+        const links = xkContext.value.chartData.series[0].links;
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].source === current_history.old.name) {
+            xkContext.value.chartData.series[0].links[i].source = current_history.new.name;
+          }
+          if (links[i].target === current_history.old.name) {
+            xkContext.value.chartData.series[0].links[i].target = current_history.new.name;
+          }
+        }
+      }
+    } else if (current_history.act === "deleteNode") {
+      const series = xkContext.value.chartData.series[0];
+      const oldName = current_history.data.name;
+
+      // 删除节点
+      let data = [];
+      let length = series.data.length;
+      for (let i = 0; i < length; i++) {
+        if (series.data[i].name !== oldName) {
+          data.push(series.data[i]);
+        }
+      }
+      xkContext.value.chartData.series[0].data = data;
+
+      // 删除节点所在的边
+      let links = [];
+      length = series.links.length;
+      for (let i = 0; i < length; i++) {
+        if (series.links[i].source !== oldName && series.links[i].target !== oldName) {
+          links.push(series.links[i]);
+        }
+      }
+      xkContext.value.chartData.series[0].links = links;
+    } else if (current_history.act === "createEdge") {
+      xkContext.value.chartData.series[0].links.push(current_history.data);
+    } else if (current_history.act === "changeEdge") {
+      const node_length = xkContext.value.chartData.series[0].links.length;
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.old.source === xkContext.value.chartData.series[0].links[i].source && current_history.old.target === xkContext.value.chartData.series[0].links[i].target) {
+          xkContext.value.chartData.series[0].links[i] = current_history.new;
+          break;
+        }
+      }
+    } else if (current_history.act === "deleteEdge") {
+      const old_links = xkContext.value.chartData.series[0].links;
+      const node_length = old_links.length;
+      const new_links = [];
+      for (let i = 0; i < node_length; i++) {
+        if (current_history.data.source !== old_links[i].source || current_history.data.target !== old_links[i].target) {
+          new_links.push(old_links[i]);
+        }
+      }
+      xkContext.value.chartData.series[0].links = new_links;
+    }
+    xkContext.value.updateChart = !xkContext.value.updateChart;
+  }
+};
+
 const createNode = () => {
   /**
    * 创建新节点
@@ -427,7 +602,7 @@ const deleteNode = () => {
       }
     }
     xkContext.value.chartData.series[0].links = links;
-    xkContext.value.updateChart = true;
+    xkContext.value.updateChart = !xkContext.value.updateChart;
   }
   resetRefData();
 };
@@ -464,7 +639,7 @@ const deleteEdge = () => {
       }
     }
     xkContext.value.chartData.series[0].links = links;
-    xkContext.value.updateChart = true;
+    xkContext.value.updateChart = !xkContext.value.updateChart;
   }
   resetSider();
   resetRefData();

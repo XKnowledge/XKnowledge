@@ -35,7 +35,7 @@ const createEdgeSubmit = () => {
     };
     xkContext.value.historySequenceNumber++;
     xkContext.value.chartData.series[0].links.push(newEdgeJson);
-    xkContext.value.updateChart = true;
+    xkContext.value.updateChart = !xkContext.value.updateChart;
     xkContext.value.errorMessage = "";
     resetEdgeRef(newEdge);
   } else {
