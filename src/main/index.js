@@ -4,7 +4,6 @@ import { join } from "path";
 const fs = require("fs");
 
 let mainWindow;
-let pythonProcess = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -16,7 +15,7 @@ function createWindow() {
     minimizable: false, // 禁止最小化
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      // devTools: false, // 禁用开发者工具快捷键
+      devTools: false, // 禁用开发者工具快捷键
       webviewTag: false, // 禁用 webview 标签
       sandbox: false,
       accelerator: {
@@ -39,8 +38,6 @@ function createWindow() {
   mainWindow.on("ready-to-show", () => {
     mainWindow.show();
   });
-
-  mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
 
   // 设置窗口打开行为的处理程序。
   // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
@@ -100,8 +97,9 @@ app.whenReady().then(() => {
 // 当所有窗口关闭时退出，但在 macOS 上除外。
 // 在 macOS 上，通常应用程序和它们的菜单栏会保持活动状态，直到用户使用 Cmd + Q 明确退出应用程序。
 app.on("window-all-closed", () => {
-  if (pythonProcess !== null) pythonProcess.kill();
-  if (process.platform !== "darwin") app.quit();
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
 
 let current_act;
@@ -129,7 +127,7 @@ function openFile() {
     }
   }).catch((err) => {
   });
-};
+}
 
 ipcMain.on("act", (event, act) => {
   current_act = act;

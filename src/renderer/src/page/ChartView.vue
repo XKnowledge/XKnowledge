@@ -652,8 +652,8 @@ const contentStyle = {
   minHeight: 120,
   lineHeight: "120px",
   backgroundColor: "#ffffff",
-  width: echartsWidth.value,
-  height: "calc(100vh - 86px)"
+  width: echartsWidth.value
+  // height: "calc(100vh - 86px)
 };
 
 const echartsStyle = {
