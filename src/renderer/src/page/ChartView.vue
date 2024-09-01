@@ -27,6 +27,23 @@
             <a-alert :message="xkContext.errorMessage" type="error" />
           </a-space>
 
+          <a-space v-show="attributeVisible">
+            <a-checkbox-group v-model:value="checkedValues" @change="onChangeAttr">
+              <a-row>
+                <a-col :span="12">
+                  <a-checkbox value="draggable">
+                    元素拖拽
+                  </a-checkbox>
+                </a-col>
+                <a-col :span="12">
+                  <a-checkbox value="showEdgeName">
+                    显示连接名称
+                  </a-checkbox>
+                </a-col>
+              </a-row>
+            </a-checkbox-group>
+          </a-space>
+
           <XkCreateNode v-show="createNodeVisible"
                         v-model:newNode="newNode"
                         v-model:categoryItems="categoryItems"
@@ -83,6 +100,9 @@ const xkContext = ref({
 
 const echartsWidth = ref("100vh");
 const siderVisible = ref(false);
+
+const attributeVisible = ref(true);
+const checkedValues = ref([]);
 
 const createNodeVisible = ref(false);
 const newNode = ref({
@@ -151,12 +171,24 @@ window.electronAPI.receiveData((data) => {
     // 初始化 ECharts 图表
     chartInstance = echarts.init(chartDom.value);
     if (xkContext.value.chartData) {
+      initAttr();
       // 使用刚指定的配置项和数据显示图表。
       xkContext.value.updateChart = !xkContext.value.updateChart;
       chartInstance.on("click", clickChart);
     }
   }
 });
+
+const initAttr = () => {
+  const attrs = [];
+  if (xkContext.value.chartData.series[0].draggable) {
+    attrs.push("draggable");
+  }
+  if (xkContext.value.chartData.series[0].edgeLabel.show) {
+    attrs.push("showEdgeName");
+  }
+  checkedValues.value = attrs;
+};
 
 watch(() => xkContext.value.updateChart, () => {
   // 自动监听，刷新图表
@@ -189,20 +221,28 @@ watch(() => xkContext.value.updateChart, () => {
   // 提示框的配置
   xkContext.value.chartData.tooltip = {
     show: true,
-    formatter: function (x) {
+    formatter: function(x) {
       return x.data.des;
     }
   };
+
   xkContext.value.chartData.series[0].edgeLabel = {
-    show: true,
-    formatter: function (x) {
+    show: (checkedValues.value.indexOf("showEdgeName") !== -1),
+    formatter: function(x) {
       return x.data.name;
     }
   };
+  xkContext.value.chartData.series[0].draggable = (checkedValues.value.indexOf("draggable") !== -1);
+
   // 更新选择下拉框类目
   categoryItems.value = categories;
   chartInstance.setOption(xkContext.value.chartData);
 });
+
+const onChangeAttr = () => {
+  console.log(checkedValues.value);
+  xkContext.value.updateChart = !xkContext.value.updateChart;
+};
 
 const shortcut = (event) => {
   /**
@@ -296,6 +336,7 @@ const resetSider = () => {
    * 将侧边栏中显示的信息全部隐藏
    */
   xkContext.value.errorMessage = "";
+  attributeVisible.value = false;
   createNodeVisible.value = false;
   currentNodeVisible.value = false;
   createEdgeVisible.value = false;
@@ -358,7 +399,7 @@ const clickChart = event => {
     }
   }
   if (!siderVisible.value) {
-    toggleSider();
+    switchSider();
   }
 };
 
@@ -378,23 +419,34 @@ const resizeChart = () => {
   chartInstance.resize();
 };
 
-const toggleSider = () => {
-  /**
-   * 显示侧边栏
-   */
+const switchSider = () => {
+  // 当侧边栏收起的时候，直接点击图表，就回唤起侧边栏，这种情况下不能清空侧壁栏
   siderVisible.value = !siderVisible.value; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   // 使用 nextTick 等待DOM更新完成后执行resize
   nextTick(resizeChart);
+};
+
+const toggleSider = () => {
+  /**
+   * 显示或者关闭侧边栏
+   */
+  switchSider();
+  // 如果是从打开到收起，一定会清空图表
+  // 如果是从收起到打开，应该打开attributeVisible，同样清空图表
+  resetRefData();
+  resetSider();
+
   if (!siderVisible.value) {
     // 收起编辑框，就可以重置图表
     for (let i = 0; i < highlightNodeList.value.length; i++) {
       operateChart(highlightNodeList.value[i], "node", "downplay");
     }
-    operateChart(currentEdgeDataIndex.value, "edge", "downplay");
-
-    resetRefData();
-    resetSider();
+    if (currentEdgeDataIndex.value > -1) {
+      operateChart(currentEdgeDataIndex.value, "edge", "downplay");
+    }
+  } else {
+    attributeVisible.value = true;
   }
 };
 
@@ -658,13 +710,19 @@ const contentStyle = {
   minHeight: 120,
   lineHeight: "120px",
   backgroundColor: "#ffffff",
-  width: echartsWidth.value,
-  height: "calc(100vh - 86px)"
+  width: echartsWidth.value
+  // height: "calc(100vh - 86px)"
 };
 
 const echartsStyle = {
   width: "100%",
   height: "100%"
+};
+
+const radioStyle = {
+  display: "block",
+  height: "30px",
+  lineHeight: "30px"
 };
 
 </script>
