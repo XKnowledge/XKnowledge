@@ -236,7 +236,9 @@ watch(() => xkContext.value.updateChart, () => {
 
   // 更新选择下拉框类目
   categoryItems.value = categories;
-  chartInstance.setOption(xkContext.value.chartData);
+  chartInstance.setOption(xkContext.value.chartData, {
+    notMerge: true
+  });
 });
 
 const onChangeAttr = () => {
