@@ -141,15 +141,15 @@ ipcMain.on("act", (event, act) => {
 
 function saveFile(file_path, data) {
   fs.writeFile(file_path, data, (err) => {
-    if (err) {
-      console.log(err);
-    }
+    return !err;
   });
+  return true;
 }
 
 ipcMain.on("data", (event, arg) => {
   // console.log(arg);
   if (current_act === "save_file") {
+    let saveSuccess = false;
     const data = JSON.stringify(arg.file);
     if (arg.path === "") {
       dialog.showSaveDialog(mainWindow, {
@@ -161,7 +161,7 @@ ipcMain.on("data", (event, arg) => {
       }).then((res) => {
         console.log(res);
         if (!res.canceled) {
-          saveFile(res.filePath, data);
+          saveSuccess = saveFile(res.filePath, data);
           mainWindow.webContents.send("data", {
             value: data,
             path: res.filePath
@@ -172,7 +172,12 @@ ipcMain.on("data", (event, arg) => {
       });
     } else {
       console.log("save_file");
-      saveFile(arg.path, data);
+      saveSuccess = saveFile(arg.path, data);
+    }
+    if (saveSuccess) {
+      mainWindow.webContents.send("act", "save_success");
+    } else {
+      mainWindow.webContents.send("act", "save_failure");
     }
   } else if (current_act === "save_as") {
     mainWindow.webContents.send("act", "chart");

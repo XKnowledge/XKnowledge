@@ -6,6 +6,9 @@
           <a-layout-sider class="sider-menu-style">
             <XkMenu v-model:shortcutActive="shortcutActive" v-model:shortcutWatch="shortcutWatch" />
           </a-layout-sider>
+          <a-space v-show="saveNodeVisible" direction="vertical" class="save-note">
+            <a-alert message="未保存" type="error" />
+          </a-space>
           <a-layout-content :style="headerStyle" class="move-show">
             <a-button class="no-move-button" @click="createNode">创建节点</a-button>
             <a-button class="no-move-button" @click="deleteNode">删除节点</a-button>
@@ -100,6 +103,7 @@ const xkContext = ref({
 
 const echartsWidth = ref("100vh");
 const siderVisible = ref(false);
+const saveNodeVisible = ref(false);
 
 const attributeVisible = ref(true);
 const checkedValues = ref([]);
@@ -174,6 +178,9 @@ window.electronAPI.receiveData((data) => {
       initAttr();
       // 使用刚指定的配置项和数据显示图表。
       xkContext.value.updateChart = !xkContext.value.updateChart;
+      nextTick(() => {
+        saveNodeVisible.value = false;
+      });
       chartInstance.on("click", clickChart);
     }
   }
@@ -239,6 +246,7 @@ watch(() => xkContext.value.updateChart, () => {
   chartInstance.setOption(xkContext.value.chartData, {
     notMerge: true
   });
+  saveNodeVisible.value = true;
 });
 
 const onChangeAttr = () => {
@@ -338,7 +346,7 @@ const resetSider = () => {
    * 将侧边栏中显示的信息全部隐藏
    */
   xkContext.value.errorMessage = "";
-  attributeVisible.value = false;
+  attributeVisible.value = true;
   createNodeVisible.value = false;
   currentNodeVisible.value = false;
   createEdgeVisible.value = false;
@@ -459,6 +467,13 @@ const saveFile = () => {
   console.log("save file");
   window.electronAPI.sendAct("save_file");
   window.electronAPI.sendData({ path: filePath.value, file: jsonReactive(xkContext.value.chartData) });
+  window.electronAPI.receiveAct((act) => {
+    if (act === "save_success") {
+      saveNodeVisible.value = false;
+    } else if (act === "save_failure") {
+      saveNodeVisible.value = true;
+    }
+  });
 };
 
 const undo = () => {
@@ -733,6 +748,19 @@ const radioStyle = {
 .echarts-style {
   width: 100%;
   height: 100%;
+}
+
+.save-note {
+  display: flex;
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: center;
+  /* 水平居中 */
+  -webkit-app-region: no-drag;
+  /* 可拖动 */
+  height: 53px !important;
+  //font: 13px sans-serif;
+  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
 }
 
 .move-show {
