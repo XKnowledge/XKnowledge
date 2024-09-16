@@ -175,6 +175,7 @@ window.electronAPI.receiveData((data) => {
     // 初始化 ECharts 图表
     chartInstance = echarts.init(chartDom.value);
     if (xkContext.value.chartData) {
+      initChartData();
       initAttr();
       // 使用刚指定的配置项和数据显示图表。
       xkContext.value.updateChart = !xkContext.value.updateChart;
@@ -197,6 +198,44 @@ const initAttr = () => {
   checkedValues.value = attrs;
 };
 
+const initChartData = () => {
+  // 增加水印
+  xkContext.value.chartData.graphic = [
+    {
+      "type": "text",
+      "left": "center",
+      "bottom": "5%",
+      "style": {
+        "fill": "rgba(0,0,0,1)",
+        "text": "By XKnowledge",
+        "font": "bold 18px sans-serif"
+      }
+    }
+  ];
+  xkContext.value.chartData.toolbox = {
+    // 显示工具箱
+    "show": true,
+    "feature": {
+      // 保存为图片
+      "saveAsImage": {
+        "show": true
+      },
+      "restore": {
+        "show": true
+      }
+    }
+  };
+
+  // 提示框的配置
+  xkContext.value.chartData.tooltip = {
+    show: true,
+    formatter: function(x) {
+      return x.data.des;
+    }
+  };
+
+};
+
 watch(() => xkContext.value.updateChart, () => {
   // 自动监听，刷新图表
   // 保证chartInstance在当前文件中
@@ -212,26 +251,6 @@ watch(() => xkContext.value.updateChart, () => {
   xkContext.value.chartData.legend[0].data = categories.map((x) => {
     return x;
   });
-  // 增加水印
-  xkContext.value.chartData.graphic = [
-    {
-      "type": "text",
-      "left": "center",
-      "bottom": "5%",
-      "style": {
-        "fill": "rgba(0,0,0,1)",
-        "text": "By XKnowledge",
-        "font": "bold 18px sans-serif"
-      }
-    }
-  ];
-  // 提示框的配置
-  xkContext.value.chartData.tooltip = {
-    show: true,
-    formatter: function(x) {
-      return x.data.des;
-    }
-  };
 
   xkContext.value.chartData.series[0].edgeLabel = {
     show: (checkedValues.value.indexOf("showEdgeName") !== -1),
@@ -243,6 +262,8 @@ watch(() => xkContext.value.updateChart, () => {
 
   // 更新选择下拉框类目
   categoryItems.value = categories;
+
+  // 更新图表
   chartInstance.setOption(xkContext.value.chartData, {
     notMerge: true
   });
@@ -627,6 +648,7 @@ const createNode = () => {
    * 创建新节点
    */
   resetSider();
+  attributeVisible.value = false;
   siderVisible.value = true; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createNodeVisible.value = true;
@@ -681,6 +703,7 @@ const createEdge = () => {
    * 创建新连接
    */
   resetSider();
+  attributeVisible.value = false;
   siderVisible.value = true; // 切换侧边栏的显示状态
   echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : "100vw";
   createEdgeVisible.value = true;
