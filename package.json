@@ -1,7 +1,7 @@
 {
   "name": "XKnowledge",
-  "version": "1.0.0",
-  "description": "XKnowledge with Vue",
+  "version": "1.1.0",
+  "description": "XKnowledge - 一款知识图谱软件",
   "main": "./out/main/index.js",
   "author": "XKnowledge Team",
   "scripts": {
