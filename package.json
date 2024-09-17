@@ -6,7 +6,7 @@
   "author": "XKnowledge Team",
   "scripts": {
     "dev": "electron-vite dev --watch",
-    "build-dev": "npm run build && electron-vite dev --watch",
+    "build:dev": "npm run build && electron-vite dev --watch",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
