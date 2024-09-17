@@ -4,19 +4,31 @@
       <img :src="MenuIcon" alt="MenuIcon" :style="{ width: '20px', height: '20px'}" />
     </a>
     <template #overlay>
-      <a-menu>
+      <a-menu style="width: 200px">
         <a-menu-item key="1" @click="undo">
-          撤销 Ctrl+Z
+          <a-row>
+            <a-col flex="120px">撤销</a-col>
+            <a-col flex="auto">Ctrl+Z</a-col>
+          </a-row>
         </a-menu-item>
         <a-menu-item key="2" @click="redo">
-          重做 Ctrl+Y
+          <a-row>
+            <a-col flex="120px">重做</a-col>
+            <a-col flex="auto">Ctrl+Y</a-col>
+          </a-row>
         </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="3" @click="createNode">
-          创建节点 Insert
+          <a-row>
+            <a-col flex="120px">创建节点</a-col>
+            <a-col flex="auto">Insert</a-col>
+          </a-row>
         </a-menu-item>
         <a-menu-item key="4" @click="deleteNode">
-          删除节点 Delete
+          <a-row>
+            <a-col flex="120px">删除节点</a-col>
+            <a-col flex="auto">Delete</a-col>
+          </a-row>
         </a-menu-item>
         <a-menu-item key="5" @click="createEdge">
           创建连接
@@ -26,7 +38,10 @@
         </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="7" @click="saveFile">
-          保存 Ctrl+S
+          <a-row>
+            <a-col flex="120px">保存</a-col>
+            <a-col flex="auto">Ctrl+S</a-col>
+          </a-row>
         </a-menu-item>
       </a-menu>
     </template>
