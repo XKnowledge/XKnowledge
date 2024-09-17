@@ -33,15 +33,24 @@
           <a-space v-show="attributeVisible">
             <a-checkbox-group v-model:value="checkedValues" @change="onChangeAttr">
               <a-row>
-                <a-col :span="12">
+                <a-col :flex="1">
                   <a-checkbox value="draggable">
                     元素拖拽
                   </a-checkbox>
                 </a-col>
-                <a-col :span="12">
+                <a-col :flex="1">
                   <a-checkbox value="showEdgeName">
                     显示连接名称
                   </a-checkbox>
+                </a-col>
+              </a-row>
+              <a-divider orientation="left">排斥力大小</a-divider>
+              <a-row>
+                <a-col :flex="4">
+                  <a-slider v-model:value="repulsion" :min="1" :max="10000" @change="onChangeRepulsion" />
+                </a-col>
+                <a-col :flex="1">
+                  <a-input-number v-model:value="repulsion" :min="1" :max="10000" @change="onChangeRepulsion" />
                 </a-col>
               </a-row>
             </a-checkbox-group>
@@ -107,6 +116,8 @@ const saveNodeVisible = ref(false);
 
 const attributeVisible = ref(true);
 const checkedValues = ref([]);
+const repulsion = ref(1000);
+let timer = null;
 
 const createNodeVisible = ref(false);
 const newNode = ref({
@@ -162,7 +173,15 @@ onMounted(async () => {
   // 调用渲染图表逻辑
   window.addEventListener("resize", resizeChart);
   window.addEventListener("keydown", shortcut);
+  setInterval(() => {
+    console.log("auto save");
+    if (saveNodeVisible.value && filePath.value !== "") {
+      shortcutActive.value = "save_file";
+      shortcutWatch.value = !shortcutWatch.value;
+    }
+  }, 60000);
 });
+
 
 window.electronAPI.receiveData((data) => {
   xkContext.value.chartData = JSON.parse(data.value);
@@ -252,14 +271,6 @@ watch(() => xkContext.value.updateChart, () => {
     return x;
   });
 
-  xkContext.value.chartData.series[0].edgeLabel = {
-    show: (checkedValues.value.indexOf("showEdgeName") !== -1),
-    formatter: function(x) {
-      return x.data.name;
-    }
-  };
-  xkContext.value.chartData.series[0].draggable = (checkedValues.value.indexOf("draggable") !== -1);
-
   // 更新选择下拉框类目
   categoryItems.value = categories;
 
@@ -271,8 +282,29 @@ watch(() => xkContext.value.updateChart, () => {
 });
 
 const onChangeAttr = () => {
-  console.log(checkedValues.value);
-  xkContext.value.updateChart = !xkContext.value.updateChart;
+  xkContext.value.chartData.series[0].edgeLabel = {
+    show: (checkedValues.value.indexOf("showEdgeName") !== -1),
+    formatter: function(x) {
+      return x.data.name;
+    }
+  };
+  xkContext.value.chartData.series[0].draggable = (checkedValues.value.indexOf("draggable") !== -1);
+  chartInstance.setOption(xkContext.value.chartData, {
+    notMerge: true
+  });
+  saveNodeVisible.value = true;
+};
+
+const onChangeRepulsion = () => {
+  xkContext.value.chartData.series[0].force.repulsion = repulsion.value;
+  chartInstance.setOption(xkContext.value.chartData);
+  saveNodeVisible.value = true;
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    chartInstance.setOption(xkContext.value.chartData, {
+      notMerge: true
+    });
+  }, 500);
 };
 
 const shortcut = (event) => {
@@ -380,6 +412,7 @@ const clickChart = event => {
    */
   console.log(event);
   resetSider();
+  attributeVisible.value = false;
   if (event.dataType === "node") {
     currentNodeVisible.value = true;
     currentNode.value = jsonReactive(event.data); // 一定要用深拷贝
