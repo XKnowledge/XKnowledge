@@ -34,7 +34,7 @@ const handleClick = (id) => {
  */
 const handleDoubleClick = async (id, fileName) => {
   if (id === "template1") {
-    window.electronAPI.sendAct("save_as");
+    window.electronAPI.sendAct("open_template");
     window.electronAPI.sendData(createTemplate1());
   }
 };
