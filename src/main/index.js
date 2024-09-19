@@ -106,6 +106,18 @@ app.on("window-all-closed", () => {
 
 let current_act;
 
+function openChartWindow(data, path) {
+  mainWindow.webContents.send("act", "chart");
+  mainWindow.setMaximizable(true);
+  mainWindow.setMinimizable(true);
+  mainWindow.setResizable(true);
+  mainWindow.setMinimumSize(900, 670);
+  mainWindow.webContents.send("data", {
+    value: data,
+    path: path
+  });
+}
+
 function openFile() {
   dialog.showOpenDialog(mainWindow, {
     title: "打开",
@@ -116,23 +128,16 @@ function openFile() {
   }).then((res) => {
     if (!res.canceled) {
       fs.readFile(res.filePaths[0], "utf-8", (err, data) => {
-        mainWindow.webContents.send("act", "chart");
-        mainWindow.setMaximizable(true);
-        mainWindow.setMinimizable(true);
-        mainWindow.setResizable(true);
-        mainWindow.setMinimumSize(900, 670);
-        mainWindow.webContents.send("data", {
-          value: data,
-          path: res.filePaths[0]
-        });
+        openChartWindow(data, res.filePaths[0]);
       });
     }
   }).catch((err) => {
     console.log(err);
   });
-};
+}
 
 ipcMain.on("act", (event, act) => {
+  // 只有操作需要进行，不需要数据参与
   current_act = act;
   if (act === "open_file") {
     openFile();
@@ -147,6 +152,7 @@ function saveFile(file_path, data) {
 }
 
 ipcMain.on("data", (event, arg) => {
+  // 当接到操作指令，需要对数据进行操作时
   // console.log(arg);
   if (current_act === "save_file") {
     let saveSuccess = false;
@@ -179,15 +185,35 @@ ipcMain.on("data", (event, arg) => {
     } else {
       mainWindow.webContents.send("act", "save_failure");
     }
+  } else if (current_act === "open_template") {
+    openChartWindow(JSON.stringify(arg), "");
   } else if (current_act === "save_as") {
-    mainWindow.webContents.send("act", "chart");
-    mainWindow.setMaximizable(true);
-    mainWindow.setMinimizable(true);
-    mainWindow.setResizable(true);
-    mainWindow.setMinimumSize(900, 670);
-    mainWindow.webContents.send("data", {
-      value: JSON.stringify(arg),
-      path: ""
+    let saveSuccess = false;
+    let filePath = arg.path;
+    const data = JSON.stringify(arg.file);
+    dialog.showSaveDialog(mainWindow, {
+      title: "将文件另存为...",
+      properties: ["createDirectory"],
+      filters: [
+        { name: "XKnowledge", extensions: ["xk"] }
+      ]
+    }).then((res) => {
+      console.log(res);
+      if (!res.canceled) {
+        saveSuccess = saveFile(res.filePath, data);
+        filePath = res.filePath;
+      }
+    }).catch((err) => {
+      console.log(err);
     });
+    mainWindow.webContents.send("data", {
+      value: data,
+      path: filePath
+    });
+    if (saveSuccess) {
+      mainWindow.webContents.send("act", "save_success");
+    } else {
+      mainWindow.webContents.send("act", "save_failure");
+    }
   }
 });

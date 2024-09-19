@@ -165,7 +165,7 @@ let chartInstance = null;
 const highlightNodeList = ref([]); // 高亮节点记录
 let highlightEdge = null;
 
-const filePath = ref("");
+let filePath = "";
 const shortcutActive = ref("");
 const shortcutWatch = ref(false);
 
@@ -175,7 +175,7 @@ onMounted(async () => {
   window.addEventListener("keydown", shortcut);
   setInterval(() => {
     console.log("auto save");
-    if (saveNodeVisible.value && filePath.value !== "") {
+    if (saveNodeVisible.value && filePath !== "") {
       shortcutActive.value = "save_file";
       shortcutWatch.value = !shortcutWatch.value;
     }
@@ -185,7 +185,7 @@ onMounted(async () => {
 
 window.electronAPI.receiveData((data) => {
   xkContext.value.chartData = JSON.parse(data.value);
-  filePath.value = data.path;
+  filePath = data.path;
   console.log(data.path);
   // 图表初始化
   console.log("option");
@@ -355,6 +355,9 @@ watch(shortcutWatch, () => {
     case "save_file":
       saveFile();
       break;
+    case "save_as":
+      saveAs();
+      break;
     case "create_node":
       needReset = false;
       createNode();
@@ -520,7 +523,23 @@ const saveFile = () => {
    */
   console.log("save file");
   window.electronAPI.sendAct("save_file");
-  window.electronAPI.sendData({ path: filePath.value, file: jsonReactive(xkContext.value.chartData) });
+  window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) });
+  window.electronAPI.receiveAct((act) => {
+    if (act === "save_success") {
+      saveNodeVisible.value = false;
+    } else if (act === "save_failure") {
+      saveNodeVisible.value = true;
+    }
+  });
+};
+
+const saveAs = () => {
+  /**
+   * 实现文件另存为，electronAPI详见/src/preload/index.js
+   */
+  console.log("save as");
+  window.electronAPI.sendAct("save_as");
+  window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) });
   window.electronAPI.receiveAct((act) => {
     if (act === "save_success") {
       saveNodeVisible.value = false;

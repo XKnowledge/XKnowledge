@@ -43,6 +43,9 @@
             <a-col flex="auto">Ctrl+S</a-col>
           </a-row>
         </a-menu-item>
+        <a-menu-item key="8" @click="saveAs">
+          另存为...
+        </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>
@@ -86,6 +89,11 @@ const deleteEdge = () => {
 
 const saveFile = () => {
   shortcutActive.value = "save_file";
+  shortcutWatch.value = !shortcutWatch.value;
+};
+
+const saveAs = () => {
+  shortcutActive.value = "save_as";
   shortcutWatch.value = !shortcutWatch.value;
 };
 
