@@ -105,6 +105,14 @@ app.on("window-all-closed", () => {
 });
 
 let current_act;
+let status = "open";
+
+function appExit() {
+  if (process.platform !== "darwin") {
+    app.exit(); // 不能使用app.quit()，否则陷入循环
+    // 见https://www.electronjs.org/zh/docs/latest/api/app#appquit
+  }
+}
 
 function openChartWindow(data, path) {
   mainWindow.webContents.send("act", "chart");
@@ -115,6 +123,11 @@ function openChartWindow(data, path) {
   mainWindow.webContents.send("data", {
     value: data,
     path: path
+  });
+
+  mainWindow.on("close", e => {
+    e.preventDefault(); //先阻止一下默认行为，不然直接关了，提示框只会闪一下
+    mainWindow.webContents.send("act", "quit");
   });
 }
 
@@ -139,81 +152,92 @@ function openFile() {
 ipcMain.on("act", (event, act) => {
   // 只有操作需要进行，不需要数据参与
   current_act = act;
-  if (act === "open_file") {
-    openFile();
+  switch (act) {
+    case "open_file":
+      openFile();
+      break;
+    case "unsaved":
+      dialog.showMessageBox({
+        type: "info",
+        title: "确认退出",
+        message: "文件未保存，是否退出？",
+        buttons: ["保存", "放弃", "取消"],   //选择按钮，点击确认则下面的idx为0，取消为1
+        cancelId: 2 //这个的值是如果直接把提示框×掉返回的值，这里设置成和“取消”按钮一样的值，下面的idx也会是1
+      }).then(idx => {
+        //注意上面↑是用的then，网上好多是直接把方法做为showMessageBox的第二个参数，我的测试下不成功
+        console.log(idx);
+        switch (idx.response) {
+          case 0:
+            status = "exit";
+            mainWindow.webContents.send("act", "save_file");
+            break;
+          case 1:
+            // 不保存直接退出
+            appExit();
+            break;
+          case 2:
+            // 取消退出
+            break;
+        }
+      });
+      break;
+    case "saved":
+      appExit();
+      break;
   }
 });
-
-function saveFile(file_path, data) {
-  fs.writeFile(file_path, data, (err) => {
-    return !err;
-  });
-  return true;
-}
 
 ipcMain.on("data", (event, arg) => {
   // 当接到操作指令，需要对数据进行操作时
   // console.log(arg);
   if (current_act === "save_file") {
-    let saveSuccess = false;
     const data = JSON.stringify(arg.file);
     if (arg.path === "") {
-      dialog.showSaveDialog(mainWindow, {
+      const filePath = dialog.showSaveDialogSync(mainWindow, {
         title: "将文件保存到...",
         properties: ["createDirectory"],
         filters: [
           { name: "XKnowledge", extensions: ["xk"] }
         ]
-      }).then((res) => {
-        console.log(res);
-        if (!res.canceled) {
-          saveSuccess = saveFile(res.filePath, data);
-          mainWindow.webContents.send("data", {
-            value: data,
-            path: res.filePath
-          });
-        }
-      }).catch((err) => {
-        console.log(err);
       });
+      if (filePath !== undefined) {
+        fs.writeFileSync(filePath, data);
+        mainWindow.webContents.send("data", {
+          value: data,
+          path: filePath
+        });
+        mainWindow.webContents.send("act", "save_success");
+      } else {
+        mainWindow.webContents.send("act", "save_failure");
+        status = "open";
+      }
     } else {
-      console.log("save_file");
-      saveSuccess = saveFile(arg.path, data);
+      fs.writeFileSync(arg.path, data);
     }
-    if (saveSuccess) {
-      mainWindow.webContents.send("act", "save_success");
-    } else {
-      mainWindow.webContents.send("act", "save_failure");
+    if (status === "exit") {
+      appExit();
     }
   } else if (current_act === "open_template") {
     openChartWindow(JSON.stringify(arg), "");
   } else if (current_act === "save_as") {
-    let saveSuccess = false;
-    let filePath = arg.path;
     const data = JSON.stringify(arg.file);
-    dialog.showSaveDialog(mainWindow, {
+    let filePath = dialog.showSaveDialogSync(mainWindow, {
       title: "将文件另存为...",
       properties: ["createDirectory"],
       filters: [
         { name: "XKnowledge", extensions: ["xk"] }
       ]
-    }).then((res) => {
-      console.log(res);
-      if (!res.canceled) {
-        saveSuccess = saveFile(res.filePath, data);
-        filePath = res.filePath;
-      }
-    }).catch((err) => {
-      console.log(err);
     });
+    if (filePath !== undefined) {
+      fs.writeFileSync(filePath, data);
+      mainWindow.webContents.send("act", "save_success");
+    } else {
+      filePath = arg.path;
+      mainWindow.webContents.send("act", "save_failure");
+    }
     mainWindow.webContents.send("data", {
       value: data,
       path: filePath
     });
-    if (saveSuccess) {
-      mainWindow.webContents.send("act", "save_success");
-    } else {
-      mainWindow.webContents.send("act", "save_failure");
-    }
   }
 });

@@ -524,13 +524,6 @@ const saveFile = () => {
   console.log("save file");
   window.electronAPI.sendAct("save_file");
   window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) });
-  window.electronAPI.receiveAct((act) => {
-    if (act === "save_success") {
-      saveNodeVisible.value = false;
-    } else if (act === "save_failure") {
-      saveNodeVisible.value = true;
-    }
-  });
 };
 
 const saveAs = () => {
@@ -540,14 +533,30 @@ const saveAs = () => {
   console.log("save as");
   window.electronAPI.sendAct("save_as");
   window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) });
-  window.electronAPI.receiveAct((act) => {
-    if (act === "save_success") {
-      saveNodeVisible.value = false;
-    } else if (act === "save_failure") {
-      saveNodeVisible.value = true;
-    }
-  });
 };
+
+window.electronAPI.receiveAct((act) => {
+  switch (act) {
+    case "save_success":
+      saveNodeVisible.value = false;
+      break;
+    case "save_failure":
+      saveNodeVisible.value = true;
+      break;
+    case "quit":
+      if (saveNodeVisible.value) {
+        console.log("unsaved");
+        window.electronAPI.sendAct("unsaved");
+      } else {
+        console.log("unsaved");
+        window.electronAPI.sendAct("saved");
+      }
+      break;
+    case "save_file":
+      saveFile();
+      break;
+  }
+});
 
 const undo = () => {
   /**
