@@ -9,14 +9,14 @@
           </a>
           <template #overlay>
             <a-menu @click="onClick">
-              <a-menu-item v-for="item in MenuList" :key="item.key">{{ item.name }}</a-menu-item>
+              <a-menu-item v-for="item in menuList" :key="item.key">{{ item.name }}</a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
         <a-typography-title :level="2">选取模板</a-typography-title>
         <!-- <a-typography-title :level="3">最近使用</a-typography-title> -->
         <!-- <a-typography-title :level="3">demo</a-typography-title> -->
-        <a-typography-title v-for="item in MenuList" :key="item.key" :level="3">{{ item.name }}</a-typography-title>
+        <a-typography-title v-for="item in menuList" :key="item.key" :level="3">{{ item.name }}</a-typography-title>
         <XkCardList :fileList="templates" />
       </a-typography>
     </div>
@@ -31,7 +31,7 @@ import { ref } from "vue";
 import XkCardList from "../components/XkCardList.vue";
 import TemplatePreview from "../assets/template.png";
 
-const MENU = [
+const menuList = ref([
   { key: "1", name: "全部" }
   // { key: "2", name: "基本" }
   // { key: "3", name: "知识管理" },
@@ -41,15 +41,13 @@ const MENU = [
   // { key: "7", name: "娱乐和生活" },
   // { key: "8", name: "分析和决策" },
   // { key: "9", name: "创造力" }
-];
-
-const MenuList = ref(MENU);
+]);
 
 const curMenu = ref("全部");
 
 const onClick = ({ key }) => {
   console.log(`Click on item ${key}`);
-  curMenu.value = MenuList.value[key].name;
+  curMenu.value = menuList.value[key].name;
 };
 
 const templates = ref([
