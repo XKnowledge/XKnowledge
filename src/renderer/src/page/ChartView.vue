@@ -1,7 +1,7 @@
 <template>
   <a-space direction="vertical" :style="{ width: '100%' }" :size="[0, 48]">
     <a-layout :style="{height: '100vh'}">
-      <a-layout-header :style="headerStyle" class="move-show">
+      <a-layout-header class="move-show">
         <a-layout>
           <a-layout-sider class="sider-menu-style">
             <XkMenu v-model:shortcutActive="shortcutActive" v-model:shortcutWatch="shortcutWatch" />
@@ -9,20 +9,22 @@
           <a-space v-show="saveNodeVisible" direction="vertical" class="save-note">
             <a-alert message="未保存" type="error" />
           </a-space>
-          <a-layout-content :style="headerStyle" class="move-show">
-            <a-button class="no-move-button" @click="createNode">创建节点</a-button>
-            <a-button class="no-move-button" @click="deleteNode">删除节点</a-button>
-            <a-button class="no-move-button" @click="createEdge">创建连接</a-button>
-            <a-button class="no-move-button" @click="deleteEdge">删除连接</a-button>
-            <a-button class="no-move-button" @click="toggleSider">编辑框</a-button>
-            <!-- 控制按钮 -->
+          <a-layout-content class="move-header">
+            <a-space size="large">
+              <a-space v-for="item in buttonList" style="align-items: center" direction="vertical" size="small">
+                <a-button type="link" class="no-move-button" @click="item.click">
+                  <img :src="item.src" alt="" :style="{ width: '20px', height: '20px'}" />
+                </a-button>
+                {{ item.name }}
+              </a-space>
+            </a-space>
           </a-layout-content>
 
         </a-layout>
       </a-layout-header>
       <a-layout>
         <a-layout-content :style="contentStyle">
-          <div :style="echartsStyle" ref="chartDom"></div>
+          <div class="echarts-style" ref="chartDom"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
 
@@ -101,6 +103,12 @@ import XkCurrentNode from "../components/XkCurrentNode.vue";
 import XkCreateEdge from "../components/XkCreateEdge.vue";
 import XkCurrentEdge from "../components/XkCurrentEdge.vue";
 import XkMenu from "../components/XkMenu.vue";
+
+import CreateNodeIcon from "../assets/create_node.png";
+import DeleteNodeIcon from "../assets/delete_node.png";
+import CreateEdgeIcon from "../assets/create_edge.png";
+import DeleteEdgeIcon from "../assets/delete_edge.png";
+import EditIcon from "../assets/edit.png";
 
 const xkContext = ref({
   "errorMessage": "",
@@ -798,13 +806,13 @@ const deleteEdge = () => {
   resetRefData();
 };
 
-const headerStyle = {
-  textAlign: "center",
-  height: 50,
-  paddingInline: 50,
-  lineHeight: "64px",
-  backgroundColor: "#f5f5f5"
-};
+const buttonList = ref([
+  { src: CreateNodeIcon, name: "创建节点", click: createNode },
+  { src: DeleteNodeIcon, name: "删除节点", click: deleteNode },
+  { src: CreateEdgeIcon, name: "创建连接", click: createEdge },
+  { src: DeleteEdgeIcon, name: "删除连接", click: deleteEdge },
+  { src: EditIcon, name: "编辑框", click: toggleSider }
+]);
 
 const contentStyle = {
   textAlign: "center",
@@ -813,17 +821,6 @@ const contentStyle = {
   backgroundColor: "#ffffff",
   width: echartsWidth.value
   // height: "calc(100vh - 86px)"
-};
-
-const echartsStyle = {
-  width: "100%",
-  height: "100%"
-};
-
-const radioStyle = {
-  display: "block",
-  height: "30px",
-  lineHeight: "30px"
 };
 
 </script>
@@ -860,10 +857,28 @@ const radioStyle = {
   height: 53px !important;
   font: 13px sans-serif;
   border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  text-align: center;
+  line-height: 64px;
+}
+
+.move-header {
+  display: flex;
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: center;
+  /* 水平居中 */
+  -webkit-app-region: drag;
+  /* 可拖动 */
+  background-color: #f5f5f5;
+  width: 100%;
+  height: 53px !important;
+  font: 13px sans-serif;
+  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
 }
 
 .no-move-button {
   -webkit-app-region: no-drag;
+  height: 25px !important;
 }
 
 .footer-style {
