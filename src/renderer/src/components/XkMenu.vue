@@ -100,22 +100,6 @@ const saveAs = () => {
 </script>
 
 <style scoped>
-.sider-menu-style {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-app-region: drag;
-  background-color: #f5f5f5 !important;
-  text-align: center;
-  width: 53px !important;
-  max-width: 53px !important;
-  min-width: 53px !important;
-  height: 53px !important;
-  font: 13px sans-serif;
-  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
-  border-right: none;
-}
-
 .no-move {
   -webkit-app-region: no-drag;
 }
