@@ -57,7 +57,6 @@ const VNodes = defineComponent({
 
 const addCategory = e => {
   e.preventDefault();
-  console.log(categoryName.value);
   if (categoryName.value) {
     currentNode.value.category = categoryName.value;
     const pos = categoryItems.value.indexOf(categoryName.value);
