@@ -20,7 +20,6 @@ onMounted(async () => {
   // let res = await myAxios.get("http://127.0.0.1:5000");
   const res = ["test"];
   let counter = 0;
-  console.log(res);
   res.forEach((file) => {
     counter++;
     if (file.endsWith(".xk")) {

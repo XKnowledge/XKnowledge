@@ -15,7 +15,7 @@ function createWindow() {
     minimizable: false, // 禁止最小化
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      // devTools: false, // 禁用开发者工具快捷键
+      devTools: false, // 禁用开发者工具快捷键
       webviewTag: false, // 禁用 webview 标签
       sandbox: false,
       accelerator: {
@@ -38,8 +38,6 @@ function createWindow() {
   mainWindow.on("ready-to-show", () => {
     mainWindow.show();
   });
-
-  mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
 
   // 设置窗口打开行为的处理程序。
   // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
@@ -145,7 +143,6 @@ function openFile() {
       });
     }
   }).catch((err) => {
-    console.log(err);
   });
 }
 
@@ -165,7 +162,6 @@ ipcMain.on("act", (event, act) => {
         cancelId: 2 //这个的值是如果直接把提示框×掉返回的值，这里设置成和“取消”按钮一样的值，下面的idx也会是1
       }).then(idx => {
         //注意上面↑是用的then，网上好多是直接把方法做为showMessageBox的第二个参数，我的测试下不成功
-        console.log(idx);
         switch (idx.response) {
           case 0:
             status = "exit";
@@ -189,7 +185,6 @@ ipcMain.on("act", (event, act) => {
 
 ipcMain.on("data", (event, arg) => {
   // 当接到操作指令，需要对数据进行操作时
-  // console.log(arg);
   if (current_act === "save_file") {
     const data = JSON.stringify(arg.file);
     if (arg.path === "") {

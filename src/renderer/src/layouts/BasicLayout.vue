@@ -68,21 +68,9 @@ function getItem(label, key, icon, children, type) {
 }
 
 const items = reactive([
-  // getItem("新建", "add", () => h(AppstoreAddOutlined)),
-  // getItem("最近", "history", () => h(HistoryOutlined)),
-  // getItem("图库", "gallery", () => h(BookOutlined)),
-  // getItem('测试页面', 'chart', () => h(BookOutlined)),
-  // getItem("我的文件", "myFiles", () => h(FileTextOutlined))
 ]);
 
-
-// window.electronAPI.openView((value) => {
-//   console.log(value);
-//   router.push(value);
-// });
-
 const handleClick = e => {
-  // console.log('click', e)
   const itemObj = items.find((item) => item.key === e.key);
   title.value = itemObj.label;
   router.push(e.key);
@@ -96,10 +84,6 @@ window.electronAPI.receiveAct((act) => {
   if (act === "chart") {
     router.push("chart");
   }
-});
-
-watch(openKeys, val => {
-  console.log("openKeys", val);
 });
 </script>
 
