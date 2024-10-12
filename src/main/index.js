@@ -189,7 +189,7 @@ ipcMain.on("act", (event, act) => {
 
 ipcMain.on("data", (event, arg) => {
   // 当接到操作指令，需要对数据进行操作时
-  // console.log(arg);
+  console.log(arg);
   if (current_act === "save_file") {
     const data = JSON.stringify(arg.file);
     if (arg.path === "") {
@@ -213,6 +213,7 @@ ipcMain.on("data", (event, arg) => {
       }
     } else {
       fs.writeFileSync(arg.path, data);
+      mainWindow.webContents.send("act", "save_success");
     }
     if (status === "exit") {
       appExit();
