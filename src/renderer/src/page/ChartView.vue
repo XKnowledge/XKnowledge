@@ -206,9 +206,6 @@ window.electronAPI.receiveData((data) => {
       initAttr();
       // 使用刚指定的配置项和数据显示图表。
       xkContext.value.updateChart = !xkContext.value.updateChart;
-      nextTick(() => {
-        saveNodeVisible.value = false;
-      });
       chartInstance.on("click", clickChart);
     }
   }
@@ -544,6 +541,7 @@ const saveAs = () => {
 };
 
 window.electronAPI.receiveAct((act) => {
+  console.log(act);
   switch (act) {
     case "save_success":
       saveNodeVisible.value = false;
