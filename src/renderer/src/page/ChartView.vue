@@ -206,6 +206,9 @@ window.electronAPI.receiveData((data) => {
       initAttr();
       // 使用刚指定的配置项和数据显示图表。
       xkContext.value.updateChart = !xkContext.value.updateChart;
+      nextTick(() => {
+        saveNodeVisible.value = false;
+      });
       chartInstance.on("click", clickChart);
     }
   }
@@ -258,6 +261,9 @@ const initChartData = () => {
     }
   };
 
+  xkContext.value.chartData.series[0].edgeLabel.formatter = function(x) {
+    return x.data.name;
+  };
 };
 
 watch(() => xkContext.value.updateChart, () => {
