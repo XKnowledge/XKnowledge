@@ -98,9 +98,6 @@ window.electronAPI.receiveAct((act) => {
   }
 });
 
-watch(openKeys, val => {
-  console.log("openKeys", val);
-});
 </script>
 
 <style>

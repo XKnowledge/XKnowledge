@@ -182,7 +182,6 @@ onMounted(async () => {
   window.addEventListener("resize", resizeChart);
   window.addEventListener("keydown", shortcut);
   setInterval(() => {
-    console.log("auto save");
     if (saveNodeVisible.value && filePath !== "") {
       shortcutActive.value = "save_file";
       shortcutWatch.value = !shortcutWatch.value;
@@ -194,9 +193,6 @@ onMounted(async () => {
 window.electronAPI.receiveData((data) => {
   xkContext.value.chartData = JSON.parse(data.value);
   filePath = data.path;
-  console.log(data.path);
-  // 图表初始化
-  console.log("option");
   // 基于准备好的dom，初始化echarts实例
   if (chartDom.value) {
     // 初始化 ECharts 图表
@@ -424,7 +420,6 @@ const clickChart = event => {
   /**
    * 点击表格，产生事件，对事件进行响应
    */
-  console.log(event);
   resetSider();
   attributeVisible.value = false;
   if (event.dataType === "node") {
@@ -432,7 +427,6 @@ const clickChart = event => {
     currentNode.value = jsonReactive(event.data); // 一定要用深拷贝
     newNode.value.symbolSize = currentNode.value.symbolSize;
     currentNodeDataIndex.value = event.dataIndex;
-    console.log("currentNode", currentNode.value);
 
     const pos = highlightNodeList.value.indexOf(event.dataIndex);
     if (pos !== -1 && highlightNodeList.value.length !== 0) {
@@ -456,7 +450,6 @@ const clickChart = event => {
         highlightNodeList.value = [highlightNodeList.value[1], event.dataIndex];
       }
     }
-    console.log(highlightNodeList.value);
   } else if (event.dataType === "edge") {
     currentEdgeVisible.value = true;
     currentEdge.value = jsonReactive(event.data);
@@ -532,7 +525,6 @@ const saveFile = () => {
   /**
    * 实现文件保存，electronAPI详见/src/preload/index.js
    */
-  console.log("save file");
   window.electronAPI.sendAct("save_file");
   window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) });
 };
@@ -541,13 +533,11 @@ const saveAs = () => {
   /**
    * 实现文件另存为，electronAPI详见/src/preload/index.js
    */
-  console.log("save as");
   window.electronAPI.sendAct("save_as");
   window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) });
 };
 
 window.electronAPI.receiveAct((act) => {
-  console.log(act);
   switch (act) {
     case "save_success":
       saveNodeVisible.value = false;
@@ -557,10 +547,8 @@ window.electronAPI.receiveAct((act) => {
       break;
     case "quit":
       if (saveNodeVisible.value) {
-        console.log("unsaved");
         window.electronAPI.sendAct("unsaved");
       } else {
-        console.log("unsaved");
         window.electronAPI.sendAct("saved");
       }
       break;
@@ -574,7 +562,6 @@ const undo = () => {
   /**
    * 实现快捷键Ctrl+Z
    */
-  console.log("menu history", xkContext.value.historyList, xkContext.value.historySequenceNumber);
   if (-1 < xkContext.value.historySequenceNumber) {
     const current_history = xkContext.value.historyList[xkContext.value.historySequenceNumber];
     xkContext.value.historySequenceNumber--;
