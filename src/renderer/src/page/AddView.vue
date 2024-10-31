@@ -46,7 +46,6 @@ const menuList = ref([
 const curMenu = ref("全部");
 
 const onClick = ({ key }) => {
-  console.log(`Click on item ${key}`);
   curMenu.value = menuList.value[key].name;
 };
 
