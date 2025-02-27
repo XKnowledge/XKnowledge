@@ -1,6 +1,6 @@
 {
   "name": "XKnowledge",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "XKnowledge - 一款知识图谱软件",
   "main": "./out/main/index.js",
   "author": "XKnowledge Team",
