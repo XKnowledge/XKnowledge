@@ -10,26 +10,26 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import XkCardList from "../components/XkCardList.vue";
+import { ref } from 'vue'
+import XkCardList from '../components/XkCardList.vue'
 
 const templates = ref([
   {
-    id: "template1",
-    name: "知识图谱1",
-    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+    id: 'template1',
+    name: '知识图谱1',
+    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
   },
   {
-    id: "template2",
-    name: "知识图谱2",
-    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+    id: 'template2',
+    name: '知识图谱2',
+    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
   },
   {
-    id: "template3",
-    name: "知识图谱3",
-    src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
+    id: 'template3',
+    name: '知识图谱3',
+    src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
   }
-]);
+])
 </script>
 
 <style scoped>

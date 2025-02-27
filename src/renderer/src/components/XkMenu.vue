@@ -52,50 +52,50 @@
 </template>
 
 <script setup>
-import MenuIcon from "../assets/menu.png";
+import MenuIcon from '../assets/menu.png'
 
-const shortcutActive = defineModel("shortcutActive");
-const shortcutWatch = defineModel("shortcutWatch");
+const shortcutActive = defineModel('shortcutActive')
+const shortcutWatch = defineModel('shortcutWatch')
 
 const undo = () => {
-  shortcutActive.value = "undo";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'undo'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const redo = () => {
-  shortcutActive.value = "redo";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'redo'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const createNode = () => {
-  shortcutActive.value = "create_node";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'create_node'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const deleteNode = () => {
-  shortcutActive.value = "delete_node";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'delete_node'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const createEdge = () => {
-  shortcutActive.value = "create_edge";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'create_edge'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const deleteEdge = () => {
-  shortcutActive.value = "delete_edge";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'delete_edge'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const saveFile = () => {
-  shortcutActive.value = "save_file";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'save_file'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 const saveAs = () => {
-  shortcutActive.value = "save_as";
-  shortcutWatch.value = !shortcutWatch.value;
-};
+  shortcutActive.value = 'save_as'
+  shortcutWatch.value = !shortcutWatch.value
+}
 
 </script>
 

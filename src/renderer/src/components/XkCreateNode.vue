@@ -31,17 +31,17 @@
 </template>
 
 <script setup>
-import { jsonReactive, resetNodeRef } from "../utils/XkUtils";
-import { defineComponent, ref } from "vue";
+import { jsonReactive, resetNodeRef } from '../utils/XkUtils'
+import { defineComponent, ref } from 'vue'
 
-const newNode = defineModel("newNode");
-const categoryItems = defineModel("categoryItems");
-const categoryName = defineModel("categoryName");
-const currentNode = defineModel("currentNode");
+const newNode = defineModel('newNode')
+const categoryItems = defineModel('categoryItems')
+const categoryName = defineModel('categoryName')
+const currentNode = defineModel('currentNode')
 
-const xkContext = defineModel("xkContext");
+const xkContext = defineModel('xkContext')
 
-const inputRef = ref();
+const inputRef = ref()
 
 const VNodes = defineComponent({
   props: {
@@ -51,46 +51,46 @@ const VNodes = defineComponent({
     }
   },
   render() {
-    return this.vnodes;
+    return this.vnodes
   }
-});
+})
 
 const addCategory = e => {
-  e.preventDefault();
-  console.log(categoryName.value);
+  e.preventDefault()
+  console.log(categoryName.value)
   if (categoryName.value) {
-    currentNode.value.category = categoryName.value;
-    const pos = categoryItems.value.indexOf(categoryName.value);
+    currentNode.value.category = categoryName.value
+    const pos = categoryItems.value.indexOf(categoryName.value)
     if (pos === -1) {
-      categoryItems.value.push(categoryName.value);
+      categoryItems.value.push(categoryName.value)
     }
   }
-  categoryName.value = "";
+  categoryName.value = ''
   setTimeout(() => {
-    inputRef.value?.focus();
-  }, 0);
-};
+    inputRef.value?.focus()
+  }, 0)
+}
 
 const createNodeSubmit = () => {
   if (
     newNode.value.category === undefined ||
     newNode.value.category === null ||
-    newNode.value.category === "" ||
+    newNode.value.category === '' ||
     newNode.value.category.length === 0
   ) {
-    xkContext.value.errorMessage = "该节点所属类目错误";
+    xkContext.value.errorMessage = '该节点所属类目错误'
     // 如果不 return 会导致每次都会创建一个空类目
-    return;
+    return
   }
   /**
    * 响应创建新节点的提交
    */
   const names = xkContext.value.chartData.series[0].data.map((x) => {
-    return x.name;
-  });
+    return x.name
+  })
   if (names.indexOf(newNode.value.name) === -1) {
-    const newNodeJson = jsonReactive(newNode.value);
-    xkContext.value.chartData.series[0].data.push(newNodeJson);
+    const newNodeJson = jsonReactive(newNode.value)
+    xkContext.value.chartData.series[0].data.push(newNodeJson)
 
     // 不能写成下面这个样子，会导致数据被赋值在数组index=-1的位置上
     // xkContext.value.historySequenceNumber++;
@@ -103,18 +103,18 @@ const createNodeSubmit = () => {
     // 下一个tick父组件发送prop来更新子组件
 
     xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
-      "act": "createNode",
-      "data": newNodeJson
-    };
-    xkContext.value.historySequenceNumber++;
+      'act': 'createNode',
+      'data': newNodeJson
+    }
+    xkContext.value.historySequenceNumber++
 
-    xkContext.value.updateChart = !xkContext.value.updateChart;
-    xkContext.value.errorMessage = "";
-    resetNodeRef(newNode);
+    xkContext.value.updateChart = !xkContext.value.updateChart
+    xkContext.value.errorMessage = ''
+    resetNodeRef(newNode)
   } else {
-    xkContext.value.errorMessage = "不能创建同名节点";
+    xkContext.value.errorMessage = '不能创建同名节点'
   }
-};
+}
 </script>
 
 <style scoped>
