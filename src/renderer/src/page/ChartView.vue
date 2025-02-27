@@ -509,24 +509,29 @@ const toggleSider = () => {
   /**
    * 显示或者关闭侧边栏
    */
-  switchSider();
+  const aVValue = attributeVisible.value
+  switchSider()
   // 如果是从打开到收起，一定会清空图表
   // 如果是从收起到打开，应该打开attributeVisible，同样清空图表
-  resetRefData();
-  resetSider();
+  resetRefData()
+  resetSider()
 
-  if (!siderVisible.value) {
-    // 收起编辑框，就可以重置图表
-    for (let i = 0; i < highlightNodeList.value.length; i++) {
-      operateChart(highlightNodeList.value[i], "node", "downplay");
-    }
-    if (currentEdgeDataIndex.value > -1) {
-      operateChart(currentEdgeDataIndex.value, "edge", "downplay");
-    }
+  if (!aVValue) {
+    siderVisible.value = true
+    echartsWidth.value = `calc(100vw - ${270}px)`
+    nextTick(resizeChart)
   } else {
-    attributeVisible.value = true;
+    if (!siderVisible.value) {
+      // 收起编辑框，就可以重置图表
+      for (let i = 0; i < highlightNodeList.value.length; i++) {
+        operateChart(highlightNodeList.value[i], 'node', 'downplay')
+      }
+      if (currentEdgeDataIndex.value > -1) {
+        operateChart(currentEdgeDataIndex.value, 'edge', 'downplay')
+      }
+    }
   }
-};
+}
 
 const saveFile = () => {
   /**
