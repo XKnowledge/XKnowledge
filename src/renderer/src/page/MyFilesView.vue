@@ -10,30 +10,30 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import XkCardList from "../components/XkCardList.vue";
+import { onMounted, ref } from 'vue'
+import XkCardList from '../components/XkCardList.vue'
 
-const fileList = ref([]);
+const fileList = ref([])
 
 onMounted(async () => {
-  const fileListValue = [];
+  const fileListValue = []
   // let res = await myAxios.get("http://127.0.0.1:5000");
-  const res = ["test"];
-  let counter = 0;
-  console.log(res);
+  const res = ['test']
+  let counter = 0
+  console.log(res)
   res.forEach((file) => {
-    counter++;
-    if (file.endsWith(".xk")) {
+    counter++
+    if (file.endsWith('.xk')) {
       fileListValue.push({
         id: counter,
         // name: file.replace(/\.[^/.]+$/, ''),
         name: file,
-        src: "https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500"
-      });
+        src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
+      })
     }
-  });
-  fileList.value = fileListValue;
-});
+  })
+  fileList.value = fileListValue
+})
 </script>
 
 <style scoped>

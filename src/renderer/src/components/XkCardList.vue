@@ -10,8 +10,8 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import createTemplate1 from "../template/template1.ts";
+import { ref } from 'vue'
+import createTemplate1 from '../template/template1.ts'
 
 const props = defineProps({
   fileList: {
@@ -19,25 +19,25 @@ const props = defineProps({
     required: true,
     default: () => []
   }
-});
+})
 
-let selected = ref(""); // 用于记录前一个点击的id
+let selected = ref('') // 用于记录前一个点击的id
 
 const handleClick = (id) => {
   if (id !== selected.value) {
-    selected.value = id;
+    selected.value = id
   }
-};
+}
 
 /**
  * 双击事件打开这个 文件 or 模板
  */
 const handleDoubleClick = async (id, fileName) => {
-  if (id === "template1") {
-    window.electronAPI.sendAct("open_template");
-    window.electronAPI.sendData(createTemplate1());
+  if (id === 'template1') {
+    window.electronAPI.sendAct('open_template')
+    window.electronAPI.sendData(createTemplate1())
   }
-};
+}
 
 /**
  * 右键事件 弹出右键窗口
@@ -45,20 +45,20 @@ const handleDoubleClick = async (id, fileName) => {
  */
 const handleRightClick = async (id, event) => {
   // 阻止默认右键事件
-  event.preventDefault();
+  event.preventDefault()
 
   // 在控制台输出鼠标右键点击的位置
-  console.log("Right clicked at:", { x: event.clientX, y: event.clientY });
+  console.log('Right clicked at:', { x: event.clientX, y: event.clientY })
 
   // 在这里执行其他你想要的操作，比如显示自定义右键菜单等
-  console.log("右键", id);
+  console.log('右键', id)
 
   // const content = 'test_save_content'
   //
   // const fileName = 'test_save'
   // const saveAns = await window.electronAPI.saveFile(fileName + '.xk', content)
   // console.log('保存结果:', saveAns)
-};
+}
 
 
 </script>

@@ -34,33 +34,33 @@
 </template>
 
 <script setup>
-import { defineComponent, ref } from "vue";
-import { jsonReactive } from "../utils/XkUtils";
+import { defineComponent, ref } from 'vue'
+import { jsonReactive } from '../utils/XkUtils'
 
-const currentNode = defineModel("currentNode");
-const categoryItems = defineModel("categoryItems");
-const categoryName = defineModel("categoryName");
-const currentNodeDataIndex = defineModel("currentNodeDataIndex");
+const currentNode = defineModel('currentNode')
+const categoryItems = defineModel('categoryItems')
+const categoryName = defineModel('categoryName')
+const currentNodeDataIndex = defineModel('currentNodeDataIndex')
 
-const xkContext = defineModel("xkContext");
+const xkContext = defineModel('xkContext')
 
-const inputRef = ref();
+const inputRef = ref()
 
 const addCategory = e => {
-  e.preventDefault();
-  console.log(categoryName.value);
+  e.preventDefault()
+  console.log(categoryName.value)
   if (categoryName.value) {
-    currentNode.value.category = categoryName.value;
-    const pos = categoryItems.value.indexOf(categoryName.value);
+    currentNode.value.category = categoryName.value
+    const pos = categoryItems.value.indexOf(categoryName.value)
     if (pos === -1) {
-      categoryItems.value.push(categoryName.value);
+      categoryItems.value.push(categoryName.value)
     }
   }
-  categoryName.value = "";
+  categoryName.value = ''
   setTimeout(() => {
-    inputRef.value?.focus();
-  }, 0);
-};
+    inputRef.value?.focus()
+  }, 0)
+}
 
 const VNodes = defineComponent({
   props: {
@@ -70,21 +70,21 @@ const VNodes = defineComponent({
     }
   },
   render() {
-    return this.vnodes;
+    return this.vnodes
   }
-});
+})
 
 const currentNodeSubmit = () => {
   /**
    * 实现节点的动态修改
    */
   let names = xkContext.value.chartData.series[0].data.map((x) => {
-    return x.name;
-  });
-  const oldName = names[currentNodeDataIndex.value];
-  const oldNodeJson = jsonReactive(xkContext.value.chartData.series[0].data[currentNodeDataIndex.value]);
-  const newName = currentNode.value.name;
-  const currentNodeJson = jsonReactive(currentNode.value);
+    return x.name
+  })
+  const oldName = names[currentNodeDataIndex.value]
+  const oldNodeJson = jsonReactive(xkContext.value.chartData.series[0].data[currentNodeDataIndex.value])
+  const newName = currentNode.value.name
+  const currentNodeJson = jsonReactive(currentNode.value)
 
   if (oldName !== newName) {
     // 修改节点的时候修改了节点名称
@@ -93,39 +93,39 @@ const currentNodeSubmit = () => {
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
     if (names.indexOf(newName) === -1) {
       // 判断修改完的名称是否重名
-      xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
+      xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson
 
       // 修改新节点所在的边
-      const links = xkContext.value.chartData.series[0].links;
-      const length = links.length;
+      const links = xkContext.value.chartData.series[0].links
+      const length = links.length
       for (let i = 0; i < length; i++) {
         if (links[i].source === oldName) {
-          xkContext.value.chartData.series[0].links[i].source = newName;
+          xkContext.value.chartData.series[0].links[i].source = newName
         }
         if (links[i].target === oldName) {
-          xkContext.value.chartData.series[0].links[i].target = newName;
+          xkContext.value.chartData.series[0].links[i].target = newName
         }
       }
 
-      xkContext.value.updateChart = !xkContext.value.updateChart;
-      xkContext.value.errorMessage = "";
+      xkContext.value.updateChart = !xkContext.value.updateChart
+      xkContext.value.errorMessage = ''
     } else {
-      xkContext.value.errorMessage = "不能创建同名节点";
-      return;
+      xkContext.value.errorMessage = '不能创建同名节点'
+      return
     }
   } else {
     // 修改节点时没有修改节点名称
-    xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson;
-    xkContext.value.updateChart = !xkContext.value.updateChart;
-    xkContext.value.errorMessage = "";
+    xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson
+    xkContext.value.updateChart = !xkContext.value.updateChart
+    xkContext.value.errorMessage = ''
   }
   xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
-    "act": "changeNode",
-    "old": oldNodeJson,
-    "new": currentNodeJson
-  };
-  xkContext.value.historySequenceNumber++;
-};
+    'act': 'changeNode',
+    'old': oldNodeJson,
+    'new': currentNodeJson
+  }
+  xkContext.value.historySequenceNumber++
+}
 </script>
 
 

@@ -25,14 +25,14 @@
 </template>
 
 <script setup>
-import { UnorderedListOutlined } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { UnorderedListOutlined } from '@ant-design/icons-vue'
+import { ref } from 'vue'
 
-import XkCardList from "../components/XkCardList.vue";
-import TemplatePreview from "../assets/template.png";
+import XkCardList from '../components/XkCardList.vue'
+import TemplatePreview from '../assets/template.png'
 
 const menuList = ref([
-  { key: "1", name: "全部" }
+  { key: '1', name: '全部' }
   // { key: "2", name: "基本" }
   // { key: "3", name: "知识管理" },
   // { key: "4", name: "会议和计划" },
@@ -41,19 +41,19 @@ const menuList = ref([
   // { key: "7", name: "娱乐和生活" },
   // { key: "8", name: "分析和决策" },
   // { key: "9", name: "创造力" }
-]);
+])
 
-const curMenu = ref("全部");
+const curMenu = ref('全部')
 
 const onClick = ({ key }) => {
-  console.log(`Click on item ${key}`);
-  curMenu.value = menuList.value[key].name;
-};
+  console.log(`Click on item ${key}`)
+  curMenu.value = menuList.value[key].name
+}
 
 const templates = ref([
   {
-    id: "template1",
-    name: "思维导图",
+    id: 'template1',
+    name: '思维导图',
     src: TemplatePreview
   }
   // {
@@ -66,7 +66,7 @@ const templates = ref([
   //   name: "思维导图3",
   //   src: imgUrl
   // }
-]);
+])
 
 </script>
 

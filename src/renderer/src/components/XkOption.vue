@@ -9,7 +9,7 @@
 const props = defineProps({
   name: { type: String, required: true },
   shortcut: { type: String, required: true }
-});
+})
 </script>
 
 <style scoped>
