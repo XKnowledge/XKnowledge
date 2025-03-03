@@ -10,12 +10,12 @@
             <a-alert message="未保存" type="error" />
           </a-space>
           <a-layout-content class="move-header">
-            <a-space size="large">
-              <a-space v-for="item in buttonList" style="align-items: center" direction="vertical" size="small">
+            <a-space size="large" style="margin-top: 10px">
+              <a-space v-for="item in buttonList" class="no-move-button-list" direction="vertical" size="small">
                 <a-button type="link" class="no-move-button" @click="item.click">
                   <img :src="item.src" alt="" :style="{ width: '20px', height: '20px'}" />
                 </a-button>
-                {{ item.name }}
+                <div style="text-align: center; margin-top: -8px">{{ item.name }}</div>
               </a-space>
             </a-space>
           </a-layout-content>
@@ -236,7 +236,7 @@ const initChartData = () => {
       'left': 'center',
       'bottom': '5%',
       'style': {
-        'fill': 'rgba(0,0,0,1)',
+        'fill': '#000000FF',
         'text': 'By XKnowledge',
         'font': 'bold 18px sans-serif'
       }
@@ -431,6 +431,7 @@ const resetSider = () => {
 
 const clickChart = event => {
   console.log(event)
+  if (!event.dataType) return
   resetSider()
   attributeVisible.value = false
 
@@ -859,7 +860,7 @@ const contentStyle = {
   /* 可拖动 */
   height: 53px !important;
   //font: 13px sans-serif;
-  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  border-bottom: 1px solid #0505050F;
 }
 
 .move-show {
@@ -874,7 +875,7 @@ const contentStyle = {
   width: 100%;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  border-bottom: 1px solid #0505050F;
   text-align: center;
   line-height: 64px;
 }
@@ -890,13 +891,32 @@ const contentStyle = {
   background-color: #f5f5f5;
   width: 100%;
   height: 53px !important;
-  font: 13px sans-serif;
-  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  font: 12px sans-serif;
+  border-bottom: 1px solid #0505050F;
+}
+
+.no-move-button-list {
+  align-items: center;
 }
 
 .no-move-button {
   -webkit-app-region: no-drag;
   height: 25px !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-move-button:hover {
+  -webkit-app-region: no-drag;
+  height: 25px !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* 添加悬停背景色 */
+  background-color: #0000000D;
+  /* 添加圆角 */
+  border-radius: 4px;
 }
 
 .footer-style {
@@ -904,7 +924,7 @@ const contentStyle = {
   text-align: center;
   background-color: #f5f5f5;
   height: 33px !important;
-  border-top: 1px solid rgba(5, 5, 5, 0.06);
+  border-top: 1px solid #0505050F;
 }
 
 .sider-style {
@@ -946,7 +966,7 @@ const contentStyle = {
   min-width: 53px !important;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  border-bottom: 1px solid #0505050F;
   border-right: none;
 }
 
