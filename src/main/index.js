@@ -1,9 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { join } from 'path'
 
-const fs = require("fs");
+const fs = require('fs')
 
-let mainWindow;
+let mainWindow
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -14,40 +14,40 @@ const createWindow = () => {
     maximizable: false, // 禁止最大化
     minimizable: false, // 禁止最小化
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(__dirname, '../preload/index.js'),
       // devTools: false, // 禁用开发者工具快捷键
       webviewTag: false, // 禁用 webview 标签
       sandbox: false,
       accelerator: {
-        "Cmd+[": null,
-        "Cmd+]": null,
-        "Cmd+W": null,
-        "Ctrl+R": null
+        'Cmd+[': null,
+        'Cmd+]': null,
+        'Cmd+W': null,
+        'Ctrl+R': null
       }
     },
     trafficLightPosition: { x: 20, y: 18 },
     autoHideMenuBar: true,
-    titleBarStyle: "hidden",
+    titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: "#ffffff",
-      symbolColor: "#74b1be"
+      color: '#ffffff',
+      symbolColor: '#74b1be'
     },
-    title: "XKnowledge"
-  });
+    title: 'XKnowledge'
+  })
 
-  mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
-  });
+  mainWindow.on('ready-to-show', () => {
+    mainWindow.show()
+  })
 
-  mainWindow.webContents.openDevTools({ mode: "detach" }); // 打开控制台
+  mainWindow.webContents.openDevTools({ mode: 'detach' }) // 打开控制台
 
   // 设置窗口打开行为的处理程序。
   // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
   // 这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
-    return { action: "deny" };
-  });
+    shell.openExternal(details.url)
+    return { action: 'deny' }
+  })
 
   // 在基于 electron-vite CLI 的渲染器热模块替换。
   // 在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
@@ -56,7 +56,7 @@ const createWindow = () => {
   // } else {
   //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   // }
-  mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+  mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
 // 当 Electron 完成初始化并准备创建浏览器窗口时，将调用此方法。
@@ -72,81 +72,81 @@ app.whenReady().then(() => {
   //   optimizer.watchWindowShortcuts(window)
   // })
 
-  let lock = app.requestSingleInstanceLock();
+  let lock = app.requestSingleInstanceLock()
   if (!lock) {
-    app.quit();
+    app.quit()
   } else {
-    app.on("second-instance", (event, commandLine, workingDirectory) => {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
       if (mainWindow) {
         if (mainWindow.isMinimized()) {
-          mainWindow.restore();
+          mainWindow.restore()
         }
-        mainWindow.focus();
+        mainWindow.focus()
       }
-    });
-    Menu.setApplicationMenu(null);
-    createWindow();
+    })
+    Menu.setApplicationMenu(null)
+    createWindow()
   }
 
-  app.on("activate", () => {
+  app.on('activate', () => {
     // 在 macOS 上，当单击应用程序的 Dock 图标且没有其他窗口打开时，重新创建窗口是常见的操作。
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow()
     }
-  });
-});
+  })
+})
 
 // 当所有窗口关闭时退出，但在 macOS 上除外。
 // 在 macOS 上，通常应用程序和它们的菜单栏会保持活动状态，直到用户使用 Cmd + Q 明确退出应用程序。
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
   }
-});
+})
 
-let current_act;
-let status = "open";
+let current_act
+let status = 'open'
 
 const appExit = () => {
-  if (process.platform !== "darwin") {
-    app.exit(); // 不能使用app.quit()，否则陷入循环
+  if (process.platform !== 'darwin') {
+    app.exit() // 不能使用app.quit()，否则陷入循环
     // 见https://www.electronjs.org/zh/docs/latest/api/app#appquit
   }
 }
 
 const openChartWindow = (data, path) => {
-  mainWindow.webContents.send("act", "chart");
-  mainWindow.setMaximizable(true);
-  mainWindow.setMinimizable(true);
-  mainWindow.setResizable(true);
-  mainWindow.setMinimumSize(900, 670);
-  mainWindow.webContents.send("data", {
+  mainWindow.webContents.send('act', 'chart')
+  mainWindow.setMaximizable(true)
+  mainWindow.setMinimizable(true)
+  mainWindow.setResizable(true)
+  mainWindow.setMinimumSize(900, 670)
+  mainWindow.webContents.send('data', {
     value: data,
     path: path
-  });
+  })
 
-  mainWindow.on("close", e => {
-    e.preventDefault(); //先阻止一下默认行为，不然直接关了，提示框只会闪一下
-    mainWindow.webContents.send("act", "quit");
-  });
+  mainWindow.on('close', e => {
+    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
+    mainWindow.webContents.send('act', 'quit')
+  })
 }
 
 const openFile = () => {
   dialog.showOpenDialog(mainWindow, {
-    title: "打开",
-    properties: ["openFile"],
+    title: '打开',
+    properties: ['openFile'],
     filters: [
-      { name: "XKnowledge", extensions: ["xk"] }
+      { name: 'XKnowledge', extensions: ['xk'] }
     ]
   }).then((res) => {
     if (!res.canceled) {
-      fs.readFile(res.filePaths[0], "utf-8", (err, data) => {
-        openChartWindow(data, res.filePaths[0]);
-      });
+      fs.readFile(res.filePaths[0], 'utf-8', (err, data) => {
+        openChartWindow(data, res.filePaths[0])
+      })
     }
   }).catch((err) => {
-    console.log(err);
-  });
+    console.log(err)
+  })
 }
 
 const saveFile = (data, dialogTitle) => {
