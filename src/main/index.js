@@ -1,11 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
-import { join } from "path";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { join } from 'path'
 
 const fs = require("fs");
 
 let mainWindow;
 
-function createWindow() {
+const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
@@ -107,14 +107,14 @@ app.on("window-all-closed", () => {
 let current_act;
 let status = "open";
 
-function appExit() {
+const appExit = () => {
   if (process.platform !== "darwin") {
     app.exit(); // 不能使用app.quit()，否则陷入循环
     // 见https://www.electronjs.org/zh/docs/latest/api/app#appquit
   }
 }
 
-function openChartWindow(data, path) {
+const openChartWindow = (data, path) => {
   mainWindow.webContents.send("act", "chart");
   mainWindow.setMaximizable(true);
   mainWindow.setMinimizable(true);
@@ -131,7 +131,7 @@ function openChartWindow(data, path) {
   });
 }
 
-function openFile() {
+const openFile = () => {
   dialog.showOpenDialog(mainWindow, {
     title: "打开",
     properties: ["openFile"],
@@ -149,96 +149,77 @@ function openFile() {
   });
 }
 
-ipcMain.on("act", (event, act) => {
-  // 只有操作需要进行，不需要数据参与
-  current_act = act;
-  switch (act) {
-    case "open_file":
-      openFile();
-      break;
-    case "unsaved":
-      dialog.showMessageBox({
-        type: "info",
-        title: "确认退出",
-        message: "文件未保存，是否退出？",
-        buttons: ["保存", "放弃", "取消"],   //选择按钮，点击确认则下面的idx为0，取消为1
-        cancelId: 2 //这个的值是如果直接把提示框×掉返回的值，这里设置成和“取消”按钮一样的值，下面的idx也会是1
-      }).then(idx => {
-        //注意上面↑是用的then，网上好多是直接把方法做为showMessageBox的第二个参数，我的测试下不成功
-        console.log(idx);
-        switch (idx.response) {
-          case 0:
-            status = "exit";
-            mainWindow.webContents.send("act", "save_file");
-            break;
-          case 1:
-            // 不保存直接退出
-            appExit();
-            break;
-          case 2:
-            // 取消退出
-            break;
-        }
-      });
-      break;
-    case "saved":
-      appExit();
-      break;
-  }
-});
+const saveFile = (data, dialogTitle) => {
+  const filePath = dialog.showSaveDialogSync(mainWindow, {
+    title: dialogTitle,
+    properties: ['createDirectory'],
+    filters: [{ name: 'XKnowledge', extensions: ['xk'] }]
+  })
 
-ipcMain.on("data", (event, arg) => {
-  // 当接到操作指令，需要对数据进行操作时
-  console.log(arg);
-  if (current_act === "save_file") {
-    const data = JSON.stringify(arg.file);
-    if (arg.path === "") {
-      const filePath = dialog.showSaveDialogSync(mainWindow, {
-        title: "将文件保存到...",
-        properties: ["createDirectory"],
-        filters: [
-          { name: "XKnowledge", extensions: ["xk"] }
-        ]
-      });
-      if (filePath !== undefined) {
-        fs.writeFileSync(filePath, data);
-        mainWindow.webContents.send("data", {
-          value: data,
-          path: filePath
-        });
-        mainWindow.webContents.send("act", "save_success");
-      } else {
-        mainWindow.webContents.send("act", "save_failure");
-        status = "open";
-      }
-    } else {
-      fs.writeFileSync(arg.path, data);
-      mainWindow.webContents.send("act", "save_success");
-    }
-    if (status === "exit") {
-      appExit();
-    }
-  } else if (current_act === "open_template") {
-    openChartWindow(JSON.stringify(arg), "");
-  } else if (current_act === "save_as") {
-    const data = JSON.stringify(arg.file);
-    let filePath = dialog.showSaveDialogSync(mainWindow, {
-      title: "将文件另存为...",
-      properties: ["createDirectory"],
-      filters: [
-        { name: "XKnowledge", extensions: ["xk"] }
-      ]
-    });
-    if (filePath !== undefined) {
-      fs.writeFileSync(filePath, data);
-      mainWindow.webContents.send("act", "save_success");
-    } else {
-      filePath = arg.path;
-      mainWindow.webContents.send("act", "save_failure");
-    }
-    mainWindow.webContents.send("data", {
-      value: data,
-      path: filePath
-    });
+  if (filePath) {
+    fs.writeFileSync(filePath, data)
+    mainWindow.webContents.send('act', 'save_success')
+    mainWindow.webContents.send('data', { value: data, path: filePath })
   }
-});
+  return filePath
+}
+
+ipcMain.on('act', (event, act) => {
+  // 只有操作需要进行，不需要数据参与
+  current_act = act
+  const actions = {
+    open_file: () => openFile(),
+
+    unsaved: async () => {
+      const { response } = await dialog.showMessageBox({
+        type: 'info',
+        title: '确认退出',
+        message: '文件未保存，是否退出？',
+        buttons: ['保存', '放弃', '取消'], //选择按钮，点击确认则下面的idx为0，取消为1
+        cancelId: 2 //这个的值是如果直接把提示框×掉返回的值，这里设置成和“取消”按钮一样的值，下面的idx也会是1
+      })
+
+      if (response === 0) {
+        status = 'exit'
+        mainWindow.webContents.send('act', 'save_file')
+      } else if (response === 1) {
+        // 不保存直接退出
+        appExit()
+      }
+      // 取消退出
+    },
+
+    saved: () => appExit()
+  }
+
+  if (actions[act]) {
+    actions[act]()
+  }
+})
+
+ipcMain.on('data', (event, arg) => {
+  // 当接到操作指令，需要对数据进行操作时
+  console.log(arg)
+  const handles = {
+    save_file: () => {
+      if (!arg.path) {
+        if (!saveFile(JSON.stringify(arg.file), '将文件保存到...')) {
+          mainWindow.webContents.send('act', 'save_failure')
+          status = 'open'
+        }
+      } else {
+        fs.writeFileSync(arg.path, data)
+        mainWindow.webContents.send('act', 'save_success')
+      }
+      if (status === 'exit') appExit()
+    },
+
+    open_template: () => openChartWindow(JSON.stringify(arg), ''),
+
+    save_as: () => saveFile(JSON.stringify(arg.file), '将文件另存为...')
+  }
+
+  if (handles[current_act]) {
+    handles[current_act]()
+  }
+})
