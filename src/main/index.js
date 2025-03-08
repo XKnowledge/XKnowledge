@@ -46,7 +46,7 @@ const createWindow = () => {
   这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
   */
   current_window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    shell.openExternal(details.url).then()
     return { action: 'deny' }
   })
 
@@ -59,7 +59,7 @@ const createWindow = () => {
     current_window.loadFile(join(__dirname, '../renderer/index.html'))
   }
   */
-  current_window.loadFile(join(__dirname, '../renderer/index.html'))
+  current_window.loadFile(join(__dirname, '../renderer/index.html')).then()
 
   return current_window
 }
@@ -220,7 +220,7 @@ ipcMain.on('data', (event, arg) => {
           status = 'open'
         }
       } else {
-        fs.writeFileSync(arg.path, data)
+        fs.writeFileSync(arg.path, JSON.stringify(arg.file))
         current_window.webContents.send('act', 'save_success')
       }
       if (status === 'exit') {

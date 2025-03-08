@@ -24,23 +24,44 @@ const createEdgeSubmit = () => {
   /**
    * 响应创建新连接的提交
    */
-  if (highlightNodeList.value.length === 2) {
-    const data = xkContext.value.chartData.series[0].data
-    newEdge.value.source = data[highlightNodeList.value[0]].name
-    newEdge.value.target = data[highlightNodeList.value[1]].name
-    const newEdgeJson = jsonReactive(newEdge.value)
-    xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
-      'act': 'createEdge',
-      'data': newEdgeJson
-    }
-    xkContext.value.historySequenceNumber++
-    xkContext.value.chartData.series[0].links.push(newEdgeJson)
-    xkContext.value.updateChart = !xkContext.value.updateChart
-    xkContext.value.errorMessage = ''
-    resetEdgeRef(newEdge)
-  } else {
-    xkContext.value.errorMessage = '请选中2个节点'
+  const { value: ctx } = xkContext;
+  ctx.errorMessage = '' // 清空旧错误信息
+
+  if (highlightNodeList.value.length !== 2) {
+    ctx.errorMessage = '请选中2个节点'
+    return
   }
+
+  const { data, links } = xkContext.value.chartData.series[0]
+  const [sourceIndex, targetIndex] = highlightNodeList.value
+  const newSource = data[sourceIndex].name
+  const newTarget = data[targetIndex].name
+
+  const isDuplicate = links.some(link =>
+    (link.source === newSource && link.target === newTarget) ||
+    (link.source === newTarget && link.target === newSource)
+  )
+
+  if (isDuplicate) {
+    ctx.errorMessage = '两个节点间连接已存在'
+    return
+  }
+
+  newEdge.value.source = newSource
+  newEdge.value.target = newTarget
+
+  const newEdgeJson = jsonReactive(newEdge.value)
+
+  // 封装历史记录操作
+  ctx.historyList[ctx.historySequenceNumber + 1] = {
+    'act': 'createEdge',
+    'data': newEdgeJson
+  }
+  ctx.historySequenceNumber++
+
+  links.push(newEdgeJson)
+  ctx.updateChart = !ctx.updateChart
+  resetEdgeRef(newEdge)
 }
 </script>
 

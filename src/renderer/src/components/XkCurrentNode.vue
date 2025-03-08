@@ -51,8 +51,7 @@ const addCategory = e => {
   console.log(categoryName.value)
   if (categoryName.value) {
     currentNode.value.category = categoryName.value
-    const pos = categoryItems.value.indexOf(categoryName.value)
-    if (pos === -1) {
+    if (!categoryItems.value.includes(categoryName.value)) {
       categoryItems.value.push(categoryName.value)
     }
   }
@@ -78,53 +77,41 @@ const currentNodeSubmit = () => {
   /**
    * 实现节点的动态修改
    */
-  let names = xkContext.value.chartData.series[0].data.map((x) => {
-    return x.name
-  })
-  const oldName = names[currentNodeDataIndex.value]
-  const oldNodeJson = jsonReactive(xkContext.value.chartData.series[0].data[currentNodeDataIndex.value])
-  const newName = currentNode.value.name
-  const currentNodeJson = jsonReactive(currentNode.value)
+  const { data, links } = xkContext.value.chartData.series[0]
+  const oldNode = jsonReactive(data[currentNodeDataIndex.value])
+  const newNode = jsonReactive(currentNode.value)
+  const oldName = oldNode.name
+  const newName = newNode.name
 
   if (oldName !== newName) {
     // 修改节点的时候修改了节点名称
     // names.slice(0, currentNodeDataIndex.value).push(...names.slice(currentNodeDataIndex.value + 1)); // 去掉旧节点名称
     // 思考：为什么不需要去掉旧的节点名称？因为本身就不重名，所以不用去掉
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
-    if (names.indexOf(newName) === -1) {
-      // 判断修改完的名称是否重名
-      xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson
-
-      // 修改新节点所在的边
-      const links = xkContext.value.chartData.series[0].links
-      const length = links.length
-      for (let i = 0; i < length; i++) {
-        if (links[i].source === oldName) {
-          xkContext.value.chartData.series[0].links[i].source = newName
-        }
-        if (links[i].target === oldName) {
-          xkContext.value.chartData.series[0].links[i].target = newName
-        }
-      }
-
-      xkContext.value.updateChart = !xkContext.value.updateChart
-      xkContext.value.errorMessage = ''
-    } else {
+    const hasDuplicate = data.some(node => node.name === newName)
+    if (hasDuplicate) {
       xkContext.value.errorMessage = '不能创建同名节点'
       return
     }
-  } else {
-    // 修改节点时没有修改节点名称
-    xkContext.value.chartData.series[0].data[currentNodeDataIndex.value] = currentNodeJson
-    xkContext.value.updateChart = !xkContext.value.updateChart
-    xkContext.value.errorMessage = ''
+
+    // 修改新节点所在的边
+    links.forEach(link => {
+      if (link.source === oldName) link.source = newName
+      if (link.target === oldName) link.target = newName
+    })
   }
+
+  data[currentNodeDataIndex.value] = newNode
+
   xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
     'act': 'changeNode',
-    'old': oldNodeJson,
-    'new': currentNodeJson
+    'old': oldNode,
+    'new': newNode
   }
   xkContext.value.historySequenceNumber++
+
+  xkContext.value.updateChart = !xkContext.value.updateChart
+  xkContext.value.errorMessage = ''
 }
 </script>
 

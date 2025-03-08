@@ -60,8 +60,7 @@ const addCategory = e => {
   console.log(categoryName.value)
   if (categoryName.value) {
     currentNode.value.category = categoryName.value
-    const pos = categoryItems.value.indexOf(categoryName.value)
-    if (pos === -1) {
+    if (!categoryItems.value.includes(categoryName.value)) {
       categoryItems.value.push(categoryName.value)
     }
   }
@@ -72,48 +71,46 @@ const addCategory = e => {
 }
 
 const createNodeSubmit = () => {
-  if (
-    newNode.value.category === undefined ||
-    newNode.value.category === null ||
-    newNode.value.category === '' ||
-    newNode.value.category.length === 0
-  ) {
-    xkContext.value.errorMessage = '该节点所属类目错误'
-    // 如果不 return 会导致每次都会创建一个空类目
-    return
-  }
   /**
    * 响应创建新节点的提交
    */
-  const names = xkContext.value.chartData.series[0].data.map((x) => {
-    return x.name
-  })
-  if (names.indexOf(newNode.value.name) === -1) {
-    const newNodeJson = jsonReactive(newNode.value)
-    xkContext.value.chartData.series[0].data.push(newNodeJson)
-
-    // 不能写成下面这个样子，会导致数据被赋值在数组index=-1的位置上
-    // xkContext.value.historySequenceNumber++;
-    // xkContext.value.historyList[xkContext.value.historySequenceNumber] = {
-    //   "act": "createNode",
-    //   "data": newNodeJson
-    // };
-    // 因为historySequenceNumber是defineModel
-    // Vue会在第一个tick更新父组件中的historySequenceNumber
-    // 下一个tick父组件发送prop来更新子组件
-
-    xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
-      'act': 'createNode',
-      'data': newNodeJson
-    }
-    xkContext.value.historySequenceNumber++
-
-    xkContext.value.updateChart = !xkContext.value.updateChart
-    xkContext.value.errorMessage = ''
-    resetNodeRef(newNode)
-  } else {
-    xkContext.value.errorMessage = '不能创建同名节点'
+  // 使用可选链和空值合并简化判断
+  if (!newNode.value.category?.trim()) {
+    xkContext.value.errorMessage = '请选择/创建节点所属类目'
+    return
   }
+
+  const { data } = xkContext.value.chartData.series[0]
+  const newName = newNode.value.name
+  const hasDuplicate = data.some(node => node.name === newName)
+
+  if (hasDuplicate) {
+    xkContext.value.errorMessage = '不能创建同名节点'
+    return
+  }
+
+  const newNodeJson = jsonReactive(newNode.value)
+  data.push(newNodeJson)
+
+  // 不能写成下面这个样子，会导致数据被赋值在数组index=-1的位置上
+  // xkContext.value.historySequenceNumber++;
+  // xkContext.value.historyList[xkContext.value.historySequenceNumber] = {
+  //   "act": "createNode",
+  //   "data": newNodeJson
+  // };
+  // 因为historySequenceNumber是defineModel
+  // Vue会在第一个tick更新父组件中的historySequenceNumber
+  // 下一个tick父组件发送prop来更新子组件
+
+  xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
+    'act': 'createNode',
+    'data': newNodeJson
+  }
+  xkContext.value.historySequenceNumber++
+
+  xkContext.value.updateChart = !xkContext.value.updateChart
+  xkContext.value.errorMessage = ''
+  resetNodeRef(newNode)
 }
 </script>
 
