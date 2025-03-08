@@ -10,12 +10,14 @@
             <a-alert message="未保存" type="error" />
           </a-space>
           <a-layout-content class="move-header">
-            <a-space size="large" style="margin-top: 10px">
-              <a-space v-for="item in buttonList" class="no-move-button-list" direction="vertical" size="small">
+            <a-space size="large" style="margin-top: 5px">
+              <a-space v-for="item in buttonList" style="align-items: center;" direction="vertical" size="small">
                 <a-button type="link" class="no-move-button" @click="item.click">
                   <img :src="item.src" alt="" :style="{ width: '20px', height: '20px'}" />
                 </a-button>
-                <div style="text-align: center; margin-top: -8px">{{ item.name }}</div>
+                <div style="text-align: center; margin-top: -8px; font: 12px sans-serif;">
+                  {{ item.name }}
+                </div>
               </a-space>
             </a-space>
           </a-layout-content>
@@ -97,6 +99,7 @@
 import { nextTick, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
+import createTemplate1 from '../template/template1.ts'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
 import XkCurrentNode from '../components/XkCurrentNode.vue'
@@ -125,7 +128,7 @@ const saveNodeVisible = ref(false)
 const attributeVisible = ref(true)
 const checkedValues = ref([])
 const repulsion = ref(1000)
-let timer = null
+// let windowID = null
 
 const createNodeVisible = ref(false)
 const newNode = ref({
@@ -190,6 +193,10 @@ onMounted(async () => {
   }, 60000)
 })
 
+// window.electronAPI.getWindowId().then(id => {
+//   windowID = id
+//   console.log('窗口ID:', id)
+// })
 
 window.electronAPI.receiveData((data) => {
   xkContext.value.chartData = JSON.parse(data.value)
@@ -375,6 +382,8 @@ watch(shortcutWatch, () => {
   const actionMap = {
     'save_file': saveFile,
     'save_as': saveAs,
+    'create_new_file': createNewFile,
+    'open_file': openFile,
     'create_node': createNode,
     'delete_node': deleteNode,
     'create_edge': createEdge,
@@ -541,6 +550,23 @@ const toggleSider = () => {
   }
 }
 
+const createNewFile = () => {
+  /**
+   * 实现新建文件
+   */
+  console.log('create new file')
+  window.electronAPI.sendAct('create_new_file')
+  window.electronAPI.sendData(createTemplate1())
+}
+
+const openFile = () => {
+  /**
+   * 实现打开文件
+   */
+  console.log('open file')
+  window.electronAPI.sendAct('open_other_file')
+}
+
 const saveFile = () => {
   /**
    * 实现文件保存，electronAPI详见/src/preload/index.js
@@ -564,6 +590,7 @@ const saveAs = () => {
 }
 
 window.electronAPI.receiveAct((act) => {
+  console.log(act)
   const actionHandlers = {
     save_success: () => {
       saveNodeVisible.value = false
@@ -583,7 +610,7 @@ window.electronAPI.receiveAct((act) => {
     }
   }
 
-  actionHandlers[act]()
+  if (actionHandlers[act]) actionHandlers[act]()
 })
 
 const undo = () => {
@@ -793,7 +820,7 @@ const createEdge = () => {
   /**
    * 创建新连接
    */
-  const SIDER_WIDTH = 270;
+  const SIDER_WIDTH = 270
   resetSider()
   attributeVisible.value = false
   siderVisible.value = true // 切换侧边栏的显示状态
@@ -859,7 +886,6 @@ const contentStyle = {
   -webkit-app-region: no-drag;
   /* 可拖动 */
   height: 53px !important;
-  //font: 13px sans-serif;
   border-bottom: 1px solid #0505050F;
 }
 
@@ -891,12 +917,8 @@ const contentStyle = {
   background-color: #f5f5f5;
   width: 100%;
   height: 53px !important;
-  font: 12px sans-serif;
+  font: 13px sans-serif;
   border-bottom: 1px solid #0505050F;
-}
-
-.no-move-button-list {
-  align-items: center;
 }
 
 .no-move-button {

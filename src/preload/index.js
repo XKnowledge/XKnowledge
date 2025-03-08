@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendAct: (act) => ipcRenderer.send('act', act),
   receiveData: (callback) => ipcRenderer.on('data', (_event, data) => callback(data)),
   sendData: (data) => ipcRenderer.send('data', data)
+  // getWindowId: () => ipcRenderer.invoke('get-window-id')
 })

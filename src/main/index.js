@@ -3,10 +3,8 @@ import { join } from 'path'
 
 const fs = require('fs')
 
-let mainWindow
-
 const createWindow = () => {
-  mainWindow = new BrowserWindow({
+  let current_window = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -34,58 +32,67 @@ const createWindow = () => {
     },
     title: 'XKnowledge'
   })
+  Menu.setApplicationMenu(null)
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+  current_window.on('ready-to-show', () => {
+    current_window.show()
   })
 
-  mainWindow.webContents.openDevTools({ mode: 'detach' }) // 打开控制台
+  current_window.webContents.openDevTools({ mode: 'detach' }) // 打开控制台
 
-  // 设置窗口打开行为的处理程序。
-  // 当在应用程序中点击某些链接时，会触发打开新窗口的行为。
-  // 这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  /*
+  设置窗口打开行为的处理程序。
+  当在应用程序中点击某些链接时，会触发打开新窗口的行为。
+  这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
+  */
+  current_window.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
-  // 在基于 electron-vite CLI 的渲染器热模块替换。
-  // 在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
-  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-  //   mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  // } else {
-  //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  // }
-  mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  /*
+  在基于 electron-vite CLI 的渲染器热模块替换。
+  在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    current_window.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    current_window.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+  */
+  current_window.loadFile(join(__dirname, '../renderer/index.html'))
+
+  return current_window
 }
 
 // 当 Electron 完成初始化并准备创建浏览器窗口时，将调用此方法。
 // 一些 API 只能在此事件发生后使用。
 app.whenReady().then(() => {
-  // 为 Windows 设置应用程序用户模型标识符。
-  // electronApp.setAppUserModelId('com.electron')
+  /*
+  为 Windows 设置应用程序用户模型标识符。
+  electronApp.setAppUserModelId('com.electron')
 
-  // 在开发环境中，默认使用 F12 打开或关闭开发者工具，
-  // 并在生产环境中忽略 CommandOrControl + R 的刷新操作。
-  // 参考 https://github.com/alex8088/electron-toolkit/tree/master/packages/utils。
-  // app.on('browser-window-created', (_, window) => {
-  //   optimizer.watchWindowShortcuts(window)
-  // })
-
+  在开发环境中，默认使用 F12 打开或关闭开发者工具，
+  并在生产环境中忽略 CommandOrControl + R 的刷新操作。
+  参考 https://github.com/alex8088/electron-toolkit/tree/master/packages/utils。
+  app.on('browser-window-created', (_, window) => {
+    optimizer.watchWindowShortcuts(window)
+  })
+   */
   let lock = app.requestSingleInstanceLock()
-  if (!lock) {
-    app.quit()
-  } else {
+  if (lock) {
+    /*
     app.on('second-instance', (event, commandLine, workingDirectory) => {
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) {
-          mainWindow.restore()
+      if (current_window) {
+        if (current_window.isMinimized()) {
+          current_window.restore()
         }
-        mainWindow.focus()
+        current_window.focus()
       }
     })
-    Menu.setApplicationMenu(null)
+     */
     createWindow()
+  } else {
+    app.quit()
   }
 
   app.on('activate', () => {
@@ -100,39 +107,36 @@ app.whenReady().then(() => {
 // 在 macOS 上，通常应用程序和它们的菜单栏会保持活动状态，直到用户使用 Cmd + Q 明确退出应用程序。
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit()
+    app.exit()
   }
+  /*
+  app.exit()
+  if (process.platform !== 'darwin') {
+    app.exit() // 不能使用app.quit()，否则陷入循环
+    // 见https://www.electronjs.org/zh/docs/latest/api/app#appquit
+  }
+  */
 })
 
 let current_act
 let status = 'open'
 
-const appExit = () => {
-  if (process.platform !== 'darwin') {
-    app.exit() // 不能使用app.quit()，否则陷入循环
-    // 见https://www.electronjs.org/zh/docs/latest/api/app#appquit
-  }
-}
+const openChartWindow = (current_window, data, path) => {
+  current_window.webContents.send('act', 'chart')
+  current_window.setMaximizable(true)
+  current_window.setMinimizable(true)
+  current_window.setResizable(true)
+  current_window.setMinimumSize(900, 670)
+  current_window.webContents.send('data', { value: data, path: path })
 
-const openChartWindow = (data, path) => {
-  mainWindow.webContents.send('act', 'chart')
-  mainWindow.setMaximizable(true)
-  mainWindow.setMinimizable(true)
-  mainWindow.setResizable(true)
-  mainWindow.setMinimumSize(900, 670)
-  mainWindow.webContents.send('data', {
-    value: data,
-    path: path
-  })
-
-  mainWindow.on('close', e => {
+  current_window.on('close', e => {
     e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
-    mainWindow.webContents.send('act', 'quit')
+    current_window.webContents.send('act', 'quit')
   })
 }
 
-const openFile = () => {
-  dialog.showOpenDialog(mainWindow, {
+const openFile = (current_window) => {
+  dialog.showOpenDialog(current_window, {
     title: '打开',
     properties: ['openFile'],
     filters: [
@@ -141,16 +145,19 @@ const openFile = () => {
   }).then((res) => {
     if (!res.canceled) {
       fs.readFile(res.filePaths[0], 'utf-8', (err, data) => {
-        openChartWindow(data, res.filePaths[0])
+        openChartWindow(current_window, data, res.filePaths[0])
       })
+    } else {
+      current_window.destroy()
     }
   }).catch((err) => {
     console.log(err)
+    current_window.destroy()
   })
 }
 
-const saveFile = (data, dialogTitle) => {
-  const filePath = dialog.showSaveDialogSync(mainWindow, {
+const saveFile = (data, dialogTitle, current_window) => {
+  const filePath = dialog.showSaveDialogSync(current_window, {
     title: dialogTitle,
     properties: ['createDirectory'],
     filters: [{ name: 'XKnowledge', extensions: ['xk'] }]
@@ -158,8 +165,8 @@ const saveFile = (data, dialogTitle) => {
 
   if (filePath) {
     fs.writeFileSync(filePath, data)
-    mainWindow.webContents.send('act', 'save_success')
-    mainWindow.webContents.send('data', { value: data, path: filePath })
+    current_window.webContents.send('act', 'save_success')
+    current_window.webContents.send('data', { value: data, path: filePath })
   }
   return filePath
 }
@@ -167,8 +174,9 @@ const saveFile = (data, dialogTitle) => {
 ipcMain.on('act', (event, act) => {
   // 只有操作需要进行，不需要数据参与
   current_act = act
+  const current_window = BrowserWindow.fromWebContents(event.sender)
   const actions = {
-    open_file: () => openFile(),
+    open_file: () => openFile(current_window),
 
     unsaved: async () => {
       const { response } = await dialog.showMessageBox({
@@ -180,16 +188,19 @@ ipcMain.on('act', (event, act) => {
       })
 
       if (response === 0) {
+        // 保存文件并退出
         status = 'exit'
-        mainWindow.webContents.send('act', 'save_file')
+        current_window.webContents.send('act', 'save_file')
       } else if (response === 1) {
         // 不保存直接退出
-        appExit()
+        current_window.destroy()
       }
       // 取消退出
     },
 
-    saved: () => appExit()
+    saved: () => current_window.destroy(),
+
+    open_other_file: () => openFile(createWindow())
   }
 
   if (actions[act]) {
@@ -200,26 +211,41 @@ ipcMain.on('act', (event, act) => {
 ipcMain.on('data', (event, arg) => {
   // 当接到操作指令，需要对数据进行操作时
   console.log(arg)
+  const current_window = BrowserWindow.fromWebContents(event.sender)
   const handles = {
     save_file: () => {
       if (!arg.path) {
-        if (!saveFile(JSON.stringify(arg.file), '将文件保存到...')) {
-          mainWindow.webContents.send('act', 'save_failure')
+        if (!saveFile(JSON.stringify(arg.file), '将文件保存到...', current_window)) {
+          current_window.webContents.send('act', 'save_failure')
           status = 'open'
         }
       } else {
         fs.writeFileSync(arg.path, data)
-        mainWindow.webContents.send('act', 'save_success')
+        current_window.webContents.send('act', 'save_success')
       }
-      if (status === 'exit') appExit()
+      if (status === 'exit') {
+        current_window.destroy()
+        status = 'open'
+      }
     },
 
-    open_template: () => openChartWindow(JSON.stringify(arg), ''),
+    open_template: () => openChartWindow(current_window, JSON.stringify(arg), ''),
 
-    save_as: () => saveFile(JSON.stringify(arg.file), '将文件另存为...')
+    save_as: () => saveFile(JSON.stringify(arg.file), '将文件另存为...', current_window),
+
+    create_new_file: () => {
+      console.log('create new file')
+      const new_window = createWindow()
+      new_window.webContents.on('did-finish-load',
+        () => openChartWindow(new_window, JSON.stringify(arg), ''))
+    }
   }
 
   if (handles[current_act]) {
     handles[current_act]()
   }
 })
+
+// ipcMain.handle('get-window-id', (event) => {
+//   return BrowserWindow.fromWebContents(event.sender).id
+// })
