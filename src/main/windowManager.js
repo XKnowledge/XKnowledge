@@ -67,7 +67,13 @@ export const createWindow = (onWindowClosed, route = '') => {
   */
   const loadOptions = route ? { hash: route } : undefined
   if (process.env['ELECTRON_RENDERER_URL']) {
-    current_window.loadURL(process.env['ELECTRON_RENDERER_URL'], loadOptions)
+    // 注意：Electron 28 的 loadURL 不支持 { hash } 选项（仅 loadFile 支持），
+    // dev 模式下需手动拼接 hash 才能直达对应路由。
+    if (route) {
+      current_window.loadURL(`${process.env['ELECTRON_RENDERER_URL']}#/${route}`)
+    } else {
+      current_window.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    }
   } else {
     current_window.loadFile(join(__dirname, '../renderer/index.html'), loadOptions)
   }
