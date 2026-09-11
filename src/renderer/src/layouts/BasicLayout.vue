@@ -109,12 +109,6 @@ const openFile = async () => {
   router.push('chart')
 }
 
-window.electronAPI.receiveAct((act) => {
-  if (act === 'chart') {
-    router.push('chart')
-  }
-})
-
 watch(openKeys, val => {
   console.log('openKeys', val)
 })

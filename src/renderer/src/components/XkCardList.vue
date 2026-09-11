@@ -11,7 +11,11 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { setPendingChart } from '../store/chartStore'
 import createTemplate1 from '../template/template1.ts'
+
+const router = useRouter()
 
 const props = defineProps({
   fileList: {
@@ -34,8 +38,8 @@ const handleClick = (id) => {
  */
 const handleDoubleClick = async (id, fileName) => {
   if (id === 'template1') {
-    window.electronAPI.sendAct('open_template')
-    window.electronAPI.sendData(createTemplate1())
+    setPendingChart({ value: JSON.stringify(createTemplate1()), path: '' })
+    router.push('chart')
   }
 }
 

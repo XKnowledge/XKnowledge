@@ -243,9 +243,6 @@ const loadChartData = (data) => {
   }
 }
 
-// 【legacy】模板/新建窗口流程仍由主进程推送 data，Task 5/6 移除
-window.electronAPI.receiveData(loadChartData)
-
 const initAttr = () => {
   // 将读取的属性赋值给组件
   const attrs = []

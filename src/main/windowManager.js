@@ -98,13 +98,3 @@ export const enterChartMode = (current_window) => {
 
   current_window.on('closed', () => chartModeWindows.delete(id))
 }
-
-/**
- * 【legacy】装载图表：解锁窗口尺寸、下发图表数据、注册关闭前确认。
- * Task 5 起由渲染端 invoke app:enter-chart-mode 取代。
- */
-export const openChartWindow = (current_window, data, path) => {
-  current_window.webContents.send('act', 'chart')
-  enterChartMode(current_window)
-  current_window.webContents.send('data', { value: data, path: path })
-}

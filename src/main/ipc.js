@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
-import { createWindow, openChartWindow, enterChartMode } from './windowManager'
+import { createWindow, enterChartMode } from './windowManager'
 import { IPC } from '../shared/ipc-channels'
 
 // 每个窗口独立的IPC上下文：记录该窗口最近一次act指令与退出流程状态。
@@ -14,35 +14,6 @@ const getContext = (webContents) => {
     windowContexts.set(webContents.id, { act: null, status: 'open' })
   }
   return windowContexts.get(webContents.id)
-}
-
-/**
- * 【legacy】打开文件对话框 + 读取校验 + 装载图表。
- * 失败与取消时的弹窗/销毁行为与重构前一致。
- */
-const legacyOpenFile = (current_window) => {
-  fileService.showOpenDialog(current_window).then((res) => {
-    if (!res.canceled) {
-      fileService.readChartFile(res.filePaths[0])
-        .then(({ content, path }) => {
-          openChartWindow(current_window, content, path)
-        })
-        .catch((err) => {
-          dialog.showMessageBoxSync(current_window, {
-            type: 'error',
-            title: '打开失败',
-            message: err.message,
-            detail: err.detail
-          })
-          current_window.destroy()
-        })
-    } else {
-      current_window.destroy()
-    }
-  }).catch((err) => {
-    console.log(err)
-    current_window.destroy()
-  })
 }
 
 /**
@@ -114,7 +85,7 @@ export const registerIpc = () => {
 
       saved: () => current_window.destroy(),
 
-      open_other_file: () => legacyOpenFile(openNewWindow())
+      open_other_file: () => openNewWindow() // 【legacy】Task 6 由 new-chart-window 通道取代
     }
 
     if (actions[act]) {
@@ -125,16 +96,11 @@ export const registerIpc = () => {
   ipcMain.on('data', (event, arg) => {
     // 当接到操作指令，需要对数据进行操作时
     console.log(arg)
-    const current_window = BrowserWindow.fromWebContents(event.sender)
     const ctx = getContext(event.sender)
     const handles = {
-      open_template: () => openChartWindow(current_window, JSON.stringify(arg), ''),
-
       create_new_file: () => {
         console.log('create new file')
-        const new_window = openNewWindow()
-        new_window.webContents.on('did-finish-load',
-          () => openChartWindow(new_window, JSON.stringify(arg), ''))
+        openNewWindow() // 【legacy】Task 6 由 new-chart-window 通道取代
       }
     }
 
