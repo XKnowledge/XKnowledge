@@ -1,0 +1,89 @@
+import { BrowserWindow, Menu, shell } from 'electron'
+import { join } from 'path'
+
+/**
+ * 创建应用主窗口。onWindowClosed 在窗口销毁时回调（webContents.id 作参数），
+ * 供 ipc 层清理按窗口记录的状态。
+ */
+export const createWindow = (onWindowClosed) => {
+  const current_window = new BrowserWindow({
+    width: 900,
+    height: 670,
+    show: false,
+    resizable: false, // 不允许用户调整窗口大小
+    maximizable: false, // 禁止最大化
+    minimizable: false, // 禁止最小化
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      // devTools: false, // 禁用开发者工具快捷键
+      webviewTag: false, // 禁用 webview 标签
+      sandbox: false,
+      accelerator: {
+        'Cmd+[': null,
+        'Cmd+]': null,
+        'Cmd+W': null,
+        'Ctrl+R': null
+      }
+    },
+    trafficLightPosition: { x: 20, y: 18 },
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#ffffff',
+      symbolColor: '#74b1be'
+    },
+    title: 'XKnowledge'
+  })
+  Menu.setApplicationMenu(null)
+
+  // 窗口销毁后通知调用方清理其按窗口记录的状态，避免Map持续增长
+  current_window.on('closed', () => {
+    if (onWindowClosed) onWindowClosed(current_window.webContents.id)
+  })
+
+  current_window.on('ready-to-show', () => {
+    current_window.show()
+  })
+
+  current_window.webContents.openDevTools({ mode: 'detach' }) // 打开控制台
+
+  /*
+  设置窗口打开行为的处理程序。
+  当在应用程序中点击某些链接时，会触发打开新窗口的行为。
+  这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
+  */
+  current_window.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url).then()
+    return { action: 'deny' }
+  })
+
+  /*
+  在基于 electron-vite CLI 的渲染器热模块替换。
+  在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
+  */
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    current_window.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    current_window.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+
+  return current_window
+}
+
+/**
+ * 【legacy】装载图表：解锁窗口尺寸、下发图表数据、注册关闭前确认。
+ * Task 5 起由渲染端 invoke app:enter-chart-mode 取代。
+ */
+export const openChartWindow = (current_window, data, path) => {
+  current_window.webContents.send('act', 'chart')
+  current_window.setMaximizable(true)
+  current_window.setMinimizable(true)
+  current_window.setResizable(true)
+  current_window.setMinimumSize(900, 670)
+  current_window.webContents.send('data', { value: data, path: path })
+
+  current_window.on('close', e => {
+    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
+    current_window.webContents.send('act', 'quit')
+  })
+}
