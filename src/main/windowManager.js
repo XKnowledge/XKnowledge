@@ -36,9 +36,12 @@ export const createWindow = (onWindowClosed) => {
   })
   Menu.setApplicationMenu(null)
 
-  // 窗口销毁后通知调用方清理其按窗口记录的状态，避免Map持续增长
+  // 窗口销毁后通知调用方清理其按窗口记录的状态，避免Map持续增长。
+  // 注意：closed 事件触发时 webContents 已销毁，届时再读 .id 会抛
+  // "Object has been destroyed"，因此必须在创建时先捕获 id。
+  const webContentsId = current_window.webContents.id
   current_window.on('closed', () => {
-    if (onWindowClosed) onWindowClosed(current_window.webContents.id)
+    if (onWindowClosed) onWindowClosed(webContentsId)
   })
 
   current_window.on('ready-to-show', () => {

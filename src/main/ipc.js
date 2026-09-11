@@ -46,14 +46,19 @@ const legacyOpenFile = (current_window) => {
 
 /**
  * 【legacy】保存（可能弹另存对话框）并回发 save_success 与文件数据。
+ * notifyCancelOnFailure：用户取消另存对话框时是否回发 save_failure 并
+ * 重置退出流程状态。save_file（无路径）场景为 true（与原版一致）；
+ * save_as 场景为 false（原版取消时静默，不发任何消息）。
  */
-const legacySaveFile = async (data, dialogTitle, current_window, ctx) => {
+const legacySaveFile = async (data, dialogTitle, current_window, ctx, notifyCancelOnFailure) => {
   const res = await fileService.saveChartFileAs(
     current_window, JSON.stringify(data.file), dialogTitle
   )
   if (res.canceled) {
-    current_window.webContents.send('act', 'save_failure')
-    ctx.status = 'open'
+    if (notifyCancelOnFailure) {
+      current_window.webContents.send('act', 'save_failure')
+      ctx.status = 'open'
+    }
     return
   }
   current_window.webContents.send('act', 'save_success')
@@ -117,7 +122,7 @@ export const registerIpc = () => {
     const handles = {
       save_file: async () => {
         if (!arg.path) {
-          await legacySaveFile(arg, '将文件保存到...', current_window, ctx)
+          await legacySaveFile(arg, '将文件保存到...', current_window, ctx, true)
         } else {
           await fileService.writeChartFile(arg.path, JSON.stringify(arg.file))
           current_window.webContents.send('act', 'save_success')
@@ -130,7 +135,7 @@ export const registerIpc = () => {
 
       open_template: () => openChartWindow(current_window, JSON.stringify(arg), ''),
 
-      save_as: () => legacySaveFile(arg, '将文件另存为...', current_window, ctx),
+      save_as: () => legacySaveFile(arg, '将文件另存为...', current_window, ctx, false),
 
       create_new_file: () => {
         console.log('create new file')
