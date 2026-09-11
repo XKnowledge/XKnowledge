@@ -31,6 +31,8 @@
 <script setup>
 import { reactive, ref, watch, h } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { setPendingChart } from '../store/chartStore'
 
 const router = useRouter()
 const title = ref('新建')
@@ -88,8 +90,23 @@ const handleClick = e => {
   router.push(e.key)
 }
 
-const openFile = () => {
-  window.electronAPI.sendAct('open_file')
+const openFile = async () => {
+  /**
+   * 打开本地文件：读取与校验在主进程完成，成功后本地跳转图表页。
+   */
+  let res
+  try {
+    res = await window.electronAPI.openFile()
+  } catch (err) {
+    console.error('打开失败', err)
+    message.error(err.message || '打开失败')
+    // 首页窗口没有可展示的内容，提示后关闭（与旧行为的关窗一致）
+    window.electronAPI.closeWindow()
+    return
+  }
+  if (res.canceled) return
+  setPendingChart({ value: res.content, path: res.path })
+  router.push('chart')
 }
 
 window.electronAPI.receiveAct((act) => {

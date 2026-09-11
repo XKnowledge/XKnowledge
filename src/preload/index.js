@@ -10,5 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   /* 新通道 */
   saveFile: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE, payload),
-  saveFileAs: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload)
+  saveFileAs: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload),
+  openFile: () => ipcRenderer.invoke(IPC.FILE_OPEN),
+  closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
+  enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE)
 })

@@ -1,5 +1,6 @@
 import { BrowserWindow, Menu, shell } from 'electron'
 import { join } from 'path'
+import { IPC } from '../shared/ipc-channels'
 
 /**
  * 创建应用主窗口。onWindowClosed 在窗口销毁时回调（webContents.id 作参数），
@@ -73,20 +74,37 @@ export const createWindow = (onWindowClosed) => {
   return current_window
 }
 
+// 已进入图表模式的窗口集合：保证解锁与close拦截只注册一次
+const chartModeWindows = new Set()
+
+/**
+ * 进入图表模式：解锁窗口尺寸限制，并注册"关闭前确认"拦截。
+ * 由图表页挂载时 invoke app:enter-chart-mode 触发；幂等。
+ */
+export const enterChartMode = (current_window) => {
+  const { id } = current_window
+  if (chartModeWindows.has(id)) return
+  chartModeWindows.add(id)
+
+  current_window.setMaximizable(true)
+  current_window.setMinimizable(true)
+  current_window.setResizable(true)
+  current_window.setMinimumSize(900, 670)
+
+  current_window.on('close', e => {
+    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
+    current_window.webContents.send('act', 'quit') // 【legacy】Task 7 改为 APP_REQUEST_CLOSE
+  })
+
+  current_window.on('closed', () => chartModeWindows.delete(id))
+}
+
 /**
  * 【legacy】装载图表：解锁窗口尺寸、下发图表数据、注册关闭前确认。
  * Task 5 起由渲染端 invoke app:enter-chart-mode 取代。
  */
 export const openChartWindow = (current_window, data, path) => {
   current_window.webContents.send('act', 'chart')
-  current_window.setMaximizable(true)
-  current_window.setMinimizable(true)
-  current_window.setResizable(true)
-  current_window.setMinimumSize(900, 670)
+  enterChartMode(current_window)
   current_window.webContents.send('data', { value: data, path: path })
-
-  current_window.on('close', e => {
-    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
-    current_window.webContents.send('act', 'quit')
-  })
 }

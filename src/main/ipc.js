@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
-import { createWindow, openChartWindow } from './windowManager'
+import { createWindow, openChartWindow, enterChartMode } from './windowManager'
 import { IPC } from '../shared/ipc-channels'
 
 // 每个窗口独立的IPC上下文：记录该窗口最近一次act指令与退出流程状态。
@@ -69,14 +69,30 @@ export const registerIpc = () => {
     return fileService.saveChartFileAs(current_window, content, '将文件另存为...')
   })
 
+  ipcMain.handle(IPC.FILE_OPEN, async (event) => {
+    const current_window = BrowserWindow.fromWebContents(event.sender)
+    const res = await fileService.showOpenDialog(current_window)
+    if (res.canceled) return { canceled: true }
+    // readChartFile 失败时 throw，经 invoke 自动变为渲染端 reject
+    return fileService.readChartFile(res.filePaths[0])
+  })
+
+  ipcMain.handle(IPC.APP_CLOSE_WINDOW, (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.destroy()
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.APP_ENTER_CHART_MODE, (event) => {
+    enterChartMode(BrowserWindow.fromWebContents(event.sender))
+    return { ok: true }
+  })
+
   ipcMain.on('act', (event, act) => {
     // 只有操作需要进行，不需要数据参与
     const ctx = getContext(event.sender)
     ctx.act = act
     const current_window = BrowserWindow.fromWebContents(event.sender)
     const actions = {
-      open_file: () => legacyOpenFile(current_window),
-
       unsaved: async () => {
         const { response } = await dialog.showMessageBox({
           type: 'info',

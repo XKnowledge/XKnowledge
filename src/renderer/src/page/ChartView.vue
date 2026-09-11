@@ -100,6 +100,7 @@ import { nextTick, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import * as echarts from 'echarts'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
+import { takePendingChart } from '../store/chartStore'
 import createTemplate1 from '../template/template1.ts'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
@@ -185,6 +186,15 @@ onMounted(async () => {
   // 调用渲染图表逻辑
   window.addEventListener('resize', resizeChart)
   window.addEventListener('keydown', shortcut)
+
+  // 同窗口跳转（首页打开/模板）：从 chartStore 取数据装载
+  const local = takePendingChart()
+  if (local) {
+    loadChartData(local)
+  }
+  // 通知主进程解锁窗口并注册关闭确认
+  window.electronAPI.enterChartMode()
+
   setInterval(() => {
     // 1分钟保存一次
     if (saveNodeVisible.value && filePath !== '') {
@@ -199,7 +209,7 @@ onMounted(async () => {
 //   console.log('窗口ID:', id)
 // })
 
-window.electronAPI.receiveData((data) => {
+const loadChartData = (data) => {
   // 解析失败时提示而不是让整个页面崩溃
   try {
     xkContext.value.chartData = JSON.parse(data.value)
@@ -215,26 +225,26 @@ window.electronAPI.receiveData((data) => {
   }
 
   filePath = data.path
-  console.log(data.path)
 
   if (chartDom.value) {
     // echarts实例和click监听只初始化一次。
-    // 保存成功后主进程会重发data，若重复init+on('click')，
-    // 监听器会不断叠加，导致一次点击触发多次、节点无法选中
-    if (!chartInstance) {
-      chartInstance = echarts.init(chartDom.value)
+    chartInstance = chartInstance || echarts.init(chartDom.value)
+    if (!chartInstance.hasClickBound) {
       chartInstance.on('click', clickChart)
+      chartInstance.hasClickBound = true
     }
 
     initChartData()
     initAttr()
-    // 使用刚指定的配置项和数据显示图表。
     xkContext.value.updateChart = !xkContext.value.updateChart
     nextTick(() => {
       saveNodeVisible.value = false
     })
   }
-})
+}
+
+// 【legacy】模板/新建窗口流程仍由主进程推送 data，Task 5/6 移除
+window.electronAPI.receiveData(loadChartData)
 
 const initAttr = () => {
   // 将读取的属性赋值给组件
