@@ -34,6 +34,12 @@ const createWindow = () => {
   })
   Menu.setApplicationMenu(null)
 
+  // 窗口销毁后清理其IPC上下文，避免Map持续增长
+  const { id: webContentsId } = current_window.webContents
+  current_window.on('closed', () => {
+    windowContexts.delete(webContentsId)
+  })
+
   current_window.on('ready-to-show', () => {
     current_window.show()
   })
@@ -53,13 +59,12 @@ const createWindow = () => {
   /*
   在基于 electron-vite CLI 的渲染器热模块替换。
   在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  */
+  if (process.env['ELECTRON_RENDERER_URL']) {
     current_window.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     current_window.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  */
-  current_window.loadFile(join(__dirname, '../renderer/index.html')).then()
 
   return current_window
 }
@@ -118,8 +123,17 @@ app.on('window-all-closed', () => {
   */
 })
 
-let current_act
-let status = 'open'
+// 每个窗口独立的IPC上下文：记录该窗口最近一次act指令与退出流程状态。
+// 不能用全局变量：多窗口并发时act/data的配对会互相干扰，
+// 甚至一个窗口的退出流程会把另一个窗口误关。
+const windowContexts = new Map() // webContents.id -> { act, status }
+
+const getContext = (webContents) => {
+  if (!windowContexts.has(webContents.id)) {
+    windowContexts.set(webContents.id, { act: null, status: 'open' })
+  }
+  return windowContexts.get(webContents.id)
+}
 
 const openChartWindow = (current_window, data, path) => {
   current_window.webContents.send('act', 'chart')
@@ -145,6 +159,31 @@ const openFile = (current_window) => {
   }).then((res) => {
     if (!res.canceled) {
       fs.readFile(res.filePaths[0], 'utf-8', (err, data) => {
+        if (err) {
+          dialog.showMessageBoxSync(current_window, {
+            type: 'error',
+            title: '打开失败',
+            message: '文件读取失败',
+            detail: String(err)
+          })
+          current_window.destroy()
+          return
+        }
+
+        // 在主进程先校验文件内容，损坏的文件不发给渲染进程，避免渲染端崩溃
+        try {
+          JSON.parse(data)
+        } catch (e) {
+          dialog.showMessageBoxSync(current_window, {
+            type: 'error',
+            title: '打开失败',
+            message: '文件已损坏或不是有效的 XKnowledge 文件',
+            detail: res.filePaths[0]
+          })
+          current_window.destroy()
+          return
+        }
+
         openChartWindow(current_window, data, res.filePaths[0])
       })
     } else {
@@ -173,7 +212,8 @@ const saveFile = (data, dialogTitle, current_window) => {
 
 ipcMain.on('act', (event, act) => {
   // 只有操作需要进行，不需要数据参与
-  current_act = act
+  const ctx = getContext(event.sender)
+  ctx.act = act
   const current_window = BrowserWindow.fromWebContents(event.sender)
   const actions = {
     open_file: () => openFile(current_window),
@@ -189,7 +229,7 @@ ipcMain.on('act', (event, act) => {
 
       if (response === 0) {
         // 保存文件并退出
-        status = 'exit'
+        ctx.status = 'exit'
         current_window.webContents.send('act', 'save_file')
       } else if (response === 1) {
         // 不保存直接退出
@@ -212,20 +252,21 @@ ipcMain.on('data', (event, arg) => {
   // 当接到操作指令，需要对数据进行操作时
   console.log(arg)
   const current_window = BrowserWindow.fromWebContents(event.sender)
+  const ctx = getContext(event.sender)
   const handles = {
     save_file: () => {
       if (!arg.path) {
         if (!saveFile(JSON.stringify(arg.file), '将文件保存到...', current_window)) {
           current_window.webContents.send('act', 'save_failure')
-          status = 'open'
+          ctx.status = 'open'
         }
       } else {
         fs.writeFileSync(arg.path, JSON.stringify(arg.file))
         current_window.webContents.send('act', 'save_success')
       }
-      if (status === 'exit') {
+      if (ctx.status === 'exit') {
         current_window.destroy()
-        status = 'open'
+        ctx.status = 'open'
       }
     },
 
@@ -241,8 +282,8 @@ ipcMain.on('data', (event, arg) => {
     }
   }
 
-  if (handles[current_act]) {
-    handles[current_act]()
+  if (handles[ctx.act]) {
+    handles[ctx.act]()
   }
 })
 

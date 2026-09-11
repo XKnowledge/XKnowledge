@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { jsonReactive, resetEdgeRef } from '../utils/XkUtils'
+import { addHistory, jsonReactive, resetEdgeRef } from '../utils/XkUtils'
 
 const newEdge = defineModel('newEdge')
 const highlightNodeList = defineModel('highlightNodeList')
@@ -53,11 +53,10 @@ const createEdgeSubmit = () => {
   const newEdgeJson = jsonReactive(newEdge.value)
 
   // 封装历史记录操作
-  ctx.historyList[ctx.historySequenceNumber + 1] = {
+  addHistory(xkContext, {
     'act': 'createEdge',
     'data': newEdgeJson
-  }
-  ctx.historySequenceNumber++
+  })
 
   links.push(newEdgeJson)
   ctx.updateChart = !ctx.updateChart

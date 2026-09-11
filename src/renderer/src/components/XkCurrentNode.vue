@@ -35,7 +35,7 @@
 
 <script setup>
 import { defineComponent, ref } from 'vue'
-import { jsonReactive } from '../utils/XkUtils'
+import { addHistory, jsonReactive } from '../utils/XkUtils'
 
 const currentNode = defineModel('currentNode')
 const categoryItems = defineModel('categoryItems')
@@ -103,12 +103,11 @@ const currentNodeSubmit = () => {
 
   data[currentNodeDataIndex.value] = newNode
 
-  xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
+  addHistory(xkContext, {
     'act': 'changeNode',
     'old': oldNode,
     'new': newNode
-  }
-  xkContext.value.historySequenceNumber++
+  })
 
   xkContext.value.updateChart = !xkContext.value.updateChart
   xkContext.value.errorMessage = ''

@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import { jsonReactive, resetNodeRef } from '../utils/XkUtils'
+import { addHistory, jsonReactive, resetNodeRef } from '../utils/XkUtils'
 import { defineComponent, ref } from 'vue'
 
 const newNode = defineModel('newNode')
@@ -92,21 +92,11 @@ const createNodeSubmit = () => {
   const newNodeJson = jsonReactive(newNode.value)
   data.push(newNodeJson)
 
-  // 不能写成下面这个样子，会导致数据被赋值在数组index=-1的位置上
-  // xkContext.value.historySequenceNumber++;
-  // xkContext.value.historyList[xkContext.value.historySequenceNumber] = {
-  //   "act": "createNode",
-  //   "data": newNodeJson
-  // };
-  // 因为historySequenceNumber是defineModel
-  // Vue会在第一个tick更新父组件中的historySequenceNumber
-  // 下一个tick父组件发送prop来更新子组件
-
-  xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
+  // 统一走addHistory：截断废弃的redo分支后追加，并同步移动当前序号
+  addHistory(xkContext, {
     'act': 'createNode',
     'data': newNodeJson
-  }
-  xkContext.value.historySequenceNumber++
+  })
 
   xkContext.value.updateChart = !xkContext.value.updateChart
   xkContext.value.errorMessage = ''

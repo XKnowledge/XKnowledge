@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { jsonReactive } from '../utils/XkUtils'
+import { addHistory, jsonReactive } from '../utils/XkUtils'
 
 const currentEdge = defineModel('currentEdge')
 const currentEdgeDataIndex = defineModel('currentEdgeDataIndex')
@@ -25,12 +25,11 @@ const currentEdgeSubmit = () => {
    * 实现连接的动态修改
    */
   const currentEdgeJson = jsonReactive(currentEdge.value)
-  xkContext.value.historyList[xkContext.value.historySequenceNumber + 1] = {
+  addHistory(xkContext, {
     'act': 'changeEdge',
     'old': jsonReactive(xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value]),
     'new': currentEdgeJson
-  }
-  xkContext.value.historySequenceNumber++
+  })
   xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value] = currentEdgeJson
   xkContext.value.updateChart = !xkContext.value.updateChart
   xkContext.value.errorMessage = ''

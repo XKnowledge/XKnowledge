@@ -97,8 +97,9 @@
 
 <script setup>
 import { nextTick, onMounted, ref, watch } from 'vue'
+import { message } from 'ant-design-vue'
 import * as echarts from 'echarts'
-import { jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
+import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
 import createTemplate1 from '../template/template1.ts'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
@@ -199,25 +200,39 @@ onMounted(async () => {
 // })
 
 window.electronAPI.receiveData((data) => {
-  xkContext.value.chartData = JSON.parse(data.value)
+  // 解析失败时提示而不是让整个页面崩溃
+  try {
+    xkContext.value.chartData = JSON.parse(data.value)
+  } catch (e) {
+    console.error('文件内容解析失败', e)
+    message.error('文件内容已损坏或格式不正确，无法打开')
+    return
+  }
+
+  if (!xkContext.value.chartData?.series?.[0]) {
+    message.error('文件内容已损坏或格式不正确，无法打开')
+    return
+  }
+
   filePath = data.path
   console.log(data.path)
-  // 图表初始化
-  console.log('option')
-  // 基于准备好的dom，初始化echarts实例
+
   if (chartDom.value) {
-    // 初始化 ECharts 图表
-    chartInstance = echarts.init(chartDom.value)
-    if (xkContext.value.chartData) {
-      initChartData()
-      initAttr()
-      // 使用刚指定的配置项和数据显示图表。
-      xkContext.value.updateChart = !xkContext.value.updateChart
-      nextTick(() => {
-        saveNodeVisible.value = false
-      })
+    // echarts实例和click监听只初始化一次。
+    // 保存成功后主进程会重发data，若重复init+on('click')，
+    // 监听器会不断叠加，导致一次点击触发多次、节点无法选中
+    if (!chartInstance) {
+      chartInstance = echarts.init(chartDom.value)
       chartInstance.on('click', clickChart)
     }
+
+    initChartData()
+    initAttr()
+    // 使用刚指定的配置项和数据显示图表。
+    xkContext.value.updateChart = !xkContext.value.updateChart
+    nextTick(() => {
+      saveNodeVisible.value = false
+    })
   }
 })
 
@@ -515,7 +530,8 @@ const operateChart = (dataIndex, dataType, action) => {
 }
 
 const resizeChart = () => {
-  chartInstance.resize()
+  // 数据尚未到达时chartInstance还未初始化
+  chartInstance?.resize()
 }
 
 const switchSider = () => {
@@ -797,8 +813,7 @@ const deleteNode = () => {
     )
   }
 
-  xkContext.value.historySequenceNumber++
-  xkContext.value.historyList.push(newHistory)
+  addHistory(xkContext, newHistory)
 
   // 使用 filter 替代循环
   currentSeries.data = currentSeries.data.filter(
@@ -836,11 +851,10 @@ const deleteEdge = () => {
   if (currentEdgeDataIndex.value < 0) return
 
   const series = xkContext.value.chartData.series[0]
-  xkContext.value.historyList.push({
+  addHistory(xkContext, {
     'act': 'deleteEdge',
     'data': jsonReactive(series.links[currentEdgeDataIndex.value])
   })
-  xkContext.value.historySequenceNumber = xkContext.value.historyList.length - 1
 
   // 删除连接
   xkContext.value.chartData.series[0].links = series.links.filter(
