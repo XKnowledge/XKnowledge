@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
 import { createWindow, openChartWindow } from './windowManager'
+import { IPC } from '../shared/ipc-channels'
 
 // 每个窗口独立的IPC上下文：记录该窗口最近一次act指令与退出流程状态。
 // 不能用全局变量：多窗口并发时act/data的配对会互相干扰，
@@ -45,27 +46,6 @@ const legacyOpenFile = (current_window) => {
 }
 
 /**
- * 【legacy】保存（可能弹另存对话框）并回发 save_success 与文件数据。
- * notifyCancelOnFailure：用户取消另存对话框时是否回发 save_failure 并
- * 重置退出流程状态。save_file（无路径）场景为 true（与原版一致）；
- * save_as 场景为 false（原版取消时静默，不发任何消息）。
- */
-const legacySaveFile = async (data, dialogTitle, current_window, ctx, notifyCancelOnFailure) => {
-  const res = await fileService.saveChartFileAs(
-    current_window, JSON.stringify(data.file), dialogTitle
-  )
-  if (res.canceled) {
-    if (notifyCancelOnFailure) {
-      current_window.webContents.send('act', 'save_failure')
-      ctx.status = 'open'
-    }
-    return
-  }
-  current_window.webContents.send('act', 'save_success')
-  current_window.webContents.send('data', { value: JSON.stringify(data.file), path: res.path })
-}
-
-/**
  * 【legacy】窗口销毁时清理其IPC上下文。Task 8 删除。
  */
 export const cleanupWindowContext = (webContentsId) => {
@@ -76,6 +56,19 @@ export const cleanupWindowContext = (webContentsId) => {
 const openNewWindow = () => createWindow(cleanupWindowContext)
 
 export const registerIpc = () => {
+  ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
+    const current_window = BrowserWindow.fromWebContents(event.sender)
+    if (!path) {
+      return fileService.saveChartFileAs(current_window, content, '将文件保存到...')
+    }
+    return fileService.writeChartFile(path, content)
+  })
+
+  ipcMain.handle(IPC.FILE_SAVE_AS, async (event, { content }) => {
+    const current_window = BrowserWindow.fromWebContents(event.sender)
+    return fileService.saveChartFileAs(current_window, content, '将文件另存为...')
+  })
+
   ipcMain.on('act', (event, act) => {
     // 只有操作需要进行，不需要数据参与
     const ctx = getContext(event.sender)
@@ -95,7 +88,6 @@ export const registerIpc = () => {
 
         if (response === 0) {
           // 保存文件并退出
-          ctx.status = 'exit'
           current_window.webContents.send('act', 'save_file')
         } else if (response === 1) {
           // 不保存直接退出
@@ -120,22 +112,7 @@ export const registerIpc = () => {
     const current_window = BrowserWindow.fromWebContents(event.sender)
     const ctx = getContext(event.sender)
     const handles = {
-      save_file: async () => {
-        if (!arg.path) {
-          await legacySaveFile(arg, '将文件保存到...', current_window, ctx, true)
-        } else {
-          await fileService.writeChartFile(arg.path, JSON.stringify(arg.file))
-          current_window.webContents.send('act', 'save_success')
-        }
-        if (ctx.status === 'exit') {
-          current_window.destroy()
-          ctx.status = 'open'
-        }
-      },
-
       open_template: () => openChartWindow(current_window, JSON.stringify(arg), ''),
-
-      save_as: () => legacySaveFile(arg, '将文件另存为...', current_window, ctx, false),
 
       create_new_file: () => {
         console.log('create new file')

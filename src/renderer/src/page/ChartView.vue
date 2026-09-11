@@ -583,46 +583,62 @@ const openFile = () => {
   window.electronAPI.sendAct('open_other_file')
 }
 
-const saveFile = () => {
+const saveFile = async () => {
   /**
-   * 实现文件保存，electronAPI详见/src/preload/index.js
+   * 实现文件保存：有路径直接写，无路径由主进程弹另存对话框。
+   * 返回是否保存成功（供退出流程使用）。
    */
-  console.log('save file')
-  window.electronAPI.sendAct('save_file')
-  window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) })
-  resetSider()
-  resetRefData()
+  try {
+    const res = await window.electronAPI.saveFile({
+      path: filePath,
+      content: JSON.stringify(jsonReactive(xkContext.value.chartData))
+    })
+    if (res.canceled) return false
+    filePath = res.path
+    saveNodeVisible.value = false
+    resetSider()
+    resetRefData()
+    return true
+  } catch (err) {
+    console.error('保存失败', err)
+    message.error('保存失败')
+    saveNodeVisible.value = true
+    return false
+  }
 }
 
-const saveAs = () => {
+const saveAs = async () => {
   /**
-   * 实现文件另存为，electronAPI详见/src/preload/index.js
+   * 实现文件另存为。
    */
-  console.log('save as')
-  window.electronAPI.sendAct('save_as')
-  window.electronAPI.sendData({ path: filePath, file: jsonReactive(xkContext.value.chartData) })
-  resetSider()
-  resetRefData()
+  try {
+    const res = await window.electronAPI.saveFileAs({
+      content: JSON.stringify(jsonReactive(xkContext.value.chartData))
+    })
+    if (res.canceled) return
+    filePath = res.path
+    saveNodeVisible.value = false
+    resetSider()
+    resetRefData()
+  } catch (err) {
+    console.error('另存为失败', err)
+    message.error('另存为失败')
+  }
 }
 
 window.electronAPI.receiveAct((act) => {
   console.log(act)
   const actionHandlers = {
-    save_success: () => {
-      saveNodeVisible.value = false
-    },
-
-    save_failure: () => {
-      saveNodeVisible.value = true
-    },
-
     quit: () => {
       const hasUnsavedChanges = saveNodeVisible.value
       window.electronAPI.sendAct(hasUnsavedChanges ? 'unsaved' : 'saved')
     },
 
-    save_file: () => {
-      saveFile()
+    save_file: async () => {
+      // 【legacy】退出前保存：保存成功后通知主进程销毁窗口。
+      // Task 7 由 onRequestClose 线性流程取代。
+      const ok = await saveFile()
+      if (ok) window.electronAPI.sendAct('saved')
     }
   }
 
