@@ -185,8 +185,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 ## 错误处理约定
 
-- 主进程处理器内 `try/catch`，失败时 `throw { code, message, path? }`，
-  `invoke` 的 Promise 在渲染端自动 reject；
+- 主进程处理器内 `try/catch`，失败时 `throw Object.assign(new Error(中文消息), { code, detail, path })`
+  （Error 实例保证消息可跨 IPC 序列化），`invoke` 的 Promise 在渲染端自动 reject；
+  渲染端对用户显示固定中文文案，完整错误对象进 console；
 - 文件损坏校验（`JSON.parse`）保留在主进程；
 - 渲染端所有 `await` 均带 `try/catch`，IPC 失败不导致白屏。
 
