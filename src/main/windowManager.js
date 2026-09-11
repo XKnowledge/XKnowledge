@@ -6,7 +6,7 @@ import { IPC } from '../shared/ipc-channels'
  * 创建应用主窗口。onWindowClosed 在窗口销毁时回调（webContents.id 作参数），
  * 供 ipc 层清理按窗口记录的状态。
  */
-export const createWindow = (onWindowClosed) => {
+export const createWindow = (onWindowClosed, route = '') => {
   const current_window = new BrowserWindow({
     width: 900,
     height: 670,
@@ -65,13 +65,43 @@ export const createWindow = (onWindowClosed) => {
   在基于 electron-vite CLI 的渲染器热模块替换。
   在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
   */
+  const loadOptions = route ? { hash: route } : undefined
   if (process.env['ELECTRON_RENDERER_URL']) {
-    current_window.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    current_window.loadURL(process.env['ELECTRON_RENDERER_URL'], loadOptions)
   } else {
-    current_window.loadFile(join(__dirname, '../renderer/index.html'))
+    current_window.loadFile(join(__dirname, '../renderer/index.html'), loadOptions)
   }
 
   return current_window
+}
+
+// 新窗口待装载的图表数据：webContents.id -> content（窗口closed时清理）
+const pendingCharts = new Map()
+
+/**
+ * 为新窗口暂存图表数据，渲染端通过 take-pending-chart 通道取走（取后即清）。
+ */
+export const stashPendingChart = (webContentsId, content) => {
+  pendingCharts.set(webContentsId, content)
+}
+
+export const takePendingChart = (webContentsId) => {
+  const content = pendingCharts.get(webContentsId) ?? null
+  pendingCharts.delete(webContentsId)
+  return content
+}
+
+/**
+ * 创建图表窗口：直接加载 #/chart 路由并暂存待装载数据。
+ * chartModeWindows 的清理由 enterChartMode 自行注册的 closed 钩子负责，
+ * 这里只清 pendingCharts。
+ */
+export const createChartWindow = (content) => {
+  const new_window = createWindow((webContentsId) => {
+    pendingCharts.delete(webContentsId)
+  }, 'chart')
+  stashPendingChart(new_window.webContents.id, content)
+  return new_window
 }
 
 // 已进入图表模式的窗口集合：保证解锁与close拦截只注册一次

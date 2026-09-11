@@ -191,6 +191,12 @@ onMounted(async () => {
   const local = takePendingChart()
   if (local) {
     loadChartData(local)
+  } else {
+    // 新窗口（新建文件/打开其他文件）：取主进程暂存的数据
+    const res = await window.electronAPI.takePendingChart()
+    if (res?.content) {
+      loadChartData({ value: res.content, path: '' })
+    }
   }
   // 通知主进程解锁窗口并注册关闭确认
   window.electronAPI.enterChartMode()
@@ -575,19 +581,25 @@ const toggleSider = () => {
 
 const createNewFile = () => {
   /**
-   * 实现新建文件
+   * 实现新建文件：新窗口装载空白模板
    */
   console.log('create new file')
-  window.electronAPI.sendAct('create_new_file')
-  window.electronAPI.sendData(createTemplate1())
+  window.electronAPI.newChartWindow({ content: JSON.stringify(createTemplate1()) })
 }
 
-const openFile = () => {
+const openFile = async () => {
   /**
-   * 实现打开文件
+   * 实现打开文件：读取成功后在新窗口打开（与旧行为一致）
    */
   console.log('open file')
-  window.electronAPI.sendAct('open_other_file')
+  try {
+    const res = await window.electronAPI.openFile()
+    if (res.canceled) return
+    window.electronAPI.newChartWindow({ content: res.content })
+  } catch (err) {
+    console.error('打开失败', err)
+    message.error(err.message || '打开失败')
+  }
 }
 
 const saveFile = async () => {

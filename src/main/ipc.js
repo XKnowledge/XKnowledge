@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
-import { createWindow, enterChartMode } from './windowManager'
+import { createChartWindow, enterChartMode, takePendingChart } from './windowManager'
 import { IPC } from '../shared/ipc-channels'
 
 // 每个窗口独立的IPC上下文：记录该窗口最近一次act指令与退出流程状态。
@@ -22,9 +22,6 @@ const getContext = (webContents) => {
 export const cleanupWindowContext = (webContentsId) => {
   windowContexts.delete(webContentsId)
 }
-
-// ipc.js 内部所有创建窗口的调用统一走包装（保证清理钩子不遗漏）
-const openNewWindow = () => createWindow(cleanupWindowContext)
 
 export const registerIpc = () => {
   ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
@@ -58,6 +55,15 @@ export const registerIpc = () => {
     return { ok: true }
   })
 
+  ipcMain.handle(IPC.APP_NEW_CHART_WINDOW, (event, { content }) => {
+    createChartWindow(content)
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.APP_TAKE_PENDING_CHART, (event) => {
+    return { content: takePendingChart(event.sender.id) }
+  })
+
   ipcMain.on('act', (event, act) => {
     // 只有操作需要进行，不需要数据参与
     const ctx = getContext(event.sender)
@@ -83,29 +89,11 @@ export const registerIpc = () => {
         // 取消退出
       },
 
-      saved: () => current_window.destroy(),
-
-      open_other_file: () => openNewWindow() // 【legacy】Task 6 由 new-chart-window 通道取代
+      saved: () => current_window.destroy()
     }
 
     if (actions[act]) {
       actions[act]()
-    }
-  })
-
-  ipcMain.on('data', (event, arg) => {
-    // 当接到操作指令，需要对数据进行操作时
-    console.log(arg)
-    const ctx = getContext(event.sender)
-    const handles = {
-      create_new_file: () => {
-        console.log('create new file')
-        openNewWindow() // 【legacy】Task 6 由 new-chart-window 通道取代
-      }
-    }
-
-    if (handles[ctx.act]) {
-      handles[ctx.act]()
     }
   })
 }

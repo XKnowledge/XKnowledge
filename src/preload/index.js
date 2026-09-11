@@ -13,5 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileAs: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload),
   openFile: () => ipcRenderer.invoke(IPC.FILE_OPEN),
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
-  enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE)
+  enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE),
+  newChartWindow: (payload) => ipcRenderer.invoke(IPC.APP_NEW_CHART_WINDOW, payload),
+  takePendingChart: () => ipcRenderer.invoke(IPC.APP_TAKE_PENDING_CHART)
 })
