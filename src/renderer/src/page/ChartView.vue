@@ -598,7 +598,8 @@ const openFile = async () => {
     window.electronAPI.newChartWindow({ content: res.content })
   } catch (err) {
     console.error('打开失败', err)
-    message.error(err.message || '打开失败')
+    // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
+    message.error('打开失败：文件读取失败或已损坏')
   }
 }
 

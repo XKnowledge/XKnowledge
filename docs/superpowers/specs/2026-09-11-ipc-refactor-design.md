@@ -178,7 +178,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 |---|---|---|
 | 保存成功 | 主进程重发 data，图表整体重载 | 不重发，仅更新 filePath 与未保存标记 |
 | 保存失败/取消 | `save_failure` act 通知 | invoke reject / `{ canceled }` 返回值 |
-| 打开失败 | 主进程 `destroy()` 窗口 | 渲染端按场景提示；首页场景才关窗 |
+| 打开失败 | 主进程 `destroy()` 窗口 | 渲染端按场景提示；首页场景才关窗；首页场景的 message.error 提示会随窗口关闭即时消失（不阻塞） |
 | 未保存退出 | quit → unsaved → 主进程弹框 → 可能再触发保存 | request-close 推送 → 渲染端 invoke confirm-unsaved → 自行决策 |
 | 首页打开/双击模板进入图表页 | 主进程回发 `'chart'` act 触发 `router.push` | 渲染端本地 `router.push`，双击模板不再走 IPC |
 | 多窗口 | `windowContexts` 按窗口记忆 act | 通道自带语义，无共享状态 |

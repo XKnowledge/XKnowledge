@@ -1,5 +1,5 @@
 /**
- * IPC 通道名单一定义：主进程（src/main）与 preload 共同引用。
+ * IPC 通道名单一处定义：主进程（src/main）与 preload 共同引用。
  * 业务代码禁止书写裸通道字符串，一律从本模块导入。
  * 命名约定：<域>:<动作>；各通道的参数与返回值约定见
  * docs/superpowers/specs/2026-09-11-ipc-refactor-design.md 的通道契约表。

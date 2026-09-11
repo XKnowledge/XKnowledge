@@ -15,6 +15,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE),
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
-  onRequestClose: (callback) =>
-    ipcRenderer.on(IPC.APP_REQUEST_CLOSE, () => callback())
+  onRequestClose: (callback) => ipcRenderer.on(IPC.APP_REQUEST_CLOSE, () => callback())
 })

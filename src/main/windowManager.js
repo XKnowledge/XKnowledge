@@ -65,7 +65,6 @@ export const createWindow = (onWindowClosed, route = '') => {
   在基于 electron-vite CLI 的渲染器热模块替换。
   在开发时加载远程 URL，或在生产时加载本地 HTML 文件。
   */
-  const loadOptions = route ? { hash: route } : undefined
   if (process.env['ELECTRON_RENDERER_URL']) {
     // 注意：Electron 28 的 loadURL 不支持 { hash } 选项（仅 loadFile 支持），
     // dev 模式下需手动拼接 hash 才能直达对应路由。
@@ -75,6 +74,7 @@ export const createWindow = (onWindowClosed, route = '') => {
       current_window.loadURL(process.env['ELECTRON_RENDERER_URL'])
     }
   } else {
+    const loadOptions = route ? { hash: route } : undefined
     current_window.loadFile(join(__dirname, '../renderer/index.html'), loadOptions)
   }
 
@@ -86,8 +86,9 @@ const pendingCharts = new Map()
 
 /**
  * 为新窗口暂存图表数据，渲染端通过 take-pending-chart 通道取走（取后即清）。
+ * 仅 createChartWindow 使用，不对外导出。
  */
-export const stashPendingChart = (webContentsId, content) => {
+const stashPendingChart = (webContentsId, content) => {
   pendingCharts.set(webContentsId, content)
 }
 
@@ -127,7 +128,7 @@ export const enterChartMode = (current_window) => {
   current_window.setResizable(true)
   current_window.setMinimumSize(900, 670)
 
-  current_window.on('close', e => {
+  current_window.on('close', (e) => {
     e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
     current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
   })

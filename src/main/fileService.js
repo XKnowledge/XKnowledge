@@ -17,7 +17,9 @@ export const showOpenDialog = (window) =>
 /**
  * 读取并校验 .xk 文件内容。
  * 成功返回 { content, path }（content 为文件原始文本）。
- * 读取失败或 JSON 非法时 throw { code, message, detail, path }，
+ * 读取失败或 JSON 非法时 throw Error 实例（message 为中文提示，
+ * code/detail/path 作为附加属性供编程访问）——throw 普通对象会因
+ * IPC 错误边界执行 error.toString() 而丢失全部信息（变 "[object Object]"）。
  * 由调用方决定如何提示用户。
  */
 export const readChartFile = async (filePath) => {
@@ -25,24 +27,22 @@ export const readChartFile = async (filePath) => {
   try {
     data = await fs.promises.readFile(filePath, 'utf-8')
   } catch (err) {
-    throw {
+    throw Object.assign(new Error('文件读取失败'), {
       code: 'READ_FAILED',
-      message: '文件读取失败',
       detail: String(err),
       path: filePath
-    }
+    })
   }
 
   // 在主进程先校验文件内容，损坏的文件不发给渲染进程，避免渲染端崩溃
   try {
     JSON.parse(data)
   } catch (err) {
-    throw {
+    throw Object.assign(new Error('文件已损坏或不是有效的 XKnowledge 文件'), {
       code: 'INVALID_JSON',
-      message: '文件已损坏或不是有效的 XKnowledge 文件',
       detail: filePath,
       path: filePath
-    }
+    })
   }
 
   return { content: data, path: filePath }
