@@ -64,6 +64,8 @@ src/
 | `FILE_SAVE` | `file:save` | invoke | `{ path, content }` | path 为空弹另存对话框；成功 → `{ path }`；取消 → `{ canceled: true }`；写失败 → reject |
 | `FILE_SAVE_AS` | `file:save-as` | invoke | `{ content }` | 总是弹对话框，其余同 `file:save` |
 | `APP_NEW_CHART_WINDOW` | `app:new-chart-window` | invoke | `{ content }` | 新建窗口并装载图表，返回 `{ ok: true }` |
+| `APP_TAKE_PENDING_CHART` | `app:take-pending-chart` | invoke | 无 | 新窗口图表页挂载时取走暂存数据，返回 `{ content }`（无数据时 `content` 为 `null`） |
+| `APP_ENTER_CHART_MODE` | `app:enter-chart-mode` | invoke | 无 | 图表页挂载时调用：解锁窗口尺寸限制 + 注册 close 拦截（幂等） |
 | `APP_CLOSE_WINDOW` | `app:close-window` | invoke | 无 | 销毁发起 invoke 的窗口 |
 | `APP_CONFIRM_UNSAVED` | `app:confirm-unsaved` | invoke | 无 | 主进程弹三按钮框（保存/放弃/取消），返回 `'save' \| 'discard' \| 'cancel'` |
 | `APP_REQUEST_CLOSE` | `app:request-close` | 主进程 → 渲染端推送 | 无 | 用户点了窗口关闭按钮，请渲染端决策 |
@@ -82,6 +84,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFile:      (payload) => ipcRenderer.invoke(IPC.FILE_SAVE, payload),
   saveFileAs:    (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload),
   newChartWindow: (payload) => ipcRenderer.invoke(IPC.APP_NEW_CHART_WINDOW, payload),
+  takePendingChart: () => ipcRenderer.invoke(IPC.APP_TAKE_PENDING_CHART),
+  enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE),
   closeWindow:   () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
   onRequestClose: (callback) => ipcRenderer.on(IPC.APP_REQUEST_CLOSE, (_e) => callback())
@@ -129,10 +133,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 重构后：
 
-- 首页打开文件成功 → 渲染端本地 `router.push('chart')` + 装载（同上一节）；
+- 新增渲染端共享状态 `src/renderer/src/store/chartStore.js`（模块级变量，
+  `setPendingChart({ content, path })` / `takePendingChart()`，取后即清），
+  承接同窗口内首页 → 图表页的数据传递；
+- 首页打开文件成功 → `setPendingChart` + 渲染端本地 `router.push('chart')`；
 - 双击模板（`XkCardList` 的 `open_template`）→ **完全不再走 IPC**：本地构造模板
-  内容、本地跳转、本地装载；
+  内容、`setPendingChart`、本地跳转；
 - `'chart'` act 通道删除。
+
+### 进入图表模式（窗口解锁与关闭确认注册）
+
+现状：主进程 `openChartWindow` 在装载图表的同时解锁窗口
+（`setMaximizable/setMinimizable/setResizable/setMinimumSize`）并注册 close 拦截。
+重构后同窗口跳转不经过主进程，改由图表页挂载时 invoke `app:enter-chart-mode`，
+主进程 `windowManager` 幂等地完成解锁 + close 拦截注册（`chartModeWindows` 集合
+防重复）。首页窗口不调用即不拦截，直接关闭——与现状一致。
+
+### 新窗口的数据传递
+
+`app:new-chart-window` 处理器：创建窗口时直接加载 `#/chart` 路由
+（`loadURL(url, { hash: 'chart' })` / `loadFile(file, { hash: 'chart' })`），
+并按 `webContents.id` 把 `content` 暂存于 `pendingCharts` Map（窗口 closed 时
+清理）。新窗口的 `ChartView` 挂载时：先查本地 `chartStore`（同窗口跳转场景），
+为空则 invoke `app:take-pending-chart`（新窗口场景）取走数据。数据在窗口创建
+时已放入 Map，渲染端任意时刻 invoke 均可取到，无竞态。
 
 ### 退出（三段式状态机 → 一次线性决策）
 
