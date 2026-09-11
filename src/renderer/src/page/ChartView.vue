@@ -645,23 +645,25 @@ const saveAs = async () => {
   }
 }
 
-window.electronAPI.receiveAct((act) => {
-  console.log(act)
-  const actionHandlers = {
-    quit: () => {
-      const hasUnsavedChanges = saveNodeVisible.value
-      window.electronAPI.sendAct(hasUnsavedChanges ? 'unsaved' : 'saved')
-    },
-
-    save_file: async () => {
-      // 【legacy】退出前保存：保存成功后通知主进程销毁窗口。
-      // Task 7 由 onRequestClose 线性流程取代。
-      const ok = await saveFile()
-      if (ok) window.electronAPI.sendAct('saved')
-    }
+window.electronAPI.onRequestClose(async () => {
+  /**
+   * 用户点击了窗口关闭按钮：主进程已拦截 close 并推送本事件，
+   * 由本页面决定是否可以关闭。
+   */
+  if (!saveNodeVisible.value) {
+    window.electronAPI.closeWindow()
+    return
   }
 
-  if (actionHandlers[act]) actionHandlers[act]()
+  const choice = await window.electronAPI.confirmUnsaved()
+  if (choice === 'cancel') return
+  if (choice === 'discard') {
+    window.electronAPI.closeWindow()
+    return
+  }
+  // choice === 'save'：保存成功才关闭；失败留在当前页面
+  const ok = await saveFile()
+  if (ok) window.electronAPI.closeWindow()
 })
 
 const undo = () => {

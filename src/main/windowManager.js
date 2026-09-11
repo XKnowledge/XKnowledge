@@ -129,7 +129,7 @@ export const enterChartMode = (current_window) => {
 
   current_window.on('close', e => {
     e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
-    current_window.webContents.send('act', 'quit') // 【legacy】Task 7 改为 APP_REQUEST_CLOSE
+    current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
   })
 
   current_window.on('closed', () => chartModeWindows.delete(id))
