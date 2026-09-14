@@ -11,7 +11,7 @@
           </a-space>
           <a-layout-content class="move-header">
             <a-space size="large" style="margin-top: 5px">
-              <a-space v-for="item in buttonList" style="align-items: center;" direction="vertical" size="small">
+              <a-space v-for="item in buttonList" :key="item.name" style="align-items: center;" direction="vertical" size="small">
                 <a-button type="link" class="no-move-button" @click="item.click">
                   <img :src="item.src" alt="" :style="{ width: '20px', height: '20px'}" />
                 </a-button>
@@ -64,8 +64,6 @@
                         v-model:newNode="newNode"
                         v-model:categoryItems="categoryItems"
                         v-model:categoryName="categoryName"
-                        v-model:currentNode="currentNode"
-
                         v-model:xkContext="xkContext"></XkCreateNode>
 
           <XkCurrentNode v-show="currentNodeVisible"
@@ -96,7 +94,7 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import * as echarts from 'echarts'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
@@ -123,7 +121,6 @@ const xkContext = ref({
   'historySequenceNumber': -1 // HSN：历史操作对应的目前的位置
 })
 
-const echartsWidth = ref('100vh')
 const siderVisible = ref(false)
 const saveNodeVisible = ref(false)
 
@@ -182,6 +179,10 @@ let filePath = ''
 const shortcutActive = ref('')
 const shortcutWatch = ref(false)
 
+let autoSaveTimer = null
+let offRequestClose = null
+let autoSaveSuspended = false // 文件冲突后暂停自动保存，避免每分钟重复报错
+
 onMounted(async () => {
   // 调用渲染图表逻辑
   window.addEventListener('resize', resizeChart)
@@ -193,21 +194,69 @@ onMounted(async () => {
     loadChartData(local)
   } else {
     // 新窗口（新建文件/打开其他文件）：取主进程暂存的数据
-    const res = await window.electronAPI.takePendingChart()
-    if (res?.content) {
-      loadChartData({ value: res.content, path: '' })
+    try {
+      const res = await window.electronAPI.takePendingChart()
+      if (res?.content) {
+        loadChartData({ value: res.content, path: res.path || '' })
+      }
+    } catch (err) {
+      console.error('装载图表数据失败', err)
+      message.error('图表数据装载失败，请关闭窗口后重新打开文件')
     }
   }
   // 通知主进程解锁窗口并注册关闭确认
-  window.electronAPI.enterChartMode()
+  window.electronAPI.enterChartMode().catch((err) => {
+    console.error('进入图表模式失败', err)
+  })
 
-  setInterval(() => {
+  autoSaveTimer = setInterval(() => {
     // 1分钟保存一次
-    if (saveNodeVisible.value && filePath !== '') {
+    if (!autoSaveSuspended && saveNodeVisible.value && filePath !== '') {
       shortcutActive.value = 'save_file'
       shortcutWatch.value = !shortcutWatch.value
     }
   }, 60000)
+
+  // 用户点击窗口关闭按钮：主进程拦截 close 后推送本事件，
+  // 由本页面决定是否可以关闭。
+  offRequestClose = window.electronAPI.onRequestClose(async () => {
+    if (!saveNodeVisible.value) {
+      window.electronAPI.closeWindow()
+      return
+    }
+
+    let choice
+    try {
+      choice = await window.electronAPI.confirmUnsaved()
+    } catch (err) {
+      console.error('退出确认失败', err)
+      return // 确认框失败按“取消”处理，避免误丢用户数据
+    }
+    if (choice === 'cancel') return
+    if (choice === 'discard') {
+      window.electronAPI.closeWindow()
+      return
+    }
+    // choice === 'save'：保存成功才关闭；失败留在当前页面
+    const ok = await saveFile()
+    if (ok) window.electronAPI.closeWindow()
+  })
+})
+
+onUnmounted(() => {
+  // 同窗口再次挂载（路由进出图表页）时，旧实例的监听器、定时器与
+  // echarts 实例若不释放，会导致快捷键跑两遍、自动保存累积、内存泄漏
+  window.removeEventListener('resize', resizeChart)
+  window.removeEventListener('keydown', shortcut)
+  if (autoSaveTimer) clearInterval(autoSaveTimer)
+  if (offRequestClose) offRequestClose()
+
+  chartInstance?.dispose()
+  chartInstance = null
+  // 解除主进程的窗口锁定与关闭拦截（与挂载时的 enterChartMode 对称）
+  window.electronAPI.exitChartMode().catch((err) => {
+    console.error('退出图表模式失败', err)
+  })
 })
 
 // window.electronAPI.getWindowId().then(id => {
@@ -217,20 +266,29 @@ onMounted(async () => {
 
 const loadChartData = (data) => {
   // 解析失败时提示而不是让整个页面崩溃
+  let chart
   try {
-    xkContext.value.chartData = JSON.parse(data.value)
+    chart = JSON.parse(data.value)
   } catch (e) {
     console.error('文件内容解析失败', e)
     message.error('文件内容已损坏或格式不正确，无法打开')
     return
   }
 
-  if (!xkContext.value.chartData?.series?.[0]) {
+  // 主进程已拦截大部分结构缺失，这里兜底不经主进程的数据（chartStore
+  // 同窗口跳转）：缺 force/edgeLabel/legend 会让属性初始化与图表刷新崩溃
+  const first = chart?.series?.[0]
+  if (!first || !Array.isArray(first.data) || !first.force || !first.edgeLabel || !chart.legend?.[0]) {
     message.error('文件内容已损坏或格式不正确，无法打开')
     return
   }
+  xkContext.value.chartData = chart
 
   filePath = data.path
+  // 向主进程登记"本窗口正在编辑该文件"：再次打开同一文件时聚焦本窗口
+  window.electronAPI.fileOpened({ path: filePath }).catch((err) => {
+    console.error('登记文件打开状态失败', err)
+  })
 
   if (chartDom.value) {
     // echarts实例和click监听只初始化一次。
@@ -356,7 +414,11 @@ const onChangeRepulsion = () => {
 const shortcut = (event) => {
   // 统一转换为小写处理
   const key = event.key.toLowerCase()
-  const isBodyEvent = event.target === document.body // 严格判断事件目标
+  // 焦点在按钮等普通控件上时快捷键照常生效，只在文本输入元素中屏蔽，
+  // 否则点击工具栏/侧边栏控件后焦点残留，Insert/Delete/Ctrl+Z/Y 会静默失效
+  const target = event.target
+  const isTypingContext = target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' || target.isContentEditable
 
   // 快捷键配置映射表
   const shortcutMap = {
@@ -370,21 +432,21 @@ const shortcut = (event) => {
       action: () => event.preventDefault() // 阻止浏览器刷新
     },
 
-    // 图表区域快捷键 (仅在BODY标签生效)
+    // 图表区域快捷键（输入文本时不触发）
     'insert': {
-      match: () => isBodyEvent && key === 'insert',
+      match: () => !isTypingContext && key === 'insert',
       action: () => triggerShortcut('create_node')
     },
     'delete': {
-      match: () => isBodyEvent && key === 'delete',
+      match: () => !isTypingContext && key === 'delete',
       action: () => triggerShortcut('delete_node')
     },
     'ctrl+z': {
-      match: () => isBodyEvent && event.ctrlKey && key === 'z',
+      match: () => !isTypingContext && event.ctrlKey && key === 'z',
       action: () => triggerShortcut('undo')
     },
     'ctrl+y': {
-      match: () => isBodyEvent && event.ctrlKey && key === 'y',
+      match: () => !isTypingContext && event.ctrlKey && key === 'y',
       action: () => triggerShortcut('redo')
     }
   }
@@ -446,6 +508,10 @@ const resetRefData = () => {
    * 重置各种ref，配合侧边栏显示一块用
    */
   downplayAllHightlight()
+  // 高亮索引在节点/边增删后随数组前移而失效，必须连同清空，
+  // 否则“创建连接”会按陈旧索引连到错误节点
+  highlightNodeList.value = []
+  highlightEdge = null
   resetNodeRef(newNode)
   resetEdgeRef(newEdge)
   currentNodeDataIndex.value = -1
@@ -550,7 +616,6 @@ const resizeChart = () => {
 const switchSider = () => {
   // 当侧边栏收起的时候，直接点击图表，就回唤起侧边栏，这种情况下不能清空侧壁栏
   siderVisible.value = !siderVisible.value // 切换侧边栏的显示状态
-  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw'
   // 使用 nextTick 等待DOM更新完成后执行resize
   nextTick(resizeChart)
 }
@@ -559,7 +624,6 @@ const toggleSider = () => {
   /**
    * 显示或者关闭侧边栏
    */
-  const SIDER_WIDTH = 270
   const wasAttributeVisible = attributeVisible.value
   switchSider()
   // 如果是从打开到收起，一定会清空图表
@@ -569,7 +633,6 @@ const toggleSider = () => {
 
   if (!wasAttributeVisible) {
     siderVisible.value = true
-    echartsWidth.value = `calc(100vw - ${SIDER_WIDTH}px)`
     nextTick(resizeChart)
     return
   }
@@ -581,21 +644,34 @@ const toggleSider = () => {
 
 const createNewFile = () => {
   /**
-   * 实现新建文件：新窗口装载空白模板
+   * 实现新建文件：新窗口装载空白模板（未存盘，path 为空）
    */
-  console.log('create new file')
-  window.electronAPI.newChartWindow({ content: JSON.stringify(createTemplate1()) })
+  window.electronAPI
+    .newChartWindow({ content: JSON.stringify(createTemplate1()), path: '' })
+    .catch((err) => {
+      console.error('新建图表窗口失败', err)
+      message.error('新建图表窗口失败')
+    })
 }
 
 const openFile = async () => {
   /**
-   * 实现打开文件：读取成功后在新窗口打开（与旧行为一致）
+   * 实现打开文件：读取成功后在新窗口打开（保持新窗口的保存直接写回原文件）。
+   * 同一文件已在其他窗口打开时，主进程会聚焦那个窗口并返回 alreadyOpen。
    */
-  console.log('open file')
   try {
     const res = await window.electronAPI.openFile()
     if (res.canceled) return
-    window.electronAPI.newChartWindow({ content: res.content })
+    if (res.alreadyOpen) {
+      message.info('该文件已在打开的窗口中')
+      return
+    }
+    window.electronAPI
+      .newChartWindow({ content: res.content, path: res.path })
+      .catch((err) => {
+        console.error('打开失败', err)
+        message.error('打开失败')
+      })
   } catch (err) {
     console.error('打开失败', err)
     // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
@@ -608,6 +684,11 @@ const saveFile = async () => {
    * 实现文件保存：有路径直接写，无路径由主进程弹另存对话框。
    * 返回是否保存成功（供退出流程使用）。
    */
+  if (!xkContext.value.chartData) {
+    // 装载失败的窗口没有可保存内容，禁止把字面量 "null" 写成损坏文件
+    message.error('没有可保存的图表内容')
+    return false
+  }
   try {
     const res = await window.electronAPI.saveFile({
       path: filePath,
@@ -615,13 +696,23 @@ const saveFile = async () => {
     })
     if (res.canceled) return false
     filePath = res.path
+    autoSaveSuspended = false
+    // 首次保存（原 path 为空）后文件有了路径，更新登记
+    window.electronAPI.fileOpened({ path: filePath }).catch(() => {})
     saveNodeVisible.value = false
     resetSider()
     resetRefData()
     return true
   } catch (err) {
     console.error('保存失败', err)
-    message.error('保存失败')
+    // invoke 错误边界只保留 message（code 属性跨 IPC 丢失），
+    // 按主进程错误里的稳定 token 区分冲突场景
+    if (String(err?.message).includes('[FILE_CONFLICT]')) {
+      autoSaveSuspended = true // 冲突未解决前不再自动保存，避免每分钟重复报错
+      message.error('文件已被其他窗口或外部程序修改，请使用“另存为”保留修改')
+    } else {
+      message.error('保存失败')
+    }
     saveNodeVisible.value = true
     return false
   }
@@ -631,12 +722,19 @@ const saveAs = async () => {
   /**
    * 实现文件另存为。
    */
+  if (!xkContext.value.chartData) {
+    message.error('没有可保存的图表内容')
+    return
+  }
   try {
     const res = await window.electronAPI.saveFileAs({
       content: JSON.stringify(jsonReactive(xkContext.value.chartData))
     })
     if (res.canceled) return
     filePath = res.path
+    autoSaveSuspended = false // 换了新文件，恢复自动保存
+    // 另存为换了路径：更新登记，旧文件不再聚焦到本窗口
+    window.electronAPI.fileOpened({ path: filePath }).catch(() => {})
     saveNodeVisible.value = false
     resetSider()
     resetRefData()
@@ -645,27 +743,6 @@ const saveAs = async () => {
     message.error('另存为失败')
   }
 }
-
-window.electronAPI.onRequestClose(async () => {
-  /**
-   * 用户点击了窗口关闭按钮：主进程已拦截 close 并推送本事件，
-   * 由本页面决定是否可以关闭。
-   */
-  if (!saveNodeVisible.value) {
-    window.electronAPI.closeWindow()
-    return
-  }
-
-  const choice = await window.electronAPI.confirmUnsaved()
-  if (choice === 'cancel') return
-  if (choice === 'discard') {
-    window.electronAPI.closeWindow()
-    return
-  }
-  // choice === 'save'：保存成功才关闭；失败留在当前页面
-  const ok = await saveFile()
-  if (ok) window.electronAPI.closeWindow()
-})
 
 const undo = () => {
   /**
@@ -828,7 +905,6 @@ const createNode = () => {
   resetSider()
   attributeVisible.value = false
   siderVisible.value = true // 切换侧边栏的显示状态
-  echartsWidth.value = siderVisible.value ? `calc(100vw - ${270}px)` : '100vw'
   createNodeVisible.value = true
   nextTick(resizeChart)
 }
@@ -873,11 +949,9 @@ const createEdge = () => {
   /**
    * 创建新连接
    */
-  const SIDER_WIDTH = 270
   resetSider()
   attributeVisible.value = false
   siderVisible.value = true // 切换侧边栏的显示状态
-  echartsWidth.value = siderVisible.value ? `calc(100vw - ${SIDER_WIDTH}px)` : '100vw'
   createEdgeVisible.value = true
   nextTick(resizeChart)
 }
@@ -912,12 +986,13 @@ const buttonList = ref([
   { src: EditIcon, name: '编辑框', click: toggleSider }
 ])
 
+// 图表区宽度不在此设定：由 antd flex 布局撑开，侧栏显隐后靠
+// nextTick(resizeChart) 让 echarts 重算尺寸
 const contentStyle = {
   textAlign: 'center',
   minHeight: 120,
   lineHeight: '120px',
-  backgroundColor: '#ffffff',
-  width: echartsWidth.value
+  backgroundColor: '#ffffff'
   // height: "calc(100vh - 86px)"
 }
 

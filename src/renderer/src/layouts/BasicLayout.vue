@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, h } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { setPendingChart } from '../store/chartStore'
@@ -59,23 +59,8 @@ const siderStyle = {
   backgroundColor: '#f5f5f5'
 }
 
-function getItem(label, key, icon, children, type) {
-  return {
-    key,
-    icon,
-    children,
-    label,
-    type
-  }
-}
-
-const items = reactive([
-  // getItem("新建", "add", () => h(AppstoreAddOutlined)),
-  // getItem("最近", "history", () => h(HistoryOutlined)),
-  // getItem("图库", "gallery", () => h(BookOutlined)),
-  // getItem('测试页面', 'chart', () => h(BookOutlined)),
-  // getItem("我的文件", "myFiles", () => h(FileTextOutlined))
-])
+// 侧边菜单项预留：未来恢复菜单时用 a-menu items 重建（参考 git 历史）
+const items = reactive([])
 
 
 // window.electronAPI.openView((value) => {
@@ -84,8 +69,8 @@ const items = reactive([
 // });
 
 const handleClick = e => {
-  // console.log('click', e)
   const itemObj = items.find((item) => item.key === e.key)
+  if (!itemObj) return // 菜单项缺失时不应连带抛错
   title.value = itemObj.label
   router.push(e.key)
 }
@@ -101,11 +86,13 @@ const openFile = async () => {
     console.error('打开失败', err)
     // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
     message.error('打开失败：文件读取失败或已损坏')
-    // 首页窗口没有可展示的内容，提示后关闭（与旧行为的关窗一致）
-    window.electronAPI.closeWindow()
-    return
+    return // 留在首页，用户可重试打开其他文件
   }
   if (res.canceled) return
+  if (res.alreadyOpen) {
+    message.info('该文件已在打开的窗口中')
+    return
+  }
   setPendingChart({ value: res.content, path: res.path })
   router.push('chart')
 }

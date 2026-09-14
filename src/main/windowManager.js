@@ -16,15 +16,12 @@ export const createWindow = (onWindowClosed, route = '') => {
     minimizable: false, // 禁止最小化
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      // devTools: false, // 禁用开发者工具快捷键
       webviewTag: false, // 禁用 webview 标签
-      sandbox: false,
-      accelerator: {
-        'Cmd+[': null,
-        'Cmd+]': null,
-        'Cmd+W': null,
-        'Ctrl+R': null
-      }
+      // preload 只使用 contextBridge/ipcRenderer，沙箱模式下完全可用，
+      // 保持默认开启以缩小攻击面（Electron 安全清单建议）
+      sandbox: true
+      // 注意：webPreferences 没有 accelerator 键，此前在此禁用 Ctrl+R 的
+      // 配置从未生效，刷新拦截改由下方 before-input-event 实现
     },
     trafficLightPosition: { x: 20, y: 18 },
     autoHideMenuBar: true,
@@ -49,15 +46,36 @@ export const createWindow = (onWindowClosed, route = '') => {
     current_window.show()
   })
 
-  current_window.webContents.openDevTools({ mode: 'detach' }) // 打开控制台
+  // 控制台只在开发模式打开：生产环境弹出 DevTools 会暴露 IPC 桥接接口
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    current_window.webContents.openDevTools({ mode: 'detach' })
+  }
+
+  // 禁止刷新（Ctrl+R / Ctrl+Shift+R / Ctrl+F5 / F5）：图表窗口的
+  // pending-chart 数据取后即清，刷新页面会让图表内容直接丢失且无提示
+  current_window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    const key = input.key.toLowerCase()
+    const isRefresh = key === 'f5' || ((input.control || input.meta) && key === 'r')
+    if (isRefresh) event.preventDefault()
+  })
 
   /*
   设置窗口打开行为的处理程序。
   当在应用程序中点击某些链接时，会触发打开新窗口的行为。
   这里的代码是告诉 Electron 当有新窗口打开请求时，使用默认的浏览器打开这个链接，并返回 { action: 'deny' } 来阻止 Electron 打开新窗口。
+  仅放行 http/https：其他协议（file:、smb:、ms-settings: 等）交给系统
+  默认处理器会成为攻击入口。
   */
   current_window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url).then()
+    try {
+      const { protocol } = new URL(details.url)
+      if (protocol === 'http:' || protocol === 'https:') {
+        shell.openExternal(details.url).catch(() => {}) // 无关联处理器时避免 unhandled rejection
+      }
+    } catch {
+      // 无效 URL，忽略
+    }
     return { action: 'deny' }
   })
 
@@ -100,38 +118,93 @@ export const takePendingChart = (webContentsId) => {
 
 /**
  * 创建图表窗口：直接加载 #/chart 路由并暂存待装载数据。
+ * content 为图表 JSON 文本，path 为来源文件路径（新图表为 ''），
+ * 传入 path 使新窗口的保存直接写回原文件而非另存为。
  * chartModeWindows 的清理由 enterChartMode 自行注册的 closed 钩子负责，
  * 这里只清 pendingCharts。
  */
-export const createChartWindow = (content) => {
+export const createChartWindow = ({ content, path = '' }) => {
   const new_window = createWindow((webContentsId) => {
     pendingCharts.delete(webContentsId)
   }, 'chart')
-  stashPendingChart(new_window.webContents.id, content)
+  stashPendingChart(new_window.webContents.id, { content, path })
   return new_window
 }
 
-// 已进入图表模式的窗口集合：保证解锁与close拦截只注册一次
-const chartModeWindows = new Set()
+// 已进入图表模式的窗口：id -> 事件处理器引用（退出时需 removeListener）。
+// 保证解锁与 close 拦截只注册一次。
+const chartModeWindows = new Map()
 
 /**
  * 进入图表模式：解锁窗口尺寸限制，并注册"关闭前确认"拦截。
  * 由图表页挂载时 invoke app:enter-chart-mode 触发；幂等。
+ * 与 exitChartMode 对称，图表页卸载（同窗口跳回其他页面）时调用。
  */
 export const enterChartMode = (current_window) => {
+  if (!current_window) return // sender 窗口已销毁（见 ipc.js senderWindow 说明）
   const { id } = current_window
   if (chartModeWindows.has(id)) return
-  chartModeWindows.add(id)
+
+  const closeHandler = (e) => {
+    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
+    current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
+  }
+  const closedHandler = () => chartModeWindows.delete(id)
+  // 渲染进程崩溃后无人响应 request-close，不解除拦截会导致窗口永远关不掉
+  const goneHandler = () => {
+    current_window.removeListener('close', closeHandler)
+    chartModeWindows.delete(id)
+  }
+  // 渲染进程假死（JS 死循环等）同样无人响应 request-close：解除拦截让
+  // 用户点 X 能直接关掉；恢复响应后重新启用关闭确认（同一函数引用，
+  // EventEmitter 对重复注册同一引用会去重，天然幂等）
+  const unresponsiveHandler = () => {
+    current_window.removeListener('close', closeHandler)
+  }
+  const responsiveHandler = () => {
+    current_window.on('close', closeHandler)
+  }
+
+  chartModeWindows.set(id, {
+    closeHandler,
+    closedHandler,
+    goneHandler,
+    unresponsiveHandler,
+    responsiveHandler
+  })
 
   current_window.setMaximizable(true)
   current_window.setMinimizable(true)
   current_window.setResizable(true)
   current_window.setMinimumSize(900, 670)
 
-  current_window.on('close', (e) => {
-    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
-    current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
-  })
+  current_window.on('close', closeHandler)
+  current_window.on('closed', closedHandler)
+  current_window.on('render-process-gone', goneHandler)
+  current_window.on('unresponsive', unresponsiveHandler)
+  current_window.on('responsive', responsiveHandler)
+}
 
-  current_window.on('closed', () => chartModeWindows.delete(id))
+/**
+ * 退出图表模式：解除"关闭前确认"拦截并恢复窗口锁定，与 enterChartMode 对称。
+ * 由图表页卸载时 invoke app:exit-chart-mode 触发；未在图表模式时为空操作。
+ */
+export const exitChartMode = (current_window) => {
+  if (!current_window || current_window.isDestroyed()) return
+  const { id } = current_window
+  const handlers = chartModeWindows.get(id)
+  if (!handlers) return
+
+  current_window.removeListener('close', handlers.closeHandler)
+  current_window.removeListener('closed', handlers.closedHandler)
+  current_window.removeListener('render-process-gone', handlers.goneHandler)
+  current_window.removeListener('unresponsive', handlers.unresponsiveHandler)
+  current_window.removeListener('responsive', handlers.responsiveHandler)
+  chartModeWindows.delete(id)
+
+  current_window.setMaximizable(false)
+  current_window.setMinimizable(false)
+  current_window.setResizable(false)
+  // 注：未回退 minimumSize/最大化状态——当前不存在同窗口内退出图表页的
+  // 路径（图表页卸载即窗口关闭），若未来支持 SPA 内退出需补对称恢复
 }
