@@ -6,6 +6,8 @@
   "author": "XKnowledge Team",
   "scripts": {
     "dev": "electron-vite dev --watch",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit",
     "build:dev": "npm run build && electron-vite dev --watch",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
@@ -32,10 +34,7 @@
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
     "ant-design-vue": "4.x",
-    "axios": "^1.6.8",
     "echarts": "^5.5.0",
-    "electron-updater": "^6.1.7",
-    "fs": "^0.0.1-security",
     "vue-router": "^4.3.2"
   },
   "devDependencies": {
@@ -49,7 +48,10 @@
     "eslint": "^8.56.0",
     "eslint-plugin-vue": "^9.20.1",
     "prettier": "^3.2.4",
+    "typescript": "^5.3.3",
     "vite": "^5.0.12",
-    "vue": "^3.4.15"
+    "vitest": "^3",
+    "vue": "^3.4.15",
+    "vue-tsc": "^1.8.25"
   }
 }
