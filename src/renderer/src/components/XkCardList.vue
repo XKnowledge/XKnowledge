@@ -2,7 +2,7 @@
   <a-space :size="[8, 16]" wrap>
     <div v-for="file in fileList" :id="file.id" :key="file.id"
          :class="[file.id!==selected?'xk-card':'xk-card xk-card-selected']" @click="handleClick(file.id)"
-         @dblclick="handleDoubleClick(file.id, file.name)" @contextmenu.prevent="handleRightClick(file.id, $event)">
+         @dblclick="handleDoubleClick(file.id)" @contextmenu.prevent="handleRightClick(file.id, $event)">
       <img :src="file.src" alt="" />
       <a-button type="link">{{ file.name }}</a-button>
     </div>
@@ -17,7 +17,7 @@ import createTemplate1 from '../template/template1.ts'
 
 const router = useRouter()
 
-const props = defineProps({
+defineProps({
   fileList: {
     type: Array,
     required: true,
@@ -36,7 +36,7 @@ const handleClick = (id) => {
 /**
  * 双击事件打开这个 文件 or 模板
  */
-const handleDoubleClick = async (id, fileName) => {
+const handleDoubleClick = async (id) => {
   if (id === 'template1') {
     setPendingChart({ value: JSON.stringify(createTemplate1()), path: '' })
     router.push('chart')

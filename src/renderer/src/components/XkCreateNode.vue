@@ -37,7 +37,6 @@ import { defineComponent, ref } from 'vue'
 const newNode = defineModel('newNode')
 const categoryItems = defineModel('categoryItems')
 const categoryName = defineModel('categoryName')
-const currentNode = defineModel('currentNode')
 
 const xkContext = defineModel('xkContext')
 
@@ -57,9 +56,10 @@ const VNodes = defineComponent({
 
 const addCategory = e => {
   e.preventDefault()
-  console.log(categoryName.value)
   if (categoryName.value) {
-    currentNode.value.category = categoryName.value
+    // 类目属于“正在创建的新节点”，不能写到 currentNode（当前选中节点的
+    // 副本）上，否则新节点拿不到类目、选中的节点反被悄悄篡改
+    newNode.value.category = categoryName.value
     if (!categoryItems.value.includes(categoryName.value)) {
       categoryItems.value.push(categoryName.value)
     }

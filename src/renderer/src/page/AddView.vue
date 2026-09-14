@@ -46,8 +46,11 @@ const menuList = ref([
 const curMenu = ref('全部')
 
 const onClick = ({ key }) => {
-  console.log(`Click on item ${key}`)
-  curMenu.value = menuList.value[key].name
+  // menu 的 key 是字符串，需按 key 查找而非当数组下标用
+  const item = menuList.value.find((item) => item.key === key)
+  if (item) {
+    curMenu.value = item.name
+  }
 }
 
 const templates = ref([
