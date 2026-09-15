@@ -1,5 +1,9 @@
 <template>
-  <div ref="containerRef" class="graph3d-container">
+  <div class="graph3d-wrap">
+    <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
+         Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
+         "开发时正常、打包后消失"的假象） -->
+    <div ref="containerRef" class="graph3d-container"></div>
     <!-- 类目图例覆盖层：色点 + 类目名，点击切换该类显隐 -->
     <div class="graph3d-legend">
       <div
@@ -255,8 +259,13 @@ defineExpose({ setRepulsion, exportPng, resetView })
 </script>
 
 <style scoped>
-.graph3d-container {
+.graph3d-wrap {
   position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.graph3d-container {
   width: 100%;
   height: 100%;
 }
