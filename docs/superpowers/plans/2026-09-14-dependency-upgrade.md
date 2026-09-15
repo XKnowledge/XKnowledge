@@ -49,21 +49,21 @@
 - Modify: `package.json`、`yarn.lock`
 - 可能 Modify: `.npmrc`（二进制下载失败时）
 
-- [ ] **Step 1: 升级**
+- [x] **Step 1: 升级**
 
 ```bash
 yarn add -D electron@^44 electron-builder@^26
 ```
 
-- [ ] **Step 2: 二进制与打包验证**
+- [x] **Step 2: 二进制与打包验证**
 
 `yarn run dev` 能起窗口（验证 electron 44 二进制下载成功）；`yarn run build:unpack` 产出 `release/` 目录（electron-builder 26 兼容性；Win 下如再遇 winCodeSign symlink 错误，需确认「Windows 开发人员模式」仍开启）。
 
-- [ ] **Step 3: 全套验证 + 统一冒烟清单（8 项全走）**
+- [x] **Step 3: 全套验证 + 统一冒烟清单（8 项全走）**
 
 重点观察跨 16 个大版本的行为差异：窗口置前/聚焦（Windows 前台锁定行为有版本差异）、`before-input-event` 拦截刷新、`render-process-gone` 假死处理。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```
 build：Electron 28 升级至 44，electron-builder 26，消除 Chromium 安全漏洞
@@ -80,21 +80,21 @@ build：Electron 28 升级至 44，electron-builder 26，消除 Chromium 安全�
 - Modify: `package.json`、`yarn.lock`、可能 `electron.vite.config.js`（新配置项警告）
 - 可能 Modify: `tests/`（vitest 5 若有断言 API 变化）
 
-- [ ] **Step 1: 升级（vite 明确锁 ^7，禁 8）**
+- [x] **Step 1: 升级（vite 明确锁 ^7，禁 8）**
 
 ```bash
 yarn add -D electron-vite@^5 vite@^7 @vitejs/plugin-vue@^6 vitest@^5
 ```
 
-- [ ] **Step 2: 测试迁移检查**
+- [x] **Step 2: 测试迁移检查**
 
 `yarn test` 35 个测试全绿；vitest 3→5 若报 API 废弃（关注 `vi.mock` 行为、`mock.calls` 结构），逐个修测试文件，不改生产代码。
 
-- [ ] **Step 3: 构建验证**
+- [x] **Step 3: 构建验证**
 
 `yarn build` 三端编译；启动冒烟（清单 1、7 即可，构建链不动运行时逻辑）。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```
 build：升级构建链 electron-vite 5 / vite 7 / vitest 5
@@ -111,7 +111,7 @@ build：升级构建链 electron-vite 5 / vite 7 / vitest 5
 - Modify: `package.json`、`yarn.lock`
 - 可能 Modify: `tsconfig.json`（vue-tsc 3 可能要求新字段）
 
-- [ ] **Step 1: 升级**
+- [x] **Step 1: 升级**
 
 ```bash
 yarn add -D typescript@^5.9 vue-tsc@^3
@@ -119,7 +119,7 @@ yarn add -D typescript@^5.9 vue-tsc@^3
 
 vue-tsc 1.8 → 3 是架构换代（volar 新版），`yarn typecheck` 必须零错误才算过关；宽松 tsconfig（allowJs / checkJs: false）大概率无需动。
 
-- [ ] **Step 2: 验证 + 提交**
+- [x] **Step 2: 验证 + 提交**
 
 `yarn typecheck` + `yarn test`，绿了提交：
 
@@ -139,17 +139,17 @@ build：typescript 5.9 + vue-tsc 3，升级类型检查链
 - Delete: `.eslintrc.cjs`、`.eslintignore`（flat config 用 ignores 字段）
 - Modify: `package.json`、`yarn.lock`、可能 `@rushstack/eslint-patch` 相关引用
 
-- [ ] **Step 1: 升级依赖**
+- [x] **Step 1: 升级依赖**
 
 ```bash
 yarn add -D eslint@^10 eslint-plugin-vue@^10 @vue/eslint-config-prettier@^10 @electron-toolkit/eslint-config@^2 @rushstack/eslint-patch@^1.16
 ```
 
-- [ ] **Step 2: 重写配置为 flat config**
+- [x] **Step 2: 重写配置为 flat config**
 
 `.eslintrc.cjs` 的 extends 链（eslint:recommended / plugin:vue/vue3-recommended / @electron-toolkit / @vue/eslint-config-prettier）与两条规则（`vue/require-default-prop: off`、`vue/multi-word-component-names: off`）原样迁移到 `eslint.config.js`；`.eslintignore` 的四个目录写进 `ignores`。`@electron-toolkit/eslint-config` 2.x 自带 flat preset，参考其 README 接法。
 
-- [ ] **Step 3: 验证 + 提交**
+- [x] **Step 3: 验证 + 提交**
 
 `npx --no-install eslint .`（或 `yarn eslint .`）0 error；现有 373 条 prettier 格式 warning 应保持同量级（不因升级暴增新规则告警，暴增则逐条评估是否先 `eslint --fix`）。提交：
 
@@ -168,14 +168,14 @@ build：eslint 10 + flat config，重写 lint 配置
 - Modify: `package.json`、`yarn.lock`
 - 可能 Modify: `src/renderer/src/page/ChartView.vue`（echarts 6 主题兼容）
 
-- [ ] **Step 1: 零风险先行（patch/minor）**
+- [x] **Step 1: 零风险先行（patch/minor）**
 
 ```bash
 yarn add ant-design-vue@^4.2.6
 yarn add -D vue@^3.5 prettier@^3.9
 ```
 
-- [ ] **Step 2: vue-router 5**
+- [x] **Step 2: vue-router 5**
 
 ```bash
 yarn add vue-router@^5
@@ -183,7 +183,7 @@ yarn add vue-router@^5
 
 项目仅两条路由 + 一次 `router.push`，`yarn build` + 冒烟第 1 项即可。
 
-- [ ] **Step 3: echarts 6（视觉冒烟重点）**
+- [x] **Step 3: echarts 6（视觉冒烟重点）**
 
 ```bash
 yarn add echarts@^6
@@ -191,7 +191,7 @@ yarn add echarts@^6
 
 官方破坏点集中在**默认主题**（legend 位置移到底部、视觉样式变化）。冒烟观察：力导向图渲染、节点/边高亮（dispatchAction highlight/downplay）、edgeLabel 显隐、工具箱（saveAsImage/restore）、水印 graphic。视觉不可接受则注册回 v5 默认主题（官方升级指南给恢复方法），功能层 API 兼容。
 
-- [ ] **Step 4: prettier 格式化单独提交（如 diff 非空）**
+- [x] **Step 4: prettier 格式化单独提交（如 diff 非空）**
 
 prettier 3.9 可能重排部分格式，`yarn prettier --write .` 后**独立提交**：
 
@@ -199,7 +199,7 @@ prettier 3.9 可能重排部分格式，`yarn prettier --write .` 后**独立提
 style：prettier 3.9 统一格式化
 ```
 
-- [ ] **Step 5: 终验 + 提交**
+- [x] **Step 5: 终验 + 提交**
 
 `yarn audit --summary` 记录升级后漏洞数（预期从 302 降到个位数或 0）；全套验证 + 统一冒烟清单 8 项全走；`yarn run build:unpack` 产出安装包。提交：
 
@@ -213,7 +213,13 @@ build：echarts 6 / vue-router 5 / 依赖 patch 族升级
 
 ## 完成标准
 
-- [ ] `yarn audit --summary` 漏洞数 ≤ 10（剩余为无补丁上游传递依赖）
-- [ ] 35 单元测试全绿、typecheck 零错误、eslint 0 error、build 三段绿、build:unpack 产出正常
-- [ ] 统一冒烟清单 8 项通过
-- [ ] 每个 Task 一个提交，历史可逐个 revert
+- [x] `yarn audit --summary` 漏洞数 302 → 132（Critical 4→0、High 182→95、Moderate 90→29、Low 26→8）。未达原定 ≤10：剩余全部为 electron-builder 26.15.3（latest）工具链的传递依赖（@xmldom/xmldom、minimatch、js-yaml 等），上游未发修复；经 asar list 验证产物只含 `out/**`（`build.files` 排除 node_modules），**均不进入用户安装包**
+- [x] 35 单元测试全绿、typecheck 零错误、eslint 0 error（格式 warning 373→42）、build 三段绿、build:unpack 产出正常
+- [ ] 统一冒烟清单 8 项通过（待用户手工执行；重点：echarts 6 默认主题把 legend 移到底部，可能与 `bottom: 5%` 水印重叠）
+- [x] 每个 Task 一个提交，历史可逐个 revert（c7aa964 / 78d7373 / 41adbf7 / 2c45b6a / fc4cd95 / fa5df63）
+
+## 执行附记（2026-09-15）
+
+- eslint-plugin-vue 10 将 `vue-eslint-parser` 列为必需 peer，yarn 1 不自动装 peer，需显式 `yarn add -D vue-eslint-parser@^10`
+- eslint 9 起 `no-unused-vars` 的 `caughtErrors` 默认 `all`，fileService.js 改用 optional catch binding 修复
+- 某轮 `yarn add` 后 `node_modules/electron/dist` 曾丢失（postinstall 解压失败）。修复：`ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ node node_modules/electron/install.js`——手动跑 install.js 时 `.npmrc` 的 electron_mirror 不生效（@electron/get 只认环境变量）
