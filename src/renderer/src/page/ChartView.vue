@@ -323,6 +323,12 @@ const loadChartData = (data) => {
     message.error('文件内容已损坏或格式不正确，无法打开')
     return
   }
+  // 与主进程 fileService 对齐：悬空边（source/target 不在任何节点上）同样视为损坏
+  const names = new Set(chart.nodes.map((n) => n.name))
+  if (chart.links.some((l) => !l || !names.has(l?.source) || !names.has(l?.target))) {
+    message.error('文件内容已损坏或格式不正确，无法打开')
+    return
+  }
   xkContext.value.chartData = chart
 
   filePath = data.path
@@ -491,7 +497,6 @@ const onGraphNodeClick = (nodeData, index) => {
   } else if (highlightNodeList.value.length < 2) {
     highlightNodeList.value.push(index)
   } else {
-    const [oldIndex] = highlightNodeList.value
     highlightNodeList.value = [highlightNodeList.value[1], index]
   }
 
@@ -503,6 +508,7 @@ const onGraphLinkClick = (linkData, index) => {
   attributeVisible.value = false
   currentEdgeVisible.value = true
   currentEdge.value = jsonReactive(linkData)
+  currentEdgeDataIndex.value = index
   highlightEdgeIndex.value = highlightEdgeIndex.value === index ? -1 : index
 
   if (!siderVisible.value) switchSider()
