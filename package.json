@@ -33,9 +33,9 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
-    "ant-design-vue": "4.x",
-    "echarts": "^5.5.0",
-    "vue-router": "^4.3.2"
+    "ant-design-vue": "^4.2.6",
+    "echarts": "^6",
+    "vue-router": "^5"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2",
@@ -47,11 +47,11 @@
     "electron-vite": "^5",
     "eslint": "^10",
     "eslint-plugin-vue": "^10",
-    "prettier": "^3.2.4",
+    "prettier": "^3.9",
     "typescript": "^5.9",
     "vite": "^7",
     "vitest": "^5",
-    "vue": "^3.4.15",
+    "vue": "^3.5",
     "vue-eslint-parser": "^10",
     "vue-tsc": "^3"
   }
