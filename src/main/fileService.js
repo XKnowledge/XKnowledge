@@ -7,37 +7,33 @@ const FILE_FILTERS = [{ name: 'XKnowledge', extensions: ['xk'] }]
 const guard = createPathGuard()
 
 /**
- * 校验解析后的图表数据结构是否满足渲染端装载所需的最低要求。
+ * 校验解析后的图谱数据（v2 纯数据格式）是否满足渲染端装载的最低要求。
  * 返回 null 表示通过；返回中文描述表示缺失项。
- * 渲染端（ChartView 的 initAttr/initChartData/updateChart watch）会裸访问
- * series[0].data / force / edgeLabel 与 legend[0]，缺任何一项都会让
- * 图表页白屏，因此必须在主进程拦截。
+ * 渲染端（ChartView / XkGraph3D）会裸访问 nodes / links 数组，缺任何
+ * 一项都会让图表页白屏，因此必须在主进程拦截。
  */
 export const validateChartStructure = (parsed) => {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return '文件内容不是 JSON 对象'
   }
-  if (!Array.isArray(parsed.series) || parsed.series.length === 0) {
-    return '缺少 series 图表数据'
+  if (parsed.version !== 2) {
+    return '缺少版本标记（version 应为 2）'
   }
-  const first = parsed.series[0]
-  if (!first || typeof first !== 'object') {
-    return 'series[0] 不是有效对象'
+  if (!Array.isArray(parsed.nodes)) {
+    return '缺少节点数据（nodes）'
   }
-  if (!Array.isArray(first.data)) {
-    return '缺少节点数据（series[0].data）'
-  }
-  if (first.data.some((node) => !node || typeof node !== 'object')) {
+  if (parsed.nodes.some((node) => !node || typeof node !== 'object')) {
     return '节点数据包含无效项'
   }
-  if (!first.force || typeof first.force !== 'object') {
-    return '缺少布局参数（series[0].force）'
+  if (!Array.isArray(parsed.links)) {
+    return '缺少连接数据（links）'
   }
-  if (!first.edgeLabel || typeof first.edgeLabel !== 'object') {
-    return '缺少边样式配置（series[0].edgeLabel）'
-  }
-  if (!Array.isArray(parsed.legend) || !parsed.legend[0] || typeof parsed.legend[0] !== 'object') {
-    return '缺少图例数据（legend）'
+  const names = new Set(parsed.nodes.map((node) => node.name))
+  const dangling = parsed.links.some(
+    (link) => !link || !names.has(link?.source) || !names.has(link?.target)
+  )
+  if (dangling) {
+    return '存在引用不存在节点的连接'
   }
   return null
 }

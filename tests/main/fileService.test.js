@@ -16,16 +16,12 @@ import {
 } from '../../src/main/fileService'
 
 const VALID_CHART = JSON.stringify({
-  series: [
-    {
-      type: 'graph',
-      data: [{ name: '节点1', category: '类目1' }],
-      links: [],
-      force: { repulsion: 200 },
-      edgeLabel: { show: true }
-    }
+  version: 2,
+  nodes: [
+    { name: '节点1', des: '描述1', symbolSize: 50, category: '类目1' },
+    { name: '节点2', des: '描述2', symbolSize: 50, category: '类目1' }
   ],
-  legend: [{ data: ['类目1'] }]
+  links: [{ source: '节点1', target: '节点2', name: '边1', des: '边描述' }]
 })
 
 let dir
@@ -39,7 +35,7 @@ afterEach(async () => {
 describe('validateChartStructure', () => {
   const parse = (s) => JSON.parse(s)
 
-  it('结构完整的图表数据通过（返回 null）', () => {
+  it('结构完整的 v2 图谱通过（返回 null）', () => {
     expect(validateChartStructure(parse(VALID_CHART))).toBeNull()
   })
 
@@ -49,39 +45,34 @@ describe('validateChartStructure', () => {
     expect(validateChartStructure(null)).toMatch(/不是 JSON 对象/)
   })
 
-  it('缺少 series / series 为空数组被拒绝', () => {
-    expect(validateChartStructure(parse('{"legend":[{}]}'))).toMatch(/series/)
-    expect(validateChartStructure(parse('{"series":[]}'))).toMatch(/series/)
+  it('缺少 version 或 version 不是 2 被拒绝', () => {
+    const noVersion = JSON.parse(VALID_CHART)
+    delete noVersion.version
+    expect(validateChartStructure(noVersion)).toMatch(/version/)
+    const oldVersion = JSON.parse(VALID_CHART)
+    oldVersion.version = 1
+    expect(validateChartStructure(oldVersion)).toMatch(/version/)
   })
 
-  it('缺少 series[0].data 或 data 含无效项被拒绝', () => {
-    const noData = JSON.parse(VALID_CHART)
-    delete noData.series[0].data
-    expect(validateChartStructure(noData)).toMatch(/data/)
+  it('缺少 nodes / nodes 含无效项被拒绝', () => {
+    const noNodes = JSON.parse(VALID_CHART)
+    delete noNodes.nodes
+    expect(validateChartStructure(noNodes)).toMatch(/nodes/)
     const nullNode = JSON.parse(VALID_CHART)
-    nullNode.series[0].data.push(null)
+    nullNode.nodes.push(null)
     expect(validateChartStructure(nullNode)).toMatch(/节点/)
   })
 
-  it('缺少 series[0].force（渲染端 initAttr 必炸点）被拒绝', () => {
-    const chart = JSON.parse(VALID_CHART)
-    delete chart.series[0].force
-    expect(validateChartStructure(chart)).toMatch(/force/)
+  it('缺少 links 被拒绝', () => {
+    const noLinks = JSON.parse(VALID_CHART)
+    delete noLinks.links
+    expect(validateChartStructure(noLinks)).toMatch(/links/)
   })
 
-  it('缺少 series[0].edgeLabel（渲染端 initAttr/initChartData 必炸点）被拒绝', () => {
-    const chart = JSON.parse(VALID_CHART)
-    delete chart.series[0].edgeLabel
-    expect(validateChartStructure(chart)).toMatch(/edgeLabel/)
-  })
-
-  it('缺少 legend（渲染端 watch 必炸点）被拒绝', () => {
-    const chart = JSON.parse(VALID_CHART)
-    delete chart.legend
-    expect(validateChartStructure(chart)).toMatch(/legend/)
-    const emptyLegend = JSON.parse(VALID_CHART)
-    emptyLegend.legend = []
-    expect(validateChartStructure(emptyLegend)).toMatch(/legend/)
+  it('link 的 source/target 引用不存在的节点被拒绝（悬空边）', () => {
+    const dangling = JSON.parse(VALID_CHART)
+    dangling.links.push({ source: '幽灵节点', target: '节点1', name: '边2', des: '' })
+    expect(validateChartStructure(dangling)).toMatch(/引用/)
   })
 })
 
@@ -104,7 +95,7 @@ describe('readChartFile', () => {
 
   it('JSON 合法但结构缺失抛 INVALID_STRUCTURE，不发给渲染进程', async () => {
     const path = join(dir, 'half.xk')
-    await fs.promises.writeFile(path, '{"series":[{"data":[]}]}', 'utf-8')
+    await fs.promises.writeFile(path, '{"version":2}', 'utf-8')
     await expect(readChartFile(path)).rejects.toMatchObject({
       code: 'INVALID_STRUCTURE'
     })
