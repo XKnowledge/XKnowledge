@@ -17,8 +17,6 @@
         <span>{{ cat }}</span>
       </div>
     </div>
-    <!-- 水印，视觉对齐旧版底部水印 -->
-    <div class="graph3d-watermark">By XKnowledge</div>
     <!-- WebGL 失败提示条 -->
     <div v-if="initFailed" class="graph3d-fallback">
       3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用
@@ -167,7 +165,7 @@ onMounted(() => {
 
   graph
     .nodeId('name')
-    // 场景背景对齐旧版 2D 图表白底；深色元素（标签/水印/边）在黑底不可见
+    // 场景背景对齐旧版 2D 图表白底；深色元素（标签/边）在黑底不可见
     .backgroundColor('#ffffff')
     .graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
     .nodeVal((n) => n.symbolSize ?? 50)
@@ -238,10 +236,22 @@ const setRepulsion = (value) => {
   graph.d3ReheatSimulation()
 }
 
-/** 导出当前视图为 PNG 并触发下载 */
+/** 导出当前视图为 PNG 并触发下载；水印只合成进导出图（画布上不显示），
+ *  样式对齐旧版：黑色粗体、水平居中、位于底部约 5% 处 */
 const exportPng = () => {
   if (!graph) return
-  const url = graph.renderer().domElement.toDataURL('image/png')
+  const src = graph.renderer().domElement
+  const canvas = document.createElement('canvas')
+  canvas.width = src.width
+  canvas.height = src.height
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(src, 0, 0)
+  const fontSize = Math.max(18, Math.round(canvas.height * 0.022))
+  ctx.font = `bold ${fontSize}px sans-serif`
+  ctx.fillStyle = '#000'
+  ctx.textAlign = 'center'
+  ctx.fillText('By XKnowledge', canvas.width / 2, canvas.height * 0.95)
+  const url = canvas.toDataURL('image/png')
   const a = document.createElement('a')
   a.href = url
   a.download = `xknowledge-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`
@@ -304,17 +314,6 @@ defineExpose({ setRepulsion, exportPng, resetView })
   height: 10px;
   border-radius: 50%;
   display: inline-block;
-}
-
-.graph3d-watermark {
-  position: absolute;
-  bottom: 5%;
-  left: 50%;
-  transform: translateX(-50%);
-  font: bold 18px sans-serif;
-  color: #000;
-  pointer-events: none;
-  z-index: 2;
 }
 
 .graph3d-fallback {
