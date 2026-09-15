@@ -38,7 +38,6 @@
             :links="xkContext.chartData?.links ?? []"
             :highlight-nodes="highlightNodeNames"
             :highlight-link="highlightEdgeObj"
-            :draggable="draggable"
             :show-link-name="showLinkName"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
@@ -49,46 +48,41 @@
             <a-alert :message="xkContext.errorMessage" type="error" />
           </a-space>
 
-          <a-space v-show="attributeVisible">
+          <!-- 属性面板用普通块级容器：a-checkbox-group 是 inline-flex，
+               divider/按钮行嵌在里面会被当 flex 子项挤到侧边栏外（按钮不可见） -->
+          <div v-show="attributeVisible" class="attr-panel">
             <a-checkbox-group v-model:value="checkedValues" @change="onChangeAttr">
-              <a-row>
-                <a-col :flex="1">
-                  <a-checkbox value="draggable"> 元素拖拽 </a-checkbox>
-                </a-col>
-                <a-col :flex="1">
-                  <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
-                </a-col>
-              </a-row>
-              <a-divider orientation="left">排斥力大小</a-divider>
-              <a-row>
-                <a-col :flex="4">
-                  <a-slider
-                    v-model:value="repulsion"
-                    :min="1"
-                    :max="10000"
-                    @change="onChangeRepulsion"
-                  />
-                </a-col>
-                <a-col :flex="1">
-                  <a-input-number
-                    v-model:value="repulsion"
-                    :min="1"
-                    :max="10000"
-                    @change="onChangeRepulsion"
-                  />
-                </a-col>
-              </a-row>
-              <a-divider orientation="left">视图</a-divider>
-              <a-row :gutter="8">
-                <a-col :flex="1">
-                  <a-button size="small" @click="graph3dRef?.exportPng()">导出图片</a-button>
-                </a-col>
-                <a-col :flex="1">
-                  <a-button size="small" @click="graph3dRef?.resetView()">复位视图</a-button>
-                </a-col>
-              </a-row>
+              <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
             </a-checkbox-group>
-          </a-space>
+            <a-divider orientation="left">排斥力大小</a-divider>
+            <a-row>
+              <a-col :flex="4">
+                <a-slider
+                  v-model:value="repulsion"
+                  :min="1"
+                  :max="10000"
+                  @change="onChangeRepulsion"
+                />
+              </a-col>
+              <a-col :flex="1">
+                <a-input-number
+                  v-model:value="repulsion"
+                  :min="1"
+                  :max="10000"
+                  @change="onChangeRepulsion"
+                />
+              </a-col>
+            </a-row>
+            <a-divider orientation="left">视图</a-divider>
+            <a-row :gutter="8">
+              <a-col :flex="1">
+                <a-button size="small" @click="graph3dRef?.exportPng()">导出图片</a-button>
+              </a-col>
+              <a-col :flex="1">
+                <a-button size="small" @click="graph3dRef?.resetView()">复位视图</a-button>
+              </a-col>
+            </a-row>
+          </div>
 
           <XkCreateNode
             v-show="createNodeVisible"
@@ -201,7 +195,6 @@ const categoryItems = ref([])
 const categoryName = ref()
 
 const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
-const draggable = ref(true) // 会话级渲染设置，不进文件
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
 const highlightNodeList = ref([]) // 高亮节点 index 记录（最多 2 个，逻辑照旧）
 const highlightNodeNames = computed(() =>
@@ -339,10 +332,9 @@ const loadChartData = (data) => {
 
 const initAttr = () => {
   // v2 格式不存渲染配置，恢复会话默认值
-  draggable.value = true
   showLinkName.value = false
   repulsion.value = 1000
-  checkedValues.value = ['draggable']
+  checkedValues.value = []
 }
 
 watch(
@@ -355,7 +347,6 @@ watch(
 )
 
 const onChangeAttr = () => {
-  draggable.value = checkedValues.value.includes('draggable')
   showLinkName.value = checkedValues.value.includes('showEdgeName')
   saveNodeVisible.value = true
 }
@@ -943,6 +934,14 @@ const contentStyle = {
   background-color: #0000000d;
   /* 添加圆角 */
   border-radius: 4px;
+}
+
+.attr-panel {
+  /* 侧边栏属性面板的左右留白（复选框/分割线/滑杆/按钮）；
+     text-align 左对齐顶掉 .sider-style 的 center——否则唯一的内联元素
+     checkbox-group 会被整行居中，与分割线错位 */
+  padding: 0 12px;
+  text-align: left;
 }
 
 .sider-style {

@@ -35,7 +35,6 @@ const props = defineProps({
   links: { type: Array, default: () => [] },
   highlightNodes: { type: Array, default: () => [] },
   highlightLink: { type: Object, default: null },
-  draggable: { type: Boolean, default: true },
   showLinkName: { type: Boolean, default: false }
 })
 
@@ -145,7 +144,6 @@ const applyLabels = () => {
 const applyInteraction = () => {
   if (!graph) return
   graph
-    .enableNodeDrag(props.draggable)
     .nodeLabel((n) => (n.des ? `${n.name}：${n.des}` : `${n.name}`))
     .linkLabel((l) => (props.showLinkName && l.name ? l.name : ''))
 }
@@ -225,7 +223,6 @@ watch(
 
 watch(() => props.highlightNodes, applyHighlight, { deep: true })
 watch(() => props.highlightLink, applyHighlight, { deep: true })
-watch(() => props.draggable, applyInteraction)
 watch(() => props.showLinkName, applyInteraction)
 
 /** 排斥力滑杆映射：d3 charge 强度 = -repulsion/10（滑杆 1~10000 → -0.1~-1000） */
