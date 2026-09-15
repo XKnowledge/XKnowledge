@@ -215,7 +215,7 @@ build：echarts 6 / vue-router 5 / 依赖 patch 族升级
 
 - [x] `yarn audit --summary` 漏洞数 302 → 132（Critical 4→0、High 182→95、Moderate 90→29、Low 26→8）。未达原定 ≤10：剩余全部为 electron-builder 26.15.3（latest）工具链的传递依赖（@xmldom/xmldom、minimatch、js-yaml 等），上游未发修复；经 asar list 验证产物只含 `out/**`（`build.files` 排除 node_modules），**均不进入用户安装包**
 - [x] 35 单元测试全绿、typecheck 零错误、eslint 0 error（格式 warning 373→42）、build 三段绿、build:unpack 产出正常
-- [ ] 统一冒烟清单 8 项通过（待用户手工执行；重点：echarts 6 默认主题把 legend 移到底部，可能与 `bottom: 5%` 水印重叠）
+- [x] 统一冒烟清单 8 项通过（2026-09-15 用户手工执行；echarts 6 legend 与水印重叠已修复，见 80c5f89）
 - [x] 每个 Task 一个提交，历史可逐个 revert（c7aa964 / 78d7373 / 41adbf7 / 2c45b6a / fc4cd95 / fa5df63）
 
 ## 执行附记（2026-09-15）
