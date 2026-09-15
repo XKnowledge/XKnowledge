@@ -32,9 +32,11 @@
     ]
   },
   "dependencies": {
+    "3d-force-graph": "^1.80.0",
     "@ant-design/icons-vue": "^7.0.1",
     "ant-design-vue": "^4.2.6",
     "echarts": "^6",
+    "three-spritetext": "^1.10.0",
     "vue-router": "^5"
   },
   "devDependencies": {
