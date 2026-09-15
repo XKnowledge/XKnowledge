@@ -61,7 +61,16 @@ const toGraphNodes = () =>
   props.nodes.map((n, i) => {
     const old = graph?.graphData().nodes.find((o) => o.name === n.name)
     // 保留旧坐标（若有），编辑刷新后已布局的图不跳
-    return old ? { ...n, __idx: i, x: old.x, y: old.y, z: old.z } : { ...n, __idx: i }
+    return old
+      ? {
+          ...n,
+          __idx: i,
+          x: old.x,
+          y: old.y,
+          z: old.z,
+          ...(old.fx !== undefined && { fx: old.fx, fy: old.fy, fz: old.fz })
+        }
+      : { ...n, __idx: i }
   })
 const toGraphLinks = () => props.links.map((l, i) => ({ ...l, __idx: i }))
 
@@ -119,14 +128,16 @@ const applyLabels = () => {
     .sort((a, b) => (b.symbolSize ?? 0) - (a.symbolSize ?? 0))
     .slice(BIG_LABEL_COUNT - 1)
     .map((n) => n.symbolSize ?? 0)[0]
-  graph.nodeThreeExtendObject((n) => {
-    if ((n.symbolSize ?? 0) < threshold || !n.name) return null
-    const sprite = new SpriteText(n.name)
-    sprite.textHeight = 5
-    sprite.color = '#333'
-    sprite.position.set(0, 7, 0)
-    return sprite
-  })
+  graph
+    .nodeThreeObjectExtend(true) // 库默认 false，不开会整个替换球体
+    .nodeThreeObject((n) => {
+      if ((n.symbolSize ?? 0) < threshold || !n.name) return null
+      const sprite = new SpriteText(n.name)
+      sprite.textHeight = 5
+      sprite.color = '#333'
+      sprite.position.set(0, 7, 0)
+      return sprite
+    })
 }
 
 const applyInteraction = () => {
@@ -167,19 +178,20 @@ onMounted(() => {
     // 边默认宽度；link 的曲线默认直线即可
     .linkWidth(1)
 
-  applyVisibility()
-  applyHighlight()
-  applyLabels()
-  applyInteraction()
-  setRepulsion(1000)
-
   // 容器尺寸变化（侧边栏显隐、窗口缩放）由 ResizeObserver 自理，
-  // 父组件不再需要 nextTick(resize) 联动
+  // 父组件不再需要 nextTick(resize) 联动；
+  // 先于各 apply* 建立，避免任一 accessor 异常吞掉画布自适应
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
     if (el && graph) graph.width(el.clientWidth).height(el.clientHeight)
   })
   resizeObserver.observe(containerRef.value)
+
+  applyVisibility()
+  applyHighlight()
+  applyLabels()
+  applyInteraction()
+  setRepulsion(1000)
 })
 
 onUnmounted(() => {

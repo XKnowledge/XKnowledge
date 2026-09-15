@@ -129,7 +129,7 @@ export const readChartFile = async (filePath) => {
     })
   }
 
-  // 半合法 JSON（语法正确但缺 series/legend/force 等结构）同样会在
+  // 半合法 JSON（语法正确但缺 version/nodes/links 等结构）同样会在
   // 渲染端引发白屏，一并拦截
   const structureError = validateChartStructure(parsed)
   if (structureError) {
