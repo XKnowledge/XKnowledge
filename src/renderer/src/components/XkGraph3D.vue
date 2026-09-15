@@ -89,8 +89,11 @@ const applyVisibility = () => {
     .nodeVisibility((n) => !hidden.has(n.category))
     // 两端任一隐藏，边随之隐藏
     .linkVisibility((l) => {
-      const s = props.nodes.find((n) => n.name === linkEnd(l.source))
-      return s ? !hidden.has(s.category) : true
+      const endVisible = (name) => {
+        const n = props.nodes.find((x) => x.name === name)
+        return n ? !hidden.has(n.category) : true
+      }
+      return endVisible(linkEnd(l.source)) && endVisible(linkEnd(l.target))
     })
 }
 

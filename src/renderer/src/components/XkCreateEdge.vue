@@ -32,7 +32,7 @@ const createEdgeSubmit = () => {
     return
   }
 
-  const { data, links } = xkContext.value.chartData.series[0]
+  const { nodes: data, links } = xkContext.value.chartData
   const [sourceIndex, targetIndex] = highlightNodeList.value
   const newSource = data[sourceIndex].name
   const newTarget = data[targetIndex].name

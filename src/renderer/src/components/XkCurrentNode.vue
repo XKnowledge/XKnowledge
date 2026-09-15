@@ -81,7 +81,7 @@ const currentNodeSubmit = () => {
   /**
    * 实现节点的动态修改
    */
-  const { data, links } = xkContext.value.chartData.series[0]
+  const { nodes: data, links } = xkContext.value.chartData
   const oldNode = jsonReactive(data[currentNodeDataIndex.value])
   const newNode = jsonReactive(currentNode.value)
   const oldName = oldNode.name

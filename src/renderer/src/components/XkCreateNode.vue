@@ -82,7 +82,7 @@ const createNodeSubmit = () => {
     return
   }
 
-  const { data } = xkContext.value.chartData.series[0]
+  const { nodes: data } = xkContext.value.chartData
   const newName = newNode.value.name
   const hasDuplicate = data.some((node) => node.name === newName)
 

@@ -31,7 +31,18 @@
       </a-layout-header>
       <a-layout>
         <a-layout-content :style="contentStyle">
-          <div class="echarts-style" ref="chartDom"></div>
+          <XkGraph3D
+            ref="graph3dRef"
+            class="echarts-style"
+            :nodes="xkContext.chartData?.nodes ?? []"
+            :links="xkContext.chartData?.links ?? []"
+            :highlight-nodes="highlightNodeNames"
+            :highlight-link="highlightEdgeObj"
+            :draggable="draggable"
+            :show-link-name="showLinkName"
+            @node-click="onGraphNodeClick"
+            @link-click="onGraphLinkClick"
+          />
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
           <a-space v-show="xkContext.errorMessage !== ''" direction="vertical" style="width: 80%">
@@ -45,7 +56,7 @@
                   <a-checkbox value="draggable"> 元素拖拽 </a-checkbox>
                 </a-col>
                 <a-col :flex="1">
-                  <a-checkbox value="showEdgeName"> 显示连接名称 </a-checkbox>
+                  <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
                 </a-col>
               </a-row>
               <a-divider orientation="left">排斥力大小</a-divider>
@@ -65,6 +76,15 @@
                     :max="10000"
                     @change="onChangeRepulsion"
                   />
+                </a-col>
+              </a-row>
+              <a-divider orientation="left">视图</a-divider>
+              <a-row :gutter="8">
+                <a-col :flex="1">
+                  <a-button size="small" @click="graph3dRef?.exportPng()">导出图片</a-button>
+                </a-col>
+                <a-col :flex="1">
+                  <a-button size="small" @click="graph3dRef?.resetView()">复位视图</a-button>
                 </a-col>
               </a-row>
             </a-checkbox-group>
@@ -108,9 +128,8 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import * as echarts from 'echarts'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
 import { takePendingChart } from '../store/chartStore'
 import createTemplate1 from '../template/template1.ts'
@@ -120,6 +139,7 @@ import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCreateEdge from '../components/XkCreateEdge.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
 import XkMenu from '../components/XkMenu.vue'
+import XkGraph3D from '../components/XkGraph3D.vue'
 
 import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
@@ -182,12 +202,22 @@ const currentEdgeDataIndex = ref(-1)
 const categoryItems = ref([])
 const categoryName = ref()
 
-// 基于准备好的dom，初始化echarts实例
-const chartDom = ref(null)
-let chartInstance = null
-
-const highlightNodeList = ref([]) // 高亮节点记录
-let highlightEdge = null
+const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
+const draggable = ref(true) // 会话级渲染设置，不进文件
+const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
+const highlightNodeList = ref([]) // 高亮节点 index 记录（最多 2 个，逻辑照旧）
+const highlightNodeNames = computed(() =>
+  highlightNodeList.value.map((i) => xkContext.value.chartData?.nodes?.[i]?.name).filter(Boolean)
+)
+// 高亮边 index（-1 表示无）；原 `let highlightEdge` 变量由此 ref 替代
+const highlightEdgeIndex = ref(-1)
+const highlightEdgeObj = computed(() => {
+  const i = highlightEdgeIndex.value
+  const links = xkContext.value.chartData?.links
+  return i > -1 && links?.[i]
+    ? { source: links[i].source, target: links[i].target, name: links[i].name }
+    : null
+})
 
 let filePath = ''
 const shortcutActive = ref('')
@@ -198,8 +228,6 @@ let offRequestClose = null
 let autoSaveSuspended = false // 文件冲突后暂停自动保存，避免每分钟重复报错
 
 onMounted(async () => {
-  // 调用渲染图表逻辑
-  window.addEventListener('resize', resizeChart)
   window.addEventListener('keydown', shortcut)
 
   // 同窗口跳转（首页打开/模板）：从 chartStore 取数据装载
@@ -258,15 +286,12 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // 同窗口再次挂载（路由进出图表页）时，旧实例的监听器、定时器与
-  // echarts 实例若不释放，会导致快捷键跑两遍、自动保存累积、内存泄漏
-  window.removeEventListener('resize', resizeChart)
+  // 同窗口再次挂载（路由进出图表页）时，旧实例的监听器与定时器若不
+  // 释放，会导致快捷键跑两遍、自动保存累积、内存泄漏
   window.removeEventListener('keydown', shortcut)
   if (autoSaveTimer) clearInterval(autoSaveTimer)
   if (offRequestClose) offRequestClose()
 
-  chartInstance?.dispose()
-  chartInstance = null
   // 解除主进程的窗口锁定与关闭拦截（与挂载时的 enterChartMode 对称）
   window.electronAPI.exitChartMode().catch((err) => {
     console.error('退出图表模式失败', err)
@@ -279,25 +304,21 @@ onUnmounted(() => {
 // })
 
 const loadChartData = (data) => {
-  // 解析失败时提示而不是让整个页面崩溃
-  let chart
-  try {
-    chart = JSON.parse(data.value)
-  } catch (e) {
-    console.error('文件内容解析失败', e)
-    message.error('文件内容已损坏或格式不正确，无法打开')
-    return
-  }
-
-  // 主进程已拦截大部分结构缺失，这里兜底不经主进程的数据（chartStore
-  // 同窗口跳转）：缺 force/edgeLabel/legend 会让属性初始化与图表刷新崩溃
-  const first = chart?.series?.[0]
+  const chart = (() => {
+    try {
+      return JSON.parse(data.value)
+    } catch (e) {
+      console.error('文件内容解析失败', e)
+      message.error('文件内容已损坏或格式不正确，无法打开')
+      return null
+    }
+  })()
+  if (!chart) return
   if (
-    !first ||
-    !Array.isArray(first.data) ||
-    !first.force ||
-    !first.edgeLabel ||
-    !chart.legend?.[0]
+    chart.version !== 2 ||
+    !Array.isArray(chart.nodes) ||
+    !Array.isArray(chart.links) ||
+    chart.nodes.some((n) => !n || typeof n !== 'object')
   ) {
     message.error('文件内容已损坏或格式不正确，无法打开')
     return
@@ -310,136 +331,38 @@ const loadChartData = (data) => {
     console.error('登记文件打开状态失败', err)
   })
 
-  if (chartDom.value) {
-    // echarts实例和click监听只初始化一次。
-    chartInstance = chartInstance || echarts.init(chartDom.value)
-    if (!chartInstance.hasClickBound) {
-      chartInstance.on('click', clickChart)
-      chartInstance.hasClickBound = true
-    }
-
-    initChartData()
-    initAttr()
-    xkContext.value.updateChart = !xkContext.value.updateChart
-    nextTick(() => {
-      saveNodeVisible.value = false
-    })
-  }
+  initAttr()
+  xkContext.value.updateChart = !xkContext.value.updateChart
+  nextTick(() => {
+    saveNodeVisible.value = false
+  })
 }
 
 const initAttr = () => {
-  // 将读取的属性赋值给组件
-  const attrs = []
-  if (xkContext.value.chartData.series[0].draggable) {
-    attrs.push('draggable')
-  }
-  if (xkContext.value.chartData.series[0].edgeLabel.show) {
-    attrs.push('showEdgeName')
-  }
-
-  checkedValues.value = attrs
-  repulsion.value = xkContext.value.chartData.series[0].force.repulsion
-}
-
-const initChartData = () => {
-  // echarts 6 起默认主题把 legend 移到底部，会与 bottom: 5% 的水印重叠；
-  // 显式锁定回顶部（v5 时代的外观）。旧 .xk 文件的 legend 没存位置字段，
-  // 也依赖这里补全，所以不能只改 template1.ts
-  xkContext.value.chartData.legend[0].top = 0
-
-  // 增加水印
-  xkContext.value.chartData.graphic = [
-    {
-      type: 'text',
-      left: 'center',
-      bottom: '5%',
-      style: {
-        fill: '#000000FF',
-        text: 'By XKnowledge',
-        font: 'bold 18px sans-serif'
-      }
-    }
-  ]
-  xkContext.value.chartData.toolbox = {
-    // 显示工具箱
-    show: true,
-    feature: {
-      // 保存为图片
-      saveAsImage: {
-        show: true
-      },
-      restore: {
-        show: true
-      }
-    }
-  }
-
-  // 提示框的配置
-  xkContext.value.chartData.tooltip = {
-    show: true,
-    formatter: function (x) {
-      return x.data.des
-    }
-  }
-
-  xkContext.value.chartData.series[0].edgeLabel.formatter = function (x) {
-    return x.data.name
-  }
+  // v2 格式不存渲染配置，恢复会话默认值
+  draggable.value = true
+  showLinkName.value = false
+  repulsion.value = 1000
+  checkedValues.value = ['draggable']
 }
 
 watch(
   () => xkContext.value.updateChart,
   () => {
-    // 自动监听，刷新图表
-    // 保证chartInstance在当前文件中
-    // 让操作变重了，但是为了后面文件拆分做准备
-    // 更新图例，比如节点类别
-    // 生成类目和图例
-    let categories = [
-      ...new Set(
-        xkContext.value.chartData.series[0].data.map((x) => {
-          return x.category
-        })
-      )
-    ] // 将类型去重
-    xkContext.value.chartData.series[0].categories = categories.map((x) => {
-      return { name: x }
-    })
-    xkContext.value.chartData.legend[0].data = categories.map((x) => {
-      return x
-    })
-
-    // 更新选择下拉框类目
+    const categories = [...new Set(xkContext.value.chartData.nodes.map((x) => x.category))]
     categoryItems.value = categories
-
-    // 更新图表
-    chartInstance.setOption(xkContext.value.chartData, {
-      notMerge: true
-    })
     saveNodeVisible.value = true
   }
 )
 
 const onChangeAttr = () => {
-  const [series] = xkContext.value.chartData.series
-  const hasShowEdgeName = checkedValues.value.includes('showEdgeName') // 使用 includes 替代 indexOf 判断
-  const hasDraggable = checkedValues.value.includes('draggable')
-
-  series.edgeLabel = Object.assign({}, series.edgeLabel, {
-    show: hasShowEdgeName,
-    formatter: (x) => x.data.name
-  })
-
-  series.draggable = hasDraggable
-
-  chartInstance.setOption({ series: [series] })
-
+  draggable.value = checkedValues.value.includes('draggable')
+  showLinkName.value = checkedValues.value.includes('showEdgeName')
   saveNodeVisible.value = true
 }
 
 const onChangeRepulsion = () => {
-  xkContext.value.chartData.series[0].force.repulsion = repulsion.value
-  chartInstance.setOption(xkContext.value.chartData)
+  graph3dRef.value?.setRepulsion(repulsion.value)
   saveNodeVisible.value = true
 }
 
@@ -522,14 +445,8 @@ watch(shortcutWatch, () => {
 })
 
 const downplayAllHightlight = () => {
-  // 收起所有高亮的节点
-  highlightNodeList.value.forEach((node) => operateChart(node, 'node', 'downplay'))
-
-  // 收起当前高亮的边（如果存在）
-  const edgeIndex = currentEdgeDataIndex.value
-  if (edgeIndex > -1) {
-    operateChart(edgeIndex, 'edge', 'downplay')
-  }
+  highlightNodeList.value = []
+  highlightEdgeIndex.value = -1
 }
 
 const resetRefData = () => {
@@ -540,7 +457,6 @@ const resetRefData = () => {
   // 高亮索引在节点/边增删后随数组前移而失效，必须连同清空，
   // 否则“创建连接”会按陈旧索引连到错误节点
   highlightNodeList.value = []
-  highlightEdge = null
   resetNodeRef(newNode)
   resetEdgeRef(newEdge)
   currentNodeDataIndex.value = -1
@@ -561,92 +477,40 @@ const resetSider = () => {
   currentEdgeVisible.value = false
 }
 
-const clickChart = (event) => {
-  console.log(event)
-  if (!event.dataType) return
+const onGraphNodeClick = (nodeData, index) => {
   resetSider()
   attributeVisible.value = false
+  currentNodeVisible.value = true
+  currentNode.value = jsonReactive(nodeData)
+  newNode.value.symbolSize = currentNode.value.symbolSize
+  currentNodeDataIndex.value = index
 
-  const handleNodeClick = () => {
-    currentNodeVisible.value = true
-    currentNode.value = jsonReactive(event.data)
-    newNode.value.symbolSize = currentNode.value.symbolSize
-    currentNodeDataIndex.value = event.dataIndex
-
-    const currentIndex = highlightNodeList.value.indexOf(event.dataIndex)
-    const hasHighlight = currentIndex !== -1
-    const maxSelections = 2
-
-    // 处理已高亮节点的点击
-    if (hasHighlight) {
-      operateChart(event.dataIndex, 'node', 'downplay')
-      highlightNodeList.value.splice(currentIndex, 1)
-      return
-    }
-
-    // 处理新节点高亮
-    if (highlightNodeList.value.length < maxSelections) {
-      highlightNodeList.value.push(event.dataIndex)
-      operateChart(event.dataIndex, 'node', 'highlight')
-    } else {
-      // 替换最早的高亮节点
-      const [oldIndex] = highlightNodeList.value
-      operateChart(oldIndex, 'node', 'downplay')
-      highlightNodeList.value = [highlightNodeList.value[1], event.dataIndex]
-      operateChart(event.dataIndex, 'node', 'highlight')
-    }
+  const currentIndex = highlightNodeList.value.indexOf(index)
+  if (currentIndex !== -1) {
+    highlightNodeList.value.splice(currentIndex, 1)
+  } else if (highlightNodeList.value.length < 2) {
+    highlightNodeList.value.push(index)
+  } else {
+    const [oldIndex] = highlightNodeList.value
+    highlightNodeList.value = [highlightNodeList.value[1], index]
   }
 
-  const handleEdgeClick = () => {
-    currentEdgeVisible.value = true
-    currentEdge.value = jsonReactive(event.data)
-    currentEdgeDataIndex.value = event.dataIndex
-
-    const isNewEdge = highlightEdge !== event.dataIndex
-    if (highlightEdge !== null) {
-      // 如果点击的不是当前高亮的边，将当前高亮的边取消高亮
-      operateChart(highlightEdge, 'edge', 'downplay')
-    }
-    highlightEdge = isNewEdge ? event.dataIndex : null
-
-    if (highlightEdge !== null) {
-      operateChart(highlightEdge, 'edge', 'highlight')
-    }
-  }
-
-  if (event.dataType === 'node') {
-    handleNodeClick()
-  } else if (event.dataType === 'edge') {
-    handleEdgeClick()
-  }
-
-  if (!siderVisible.value) {
-    switchSider()
-  }
+  if (!siderVisible.value) switchSider()
 }
 
-const operateChart = (dataIndex, dataType, action) => {
-  /**
-   * 操作图表内的节点，根据数据类型和位置来高亮或者去除高亮
-   */
-  chartInstance.dispatchAction({
-    type: action,
-    seriesIndex: 0,
-    dataType: dataType,
-    dataIndex: dataIndex
-  })
-}
+const onGraphLinkClick = (linkData, index) => {
+  resetSider()
+  attributeVisible.value = false
+  currentEdgeVisible.value = true
+  currentEdge.value = jsonReactive(linkData)
+  highlightEdgeIndex.value = highlightEdgeIndex.value === index ? -1 : index
 
-const resizeChart = () => {
-  // 数据尚未到达时chartInstance还未初始化
-  chartInstance?.resize()
+  if (!siderVisible.value) switchSider()
 }
 
 const switchSider = () => {
   // 当侧边栏收起的时候，直接点击图表，就回唤起侧边栏，这种情况下不能清空侧壁栏
   siderVisible.value = !siderVisible.value // 切换侧边栏的显示状态
-  // 使用 nextTick 等待DOM更新完成后执行resize
-  nextTick(resizeChart)
 }
 
 const toggleSider = () => {
@@ -662,7 +526,6 @@ const toggleSider = () => {
 
   if (!wasAttributeVisible) {
     siderVisible.value = true
-    nextTick(resizeChart)
     return
   }
 
@@ -785,23 +648,23 @@ const undo = () => {
   // 策略模式处理不同操作类型
   const actionHandlers = {
     createNode: () => {
-      xkContext.value.chartData.series[0].data = xkContext.value.chartData.series[0].data.filter(
+      xkContext.value.chartData.nodes = xkContext.value.chartData.nodes.filter(
         (node) => node.name !== currentHistory.data.name
       )
     },
 
     changeNode: () => {
-      const nodeIndex = xkContext.value.chartData.series[0].data.findIndex(
+      const nodeIndex = xkContext.value.chartData.nodes.findIndex(
         (node) => node.name === currentHistory.new.name
       )
 
       if (nodeIndex > -1) {
         // 还原节点数据
-        xkContext.value.chartData.series[0].data[nodeIndex] = currentHistory.old
+        xkContext.value.chartData.nodes[nodeIndex] = currentHistory.old
 
         // 更新关联的边
         if (currentHistory.new.name !== currentHistory.old.name) {
-          xkContext.value.chartData.series[0].links.forEach((link) => {
+          xkContext.value.chartData.links.forEach((link) => {
             if (link.source === currentHistory.new.name) link.source = currentHistory.old.name
             if (link.target === currentHistory.new.name) link.target = currentHistory.old.name
           })
@@ -810,30 +673,30 @@ const undo = () => {
     },
 
     deleteNode: () => {
-      xkContext.value.chartData.series[0].data.push(currentHistory.data)
-      xkContext.value.chartData.series[0].links.push(...currentHistory.links)
+      xkContext.value.chartData.nodes.push(currentHistory.data)
+      xkContext.value.chartData.links.push(...currentHistory.links)
     },
 
     createEdge: () => {
-      xkContext.value.chartData.series[0].links = xkContext.value.chartData.series[0].links.filter(
+      xkContext.value.chartData.links = xkContext.value.chartData.links.filter(
         (link) =>
           link.source !== currentHistory.data.source || link.target !== currentHistory.data.target
       )
     },
 
     changeEdge: () => {
-      const edgeIndex = xkContext.value.chartData.series[0].links.findIndex(
+      const edgeIndex = xkContext.value.chartData.links.findIndex(
         (link) =>
           link.source === currentHistory.new.source && link.target === currentHistory.new.target
       )
 
       if (edgeIndex > -1) {
-        xkContext.value.chartData.series[0].links[edgeIndex] = currentHistory.old
+        xkContext.value.chartData.links[edgeIndex] = currentHistory.old
       }
     },
 
     deleteEdge: () => {
-      xkContext.value.chartData.series[0].links.push(currentHistory.data)
+      xkContext.value.chartData.links.push(currentHistory.data)
     }
   }
 
@@ -860,19 +723,19 @@ const redo = () => {
   // 策略模式处理不同操作类型
   const actionHandlers = {
     createNode: () => {
-      xkContext.value.chartData.series[0].data.push(currentHistory.data)
+      xkContext.value.chartData.nodes.push(currentHistory.data)
     },
 
     changeNode: () => {
-      const seriesData = xkContext.value.chartData.series[0].data
-      const nodeIndex = seriesData.findIndex((n) => n.name === currentHistory.old.name)
+      const nodes = xkContext.value.chartData.nodes
+      const nodeIndex = nodes.findIndex((n) => n.name === currentHistory.old.name)
 
       if (nodeIndex > -1) {
-        seriesData[nodeIndex] = currentHistory.new
+        nodes[nodeIndex] = currentHistory.new
 
         // 更新关联边名称
         if (currentHistory.new.name !== currentHistory.old.name) {
-          xkContext.value.chartData.series[0].links.forEach((link) => {
+          xkContext.value.chartData.links.forEach((link) => {
             if (link.source === currentHistory.old.name) link.source = currentHistory.new.name
             if (link.target === currentHistory.old.name) link.target = currentHistory.new.name
           })
@@ -881,20 +744,20 @@ const redo = () => {
     },
 
     deleteNode: () => {
-      const series = xkContext.value.chartData.series[0]
+      const { nodes, links } = xkContext.value.chartData
 
-      series.data = series.data.filter((n) => n.name !== currentHistory.data.name)
-      series.links = series.links.filter(
+      xkContext.value.chartData.nodes = nodes.filter((n) => n.name !== currentHistory.data.name)
+      xkContext.value.chartData.links = links.filter(
         (l) => l.source !== currentHistory.data.name && l.target !== currentHistory.data.name
       )
     },
 
     createEdge: () => {
-      xkContext.value.chartData.series[0].links.push(currentHistory.data)
+      xkContext.value.chartData.links.push(currentHistory.data)
     },
 
     changeEdge: () => {
-      const links = xkContext.value.chartData.series[0].links
+      const links = xkContext.value.chartData.links
       const edgeIndex = links.findIndex(
         (l) => l.source === currentHistory.old.source && l.target === currentHistory.old.target
       )
@@ -905,7 +768,7 @@ const redo = () => {
     },
 
     deleteEdge: () => {
-      xkContext.value.chartData.series[0].links = xkContext.value.chartData.series[0].links.filter(
+      xkContext.value.chartData.links = xkContext.value.chartData.links.filter(
         (l) => l.source !== currentHistory.data.source || l.target !== currentHistory.data.target
       )
     }
@@ -929,7 +792,6 @@ const createNode = () => {
   attributeVisible.value = false
   siderVisible.value = true // 切换侧边栏的显示状态
   createNodeVisible.value = true
-  nextTick(resizeChart)
 }
 
 const deleteNode = () => {
@@ -938,14 +800,14 @@ const deleteNode = () => {
    */
   if (currentNodeDataIndex.value < 0) return
 
-  const currentSeries = xkContext.value.chartData.series[0]
-  const deletedNode = currentSeries.data[currentNodeDataIndex.value]
+  const { nodes, links } = xkContext.value.chartData
+  const deletedNode = nodes[currentNodeDataIndex.value]
 
   // 更新历史记录
   const newHistory = {
     act: 'deleteNode',
     data: jsonReactive(deletedNode),
-    links: currentSeries.links.filter(
+    links: links.filter(
       (link) => link.source === deletedNode.name || link.target === deletedNode.name
     )
   }
@@ -953,10 +815,10 @@ const deleteNode = () => {
   addHistory(xkContext, newHistory)
 
   // 使用 filter 替代循环
-  currentSeries.data = currentSeries.data.filter((_, index) => index !== currentNodeDataIndex.value)
+  xkContext.value.chartData.nodes = nodes.filter((_, index) => index !== currentNodeDataIndex.value)
 
   // 过滤保留不相关的边
-  currentSeries.links = currentSeries.links.filter(
+  xkContext.value.chartData.links = links.filter(
     (link) => link.source !== deletedNode.name && link.target !== deletedNode.name
   )
 
@@ -974,7 +836,6 @@ const createEdge = () => {
   attributeVisible.value = false
   siderVisible.value = true // 切换侧边栏的显示状态
   createEdgeVisible.value = true
-  nextTick(resizeChart)
 }
 
 const deleteEdge = () => {
@@ -983,16 +844,14 @@ const deleteEdge = () => {
    */
   if (currentEdgeDataIndex.value < 0) return
 
-  const series = xkContext.value.chartData.series[0]
+  const { links } = xkContext.value.chartData
   addHistory(xkContext, {
     act: 'deleteEdge',
-    data: jsonReactive(series.links[currentEdgeDataIndex.value])
+    data: jsonReactive(links[currentEdgeDataIndex.value])
   })
 
   // 删除连接
-  xkContext.value.chartData.series[0].links = series.links.filter(
-    (_, index) => index !== currentEdgeDataIndex.value
-  )
+  xkContext.value.chartData.links = links.filter((_, index) => index !== currentEdgeDataIndex.value)
 
   xkContext.value.updateChart = !xkContext.value.updateChart
   resetSider()
@@ -1007,8 +866,8 @@ const buttonList = ref([
   { src: EditIcon, name: '编辑框', click: toggleSider }
 ])
 
-// 图表区宽度不在此设定：由 antd flex 布局撑开，侧栏显隐后靠
-// nextTick(resizeChart) 让 echarts 重算尺寸
+// 图表区宽度不在此设定：由 antd flex 布局撑开；3D 图组件经
+// ResizeObserver 自适应容器尺寸，无需页面联动 resize
 const contentStyle = {
   textAlign: 'center',
   minHeight: 120,
