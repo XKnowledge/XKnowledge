@@ -48,10 +48,10 @@
     "eslint": "^8.56.0",
     "eslint-plugin-vue": "^9.20.1",
     "prettier": "^3.2.4",
-    "typescript": "^5.3.3",
+    "typescript": "^5.9",
     "vite": "^7",
     "vitest": "^5",
     "vue": "^3.4.15",
-    "vue-tsc": "^1.8.25"
+    "vue-tsc": "^3"
   }
 }
