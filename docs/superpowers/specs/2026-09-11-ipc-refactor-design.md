@@ -58,17 +58,17 @@ src/
 
 所有通道名从 `shared/ipc-channels.js` 导出常量（如 `IPC.FILE_OPEN`）。
 
-| 常量 | 通道名 | 方向 | 参数 | 返回 / 行为 |
-|---|---|---|---|---|
-| `FILE_OPEN` | `file:open` | invoke | 无 | `{ content, path }`；取消 → `{ canceled: true }`；失败 → reject `{ code, message, path }` |
-| `FILE_SAVE` | `file:save` | invoke | `{ path, content }` | path 为空弹另存对话框；成功 → `{ path }`；取消 → `{ canceled: true }`；写失败 → reject |
-| `FILE_SAVE_AS` | `file:save-as` | invoke | `{ content }` | 总是弹对话框，其余同 `file:save` |
-| `APP_NEW_CHART_WINDOW` | `app:new-chart-window` | invoke | `{ content }` | 新建窗口并装载图表，返回 `{ ok: true }` |
-| `APP_TAKE_PENDING_CHART` | `app:take-pending-chart` | invoke | 无 | 新窗口图表页挂载时取走暂存数据，返回 `{ content }`（无数据时 `content` 为 `null`） |
-| `APP_ENTER_CHART_MODE` | `app:enter-chart-mode` | invoke | 无 | 图表页挂载时调用：解锁窗口尺寸限制 + 注册 close 拦截（幂等） |
-| `APP_CLOSE_WINDOW` | `app:close-window` | invoke | 无 | 销毁发起 invoke 的窗口 |
-| `APP_CONFIRM_UNSAVED` | `app:confirm-unsaved` | invoke | 无 | 主进程弹三按钮框（保存/放弃/取消），返回 `'save' \| 'discard' \| 'cancel'` |
-| `APP_REQUEST_CLOSE` | `app:request-close` | 主进程 → 渲染端推送 | 无 | 用户点了窗口关闭按钮，请渲染端决策 |
+| 常量                     | 通道名                   | 方向                | 参数                | 返回 / 行为                                                                               |
+| ------------------------ | ------------------------ | ------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| `FILE_OPEN`              | `file:open`              | invoke              | 无                  | `{ content, path }`；取消 → `{ canceled: true }`；失败 → reject `{ code, message, path }` |
+| `FILE_SAVE`              | `file:save`              | invoke              | `{ path, content }` | path 为空弹另存对话框；成功 → `{ path }`；取消 → `{ canceled: true }`；写失败 → reject    |
+| `FILE_SAVE_AS`           | `file:save-as`           | invoke              | `{ content }`       | 总是弹对话框，其余同 `file:save`                                                          |
+| `APP_NEW_CHART_WINDOW`   | `app:new-chart-window`   | invoke              | `{ content }`       | 新建窗口并装载图表，返回 `{ ok: true }`                                                   |
+| `APP_TAKE_PENDING_CHART` | `app:take-pending-chart` | invoke              | 无                  | 新窗口图表页挂载时取走暂存数据，返回 `{ content }`（无数据时 `content` 为 `null`）        |
+| `APP_ENTER_CHART_MODE`   | `app:enter-chart-mode`   | invoke              | 无                  | 图表页挂载时调用：解锁窗口尺寸限制 + 注册 close 拦截（幂等）                              |
+| `APP_CLOSE_WINDOW`       | `app:close-window`       | invoke              | 无                  | 销毁发起 invoke 的窗口                                                                    |
+| `APP_CONFIRM_UNSAVED`    | `app:confirm-unsaved`    | invoke              | 无                  | 主进程弹三按钮框（保存/放弃/取消），返回 `'save' \| 'discard' \| 'cancel'`                |
+| `APP_REQUEST_CLOSE`      | `app:request-close`      | 主进程 → 渲染端推送 | 无                  | 用户点了窗口关闭按钮，请渲染端决策                                                        |
 
 要点：
 
@@ -80,13 +80,13 @@ src/
 
 ```js
 contextBridge.exposeInMainWorld('electronAPI', {
-  openFile:       () => ipcRenderer.invoke(IPC.FILE_OPEN),
-  saveFile:      (payload) => ipcRenderer.invoke(IPC.FILE_SAVE, payload),
-  saveFileAs:    (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload),
+  openFile: () => ipcRenderer.invoke(IPC.FILE_OPEN),
+  saveFile: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE, payload),
+  saveFileAs: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload),
   newChartWindow: (payload) => ipcRenderer.invoke(IPC.APP_NEW_CHART_WINDOW, payload),
   takePendingChart: () => ipcRenderer.invoke(IPC.APP_TAKE_PENDING_CHART),
   enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE),
-  closeWindow:   () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
+  closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
   onRequestClose: (callback) => ipcRenderer.on(IPC.APP_REQUEST_CLOSE, (_e) => callback())
 })
@@ -174,14 +174,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 ## 行为对照（重构前 → 重构后）
 
-| 场景 | 重构前 | 重构后 |
-|---|---|---|
-| 保存成功 | 主进程重发 data，图表整体重载 | 不重发，仅更新 filePath 与未保存标记 |
-| 保存失败/取消 | `save_failure` act 通知 | invoke reject / `{ canceled }` 返回值 |
-| 打开失败 | 主进程 `destroy()` 窗口 | 渲染端按场景提示；首页场景才关窗；首页场景的 message.error 提示会随窗口关闭即时消失（不阻塞） |
-| 未保存退出 | quit → unsaved → 主进程弹框 → 可能再触发保存 | request-close 推送 → 渲染端 invoke confirm-unsaved → 自行决策 |
-| 首页打开/双击模板进入图表页 | 主进程回发 `'chart'` act 触发 `router.push` | 渲染端本地 `router.push`，双击模板不再走 IPC |
-| 多窗口 | `windowContexts` 按窗口记忆 act | 通道自带语义，无共享状态 |
+| 场景                        | 重构前                                       | 重构后                                                                                        |
+| --------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 保存成功                    | 主进程重发 data，图表整体重载                | 不重发，仅更新 filePath 与未保存标记                                                          |
+| 保存失败/取消               | `save_failure` act 通知                      | invoke reject / `{ canceled }` 返回值                                                         |
+| 打开失败                    | 主进程 `destroy()` 窗口                      | 渲染端按场景提示；首页场景才关窗；首页场景的 message.error 提示会随窗口关闭即时消失（不阻塞） |
+| 未保存退出                  | quit → unsaved → 主进程弹框 → 可能再触发保存 | request-close 推送 → 渲染端 invoke confirm-unsaved → 自行决策                                 |
+| 首页打开/双击模板进入图表页 | 主进程回发 `'chart'` act 触发 `router.push`  | 渲染端本地 `router.push`，双击模板不再走 IPC                                                  |
+| 多窗口                      | `windowContexts` 按窗口记忆 act              | 通道自带语义，无共享状态                                                                      |
 
 ## 错误处理约定
 

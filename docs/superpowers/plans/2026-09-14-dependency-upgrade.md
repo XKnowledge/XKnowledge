@@ -10,14 +10,14 @@
 
 ## 兼容性硬约束（决定路线，勿凭直觉改）
 
-| 约束 | 结论 |
-|---|---|
-| electron-vite@5 peer 仅接受 `vite ^5 \|\| ^6 \|\| ^7` | **vite 上限锁 7**，禁上 vite 8（支持 8 的 electron-vite 6 仍是 beta，截至 2026-09） |
-| vitest@5 peer 要求 `vite ^6.4+` | 与 vite 7 兼容 ✓ |
-| vue-tsc@3.3 peer 要求 `typescript >=5.0` | 配 TS 5.9 ✓；**TS 7（tsgo）不采用**，vue-tsc 3 与原生编译器组合未经验证 |
-| 本机 node v24.13.0 | 满足 electron-vite 5（`^20.19 \|\| >=22.12`）与 vitest 5 ✓ |
-| Electron 23 起仅支持 Win10+ | 开发机 Win11 ✓，产品如需兼容 Win7 则止步 Electron 28（需用户决策，当前默认放弃 Win7） |
-| `.npmrc` 的 electron 二进制镜像 | `electron_mirror=https://npmmirror.com/mirrors/electron/` 仍有效，但 npm 已警告该 key 格式过时；P0 装完若二进制拉取失败，先排查此处 |
+| 约束                                                  | 结论                                                                                                                                |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| electron-vite@5 peer 仅接受 `vite ^5 \|\| ^6 \|\| ^7` | **vite 上限锁 7**，禁上 vite 8（支持 8 的 electron-vite 6 仍是 beta，截至 2026-09）                                                 |
+| vitest@5 peer 要求 `vite ^6.4+`                       | 与 vite 7 兼容 ✓                                                                                                                    |
+| vue-tsc@3.3 peer 要求 `typescript >=5.0`              | 配 TS 5.9 ✓；**TS 7（tsgo）不采用**，vue-tsc 3 与原生编译器组合未经验证                                                             |
+| 本机 node v24.13.0                                    | 满足 electron-vite 5（`^20.19 \|\| >=22.12`）与 vitest 5 ✓                                                                          |
+| Electron 23 起仅支持 Win10+                           | 开发机 Win11 ✓，产品如需兼容 Win7 则止步 Electron 28（需用户决策，当前默认放弃 Win7）                                               |
+| `.npmrc` 的 electron 二进制镜像                       | `electron_mirror=https://npmmirror.com/mirrors/electron/` 仍有效，但 npm 已警告该 key 格式过时；P0 装完若二进制拉取失败，先排查此处 |
 
 ## Global Constraints
 
@@ -45,6 +45,7 @@
 漏洞大头（Chromium 120 已停止安全维护多年），预期消掉绝大多数 Critical/High。
 
 **Files:**
+
 - Modify: `package.json`、`yarn.lock`
 - 可能 Modify: `.npmrc`（二进制下载失败时）
 
@@ -75,6 +76,7 @@ build：Electron 28 升级至 44，electron-builder 26，消除 Chromium 安全�
 ### Task 2（P1 构建链）: electron-vite 5 / vite 7 / plugin-vue 6 / vitest 5
 
 **Files:**
+
 - Modify: `package.json`、`yarn.lock`、可能 `electron.vite.config.js`（新配置项警告）
 - 可能 Modify: `tests/`（vitest 5 若有断言 API 变化）
 
@@ -105,6 +107,7 @@ build：升级构建链 electron-vite 5 / vite 7 / vitest 5
 ### Task 3（P2 质量工具·类型链）: typescript 5.9 + vue-tsc 3
 
 **Files:**
+
 - Modify: `package.json`、`yarn.lock`
 - 可能 Modify: `tsconfig.json`（vue-tsc 3 可能要求新字段）
 
@@ -131,6 +134,7 @@ build：typescript 5.9 + vue-tsc 3，升级类型检查链
 ### Task 4（P2 质量工具·Lint 链）: eslint 10 + flat config 重写
 
 **Files:**
+
 - Create: `eslint.config.js`
 - Delete: `.eslintrc.cjs`、`.eslintignore`（flat config 用 ignores 字段）
 - Modify: `package.json`、`yarn.lock`、可能 `@rushstack/eslint-patch` 相关引用
@@ -160,6 +164,7 @@ build：eslint 10 + flat config，重写 lint 配置
 ### Task 5（P3 应用层 major + 顺手清理）: echarts 6 / vue-router 5 / patch 族
 
 **Files:**
+
 - Modify: `package.json`、`yarn.lock`
 - 可能 Modify: `src/renderer/src/page/ChartView.vue`（echarts 6 主题兼容）
 

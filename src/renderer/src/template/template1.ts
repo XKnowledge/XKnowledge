@@ -14,10 +14,12 @@ const createTemplate1 = () => {
         }
       }
     },
-    legend: [{
-      // selectedMode: "single",
-      data: ['类目1', '类目0', '类目3', '类目2']
-    }],
+    legend: [
+      {
+        // selectedMode: "single",
+        data: ['类目1', '类目0', '类目3', '类目2']
+      }
+    ],
     graphic: [
       {
         type: 'text',
@@ -30,136 +32,138 @@ const createTemplate1 = () => {
         }
       }
     ],
-    series: [{
-      type: 'graph', // 类型:关系图
-      layout: 'force', //图的布局，类型为力导图
-      //symbolSize: 40, // 调整节点的大小
-      roam: true, // 是否开启鼠标缩放和平移漫游。默认不开启。如果只想要开启缩放或者平移,可以设置成 "scale" 或者 "move"。设置成 true 为都开启
-      // edgeSymbol: ["circle", "arrow"],
-      //edgeSymbolSize: [2, 10],
-      //edgeLabel: {
-      //        textStyle: {
-      //            fontSize: 20
-      //        }
-      //},
-      force: {
-        repulsion: 1000,
-        edgeLength: [10, 50]
-      },
-      draggable: true, // 元素是否可以被拖动
-      // 边的风格
-      lineStyle: {
-        width: 2,
-        color: '#4b565b'
-      },
-      // 边上显示当前边的名称
-      edgeLabel: {
-        show: false
-      },
-      // 节点上显示当前节点名称
-      label: {
-        show: true,
-        textStyle: {}
-      },
-      // 高亮时节点外层增加黑色边缘
-      emphasis: {
-        disable: true,
-        itemStyle: {
-          borderColor: '#000',
-          borderWidth: 2,
-          borderType: 'solid'
+    series: [
+      {
+        type: 'graph', // 类型:关系图
+        layout: 'force', //图的布局，类型为力导图
+        //symbolSize: 40, // 调整节点的大小
+        roam: true, // 是否开启鼠标缩放和平移漫游。默认不开启。如果只想要开启缩放或者平移,可以设置成 "scale" 或者 "move"。设置成 true 为都开启
+        // edgeSymbol: ["circle", "arrow"],
+        //edgeSymbolSize: [2, 10],
+        //edgeLabel: {
+        //        textStyle: {
+        //            fontSize: 20
+        //        }
+        //},
+        force: {
+          repulsion: 1000,
+          edgeLength: [10, 50]
         },
+        draggable: true, // 元素是否可以被拖动
+        // 边的风格
         lineStyle: {
-          color: '#000',
-          width: 5
-        }
-      },
-      // 数据
-      'data': [
-        {
-          'name': 'node01',
-          'des': 'nodedes01',
-          'symbolSize': 50,
-          'category': '类目0'
+          width: 2,
+          color: '#4b565b'
         },
-        {
-          'name': 'node02',
-          'des': 'nodedes02',
-          'symbolSize': 50,
-          'category': '类目1'
+        // 边上显示当前边的名称
+        edgeLabel: {
+          show: false
         },
-        {
-          'name': 'node03',
-          'des': 'nodedes3',
-          'symbolSize': 50,
-          'category': '类目2'
+        // 节点上显示当前节点名称
+        label: {
+          show: true,
+          textStyle: {}
         },
-        {
-          'name': 'node05',
-          'des': 'nodedes05',
-          'symbolSize': 50,
-          'category': '类目1'
+        // 高亮时节点外层增加黑色边缘
+        emphasis: {
+          disable: true,
+          itemStyle: {
+            borderColor: '#000',
+            borderWidth: 2,
+            borderType: 'solid'
+          },
+          lineStyle: {
+            color: '#000',
+            width: 5
+          }
         },
-        {
-          'name': 'node04',
-          'des': 'nodedes04',
-          'symbolSize': 50,
-          'category': '类目3'
-        }
-      ],
-      'links': [
-        {
-          'source': 'node01',
-          'target': 'node02',
-          'name': 'link01',
-          'des': 'link01des'
-        },
-        {
-          'source': 'node01',
-          'target': 'node05',
-          'name': 'link04',
-          'des': 'link05des'
-        },
-        {
-          'source': 'node01',
-          'target': 'node04',
-          'name': 'link03',
-          'des': 'link03des'
-        },
-        {
-          'source': 'node03',
-          'target': 'node02',
-          'name': 'link05',
-          'des': 'link05des'
-        },
-        {
-          'source': 'node04',
-          'target': 'node03',
-          'name': 'link02',
-          'des': 'link02des'
-        },
-        {
-          'source': 'node03',
-          'target': 'node05',
-          'name': 'link06',
-          'des': 'link06des'
-        }
-      ],
-      categories: [
-        {
-          'name': '\u7c7b\u76ee0'
-        },
-        {
-          'name': '\u7c7b\u76ee3'
-        },
-        {
-          'name': '\u7c7b\u76ee2'
-        },
-        {
-          'name': '\u7c7b\u76ee1'
-        }
-      ]
-    }]
+        // 数据
+        data: [
+          {
+            name: 'node01',
+            des: 'nodedes01',
+            symbolSize: 50,
+            category: '类目0'
+          },
+          {
+            name: 'node02',
+            des: 'nodedes02',
+            symbolSize: 50,
+            category: '类目1'
+          },
+          {
+            name: 'node03',
+            des: 'nodedes3',
+            symbolSize: 50,
+            category: '类目2'
+          },
+          {
+            name: 'node05',
+            des: 'nodedes05',
+            symbolSize: 50,
+            category: '类目1'
+          },
+          {
+            name: 'node04',
+            des: 'nodedes04',
+            symbolSize: 50,
+            category: '类目3'
+          }
+        ],
+        links: [
+          {
+            source: 'node01',
+            target: 'node02',
+            name: 'link01',
+            des: 'link01des'
+          },
+          {
+            source: 'node01',
+            target: 'node05',
+            name: 'link04',
+            des: 'link05des'
+          },
+          {
+            source: 'node01',
+            target: 'node04',
+            name: 'link03',
+            des: 'link03des'
+          },
+          {
+            source: 'node03',
+            target: 'node02',
+            name: 'link05',
+            des: 'link05des'
+          },
+          {
+            source: 'node04',
+            target: 'node03',
+            name: 'link02',
+            des: 'link02des'
+          },
+          {
+            source: 'node03',
+            target: 'node05',
+            name: 'link06',
+            des: 'link06des'
+          }
+        ],
+        categories: [
+          {
+            name: '\u7c7b\u76ee0'
+          },
+          {
+            name: '\u7c7b\u76ee3'
+          },
+          {
+            name: '\u7c7b\u76ee2'
+          },
+          {
+            name: '\u7c7b\u76ee1'
+          }
+        ]
+      }
+    ]
   }
 }
 

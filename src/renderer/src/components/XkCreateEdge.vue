@@ -24,7 +24,7 @@ const createEdgeSubmit = () => {
   /**
    * 响应创建新连接的提交
    */
-  const { value: ctx } = xkContext;
+  const { value: ctx } = xkContext
   ctx.errorMessage = '' // 清空旧错误信息
 
   if (highlightNodeList.value.length !== 2) {
@@ -37,9 +37,10 @@ const createEdgeSubmit = () => {
   const newSource = data[sourceIndex].name
   const newTarget = data[targetIndex].name
 
-  const isDuplicate = links.some(link =>
-    (link.source === newSource && link.target === newTarget) ||
-    (link.source === newTarget && link.target === newSource)
+  const isDuplicate = links.some(
+    (link) =>
+      (link.source === newSource && link.target === newTarget) ||
+      (link.source === newTarget && link.target === newSource)
   )
 
   if (isDuplicate) {
@@ -54,8 +55,8 @@ const createEdgeSubmit = () => {
 
   // 封装历史记录操作
   addHistory(xkContext, {
-    'act': 'createEdge',
-    'data': newEdgeJson
+    act: 'createEdge',
+    data: newEdgeJson
   })
 
   links.push(newEdgeJson)
@@ -64,6 +65,4 @@ const createEdgeSubmit = () => {
 }
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

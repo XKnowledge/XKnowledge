@@ -1,11 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
-import {
-  createChartWindow,
-  enterChartMode,
-  exitChartMode,
-  takePendingChart
-} from './windowManager'
+import { createChartWindow, enterChartMode, exitChartMode, takePendingChart } from './windowManager'
 import { IPC } from '../shared/ipc-channels'
 
 /**

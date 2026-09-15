@@ -36,11 +36,7 @@ export const validateChartStructure = (parsed) => {
   if (!first.edgeLabel || typeof first.edgeLabel !== 'object') {
     return '缺少边样式配置（series[0].edgeLabel）'
   }
-  if (
-    !Array.isArray(parsed.legend) ||
-    !parsed.legend[0] ||
-    typeof parsed.legend[0] !== 'object'
-  ) {
+  if (!Array.isArray(parsed.legend) || !parsed.legend[0] || typeof parsed.legend[0] !== 'object') {
     return '缺少图例数据（legend）'
   }
   return null

@@ -7,16 +7,18 @@
       <a-textarea v-model:value="newNode.des" />
     </a-form-item>
     <a-form-item label="所属类目">
-      <a-select v-model:value="newNode.category" placeholder="请选择类目" style="width: 200px"
-                :options="categoryItems.map(item => ({ value: item }))">
+      <a-select
+        v-model:value="newNode.category"
+        placeholder="请选择类目"
+        style="width: 200px"
+        :options="categoryItems.map((item) => ({ value: item }))"
+      >
         <template #dropdownRender="{ menuNode: menu }">
           <v-nodes :vnodes="menu" />
           <a-divider style="margin: 4px 0" />
           <a-space style="padding: 4px 8px">
             <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
-            <a-button type="text" @click="addCategory">
-              新增类目
-            </a-button>
+            <a-button type="text" @click="addCategory"> 新增类目 </a-button>
           </a-space>
         </template>
       </a-select>
@@ -54,7 +56,7 @@ const VNodes = defineComponent({
   }
 })
 
-const addCategory = e => {
+const addCategory = (e) => {
   e.preventDefault()
   if (categoryName.value) {
     // 类目属于“正在创建的新节点”，不能写到 currentNode（当前选中节点的
@@ -82,7 +84,7 @@ const createNodeSubmit = () => {
 
   const { data } = xkContext.value.chartData.series[0]
   const newName = newNode.value.name
-  const hasDuplicate = data.some(node => node.name === newName)
+  const hasDuplicate = data.some((node) => node.name === newName)
 
   if (hasDuplicate) {
     xkContext.value.errorMessage = '不能创建同名节点'
@@ -94,8 +96,8 @@ const createNodeSubmit = () => {
 
   // 统一走addHistory：截断废弃的redo分支后追加，并同步移动当前序号
   addHistory(xkContext, {
-    'act': 'createNode',
-    'data': newNodeJson
+    act: 'createNode',
+    data: newNodeJson
   })
 
   xkContext.value.updateChart = !xkContext.value.updateChart
@@ -104,6 +106,4 @@ const createNodeSubmit = () => {
 }
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

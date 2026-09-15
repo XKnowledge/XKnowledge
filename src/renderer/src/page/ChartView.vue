@@ -1,6 +1,6 @@
 <template>
   <a-space direction="vertical" :style="{ width: '100%' }" :size="[0, 48]">
-    <a-layout :style="{height: '100vh'}">
+    <a-layout :style="{ height: '100vh' }">
       <a-layout-header class="move-show">
         <a-layout>
           <a-layout-sider class="sider-menu-style">
@@ -11,17 +11,22 @@
           </a-space>
           <a-layout-content class="move-header">
             <a-space size="large" style="margin-top: 5px">
-              <a-space v-for="item in buttonList" :key="item.name" style="align-items: center;" direction="vertical" size="small">
+              <a-space
+                v-for="item in buttonList"
+                :key="item.name"
+                style="align-items: center"
+                direction="vertical"
+                size="small"
+              >
                 <a-button type="link" class="no-move-button" @click="item.click">
-                  <img :src="item.src" alt="" :style="{ width: '20px', height: '20px'}" />
+                  <img :src="item.src" alt="" :style="{ width: '20px', height: '20px' }" />
                 </a-button>
-                <div style="text-align: center; margin-top: -8px; font: 12px sans-serif;">
+                <div style="text-align: center; margin-top: -8px; font: 12px sans-serif">
                   {{ item.name }}
                 </div>
               </a-space>
             </a-space>
           </a-layout-content>
-
         </a-layout>
       </a-layout-header>
       <a-layout>
@@ -29,7 +34,6 @@
           <div class="echarts-style" ref="chartDom"></div>
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
-
           <a-space v-show="xkContext.errorMessage !== ''" direction="vertical" style="width: 80%">
             <a-alert :message="xkContext.errorMessage" type="error" />
           </a-space>
@@ -38,57 +42,67 @@
             <a-checkbox-group v-model:value="checkedValues" @change="onChangeAttr">
               <a-row>
                 <a-col :flex="1">
-                  <a-checkbox value="draggable">
-                    元素拖拽
-                  </a-checkbox>
+                  <a-checkbox value="draggable"> 元素拖拽 </a-checkbox>
                 </a-col>
                 <a-col :flex="1">
-                  <a-checkbox value="showEdgeName">
-                    显示连接名称
-                  </a-checkbox>
+                  <a-checkbox value="showEdgeName"> 显示连接名称 </a-checkbox>
                 </a-col>
               </a-row>
               <a-divider orientation="left">排斥力大小</a-divider>
               <a-row>
                 <a-col :flex="4">
-                  <a-slider v-model:value="repulsion" :min="1" :max="10000" @change="onChangeRepulsion" />
+                  <a-slider
+                    v-model:value="repulsion"
+                    :min="1"
+                    :max="10000"
+                    @change="onChangeRepulsion"
+                  />
                 </a-col>
                 <a-col :flex="1">
-                  <a-input-number v-model:value="repulsion" :min="1" :max="10000" @change="onChangeRepulsion" />
+                  <a-input-number
+                    v-model:value="repulsion"
+                    :min="1"
+                    :max="10000"
+                    @change="onChangeRepulsion"
+                  />
                 </a-col>
               </a-row>
             </a-checkbox-group>
           </a-space>
 
-          <XkCreateNode v-show="createNodeVisible"
-                        v-model:newNode="newNode"
-                        v-model:categoryItems="categoryItems"
-                        v-model:categoryName="categoryName"
-                        v-model:xkContext="xkContext"></XkCreateNode>
+          <XkCreateNode
+            v-show="createNodeVisible"
+            v-model:newNode="newNode"
+            v-model:categoryItems="categoryItems"
+            v-model:categoryName="categoryName"
+            v-model:xkContext="xkContext"
+          ></XkCreateNode>
 
-          <XkCurrentNode v-show="currentNodeVisible"
-                         v-model:currentNode="currentNode"
-                         v-model:categoryItems="categoryItems"
-                         v-model:categoryName="categoryName"
-                         v-model:currentNodeDataIndex="currentNodeDataIndex"
+          <XkCurrentNode
+            v-show="currentNodeVisible"
+            v-model:currentNode="currentNode"
+            v-model:categoryItems="categoryItems"
+            v-model:categoryName="categoryName"
+            v-model:currentNodeDataIndex="currentNodeDataIndex"
+            v-model:xkContext="xkContext"
+          ></XkCurrentNode>
 
-                         v-model:xkContext="xkContext"></XkCurrentNode>
+          <XkCreateEdge
+            v-show="createEdgeVisible"
+            v-model:newEdge="newEdge"
+            v-model:highlightNodeList="highlightNodeList"
+            v-model:xkContext="xkContext"
+          ></XkCreateEdge>
 
-          <XkCreateEdge v-show="createEdgeVisible"
-                        v-model:newEdge="newEdge"
-                        v-model:highlightNodeList="highlightNodeList"
-
-                        v-model:xkContext="xkContext"></XkCreateEdge>
-
-          <XkCurrentEdge v-show="currentEdgeVisible"
-                         v-model:currentEdge="currentEdge"
-                         v-model:currentEdgeDataIndex="currentEdgeDataIndex"
-
-                         v-model:xkContext="xkContext"></XkCurrentEdge>
-
+          <XkCurrentEdge
+            v-show="currentEdgeVisible"
+            v-model:currentEdge="currentEdge"
+            v-model:currentEdgeDataIndex="currentEdgeDataIndex"
+            v-model:xkContext="xkContext"
+          ></XkCurrentEdge>
         </a-layout-sider>
       </a-layout>
-      <a-layout-footer class="footer-style" v-show=false>Footer</a-layout-footer>
+      <a-layout-footer class="footer-style" v-show="false">Footer</a-layout-footer>
     </a-layout>
   </a-space>
 </template>
@@ -114,11 +128,11 @@ import DeleteEdgeIcon from '../assets/delete_edge.png'
 import EditIcon from '../assets/edit.png'
 
 const xkContext = ref({
-  'errorMessage': '',
-  'chartData': null,
-  'updateChart': false,
-  'historyList': [], // 记录历史
-  'historySequenceNumber': -1 // HSN：历史操作对应的目前的位置
+  errorMessage: '',
+  chartData: null,
+  updateChart: false,
+  historyList: [], // 记录历史
+  historySequenceNumber: -1 // HSN：历史操作对应的目前的位置
 })
 
 const siderVisible = ref(false)
@@ -131,36 +145,36 @@ const repulsion = ref(1000)
 
 const createNodeVisible = ref(false)
 const newNode = ref({
-  'name': '',
-  'des': '',
-  'symbolSize': 50,
+  name: '',
+  des: '',
+  symbolSize: 50,
   // placeholder 只有在 value = undefined 才会显示
-  'category': undefined
+  category: undefined
 })
 
 const currentNodeVisible = ref(false)
 const currentNode = ref({
-  'name': '',
-  'des': '',
-  'symbolSize': 50,
-  'category': ''
+  name: '',
+  des: '',
+  symbolSize: 50,
+  category: ''
 })
 const currentNodeDataIndex = ref(-1) // todo 这块有一个优化，可以和highlightNodeList合并，相当于highlightNodeList的最后一个值，不确定能不能替换，替换之后如果highlightNodeList中没有节点，会有问题？
 
 const createEdgeVisible = ref(false)
 const newEdge = ref({
-  'source': '',
-  'target': '',
-  'name': '',
-  'des': ''
+  source: '',
+  target: '',
+  name: '',
+  des: ''
 })
 
 const currentEdgeVisible = ref(false)
 const currentEdge = ref({
-  'source': '',
-  'target': '',
-  'name': '',
-  'des': ''
+  source: '',
+  target: '',
+  name: '',
+  des: ''
 })
 const currentEdgeDataIndex = ref(-1)
 
@@ -278,7 +292,13 @@ const loadChartData = (data) => {
   // 主进程已拦截大部分结构缺失，这里兜底不经主进程的数据（chartStore
   // 同窗口跳转）：缺 force/edgeLabel/legend 会让属性初始化与图表刷新崩溃
   const first = chart?.series?.[0]
-  if (!first || !Array.isArray(first.data) || !first.force || !first.edgeLabel || !chart.legend?.[0]) {
+  if (
+    !first ||
+    !Array.isArray(first.data) ||
+    !first.force ||
+    !first.edgeLabel ||
+    !chart.legend?.[0]
+  ) {
     message.error('文件内容已损坏或格式不正确，无法打开')
     return
   }
@@ -325,26 +345,26 @@ const initChartData = () => {
   // 增加水印
   xkContext.value.chartData.graphic = [
     {
-      'type': 'text',
-      'left': 'center',
-      'bottom': '5%',
-      'style': {
-        'fill': '#000000FF',
-        'text': 'By XKnowledge',
-        'font': 'bold 18px sans-serif'
+      type: 'text',
+      left: 'center',
+      bottom: '5%',
+      style: {
+        fill: '#000000FF',
+        text: 'By XKnowledge',
+        font: 'bold 18px sans-serif'
       }
     }
   ]
   xkContext.value.chartData.toolbox = {
     // 显示工具箱
-    'show': true,
-    'feature': {
+    show: true,
+    feature: {
       // 保存为图片
-      'saveAsImage': {
-        'show': true
+      saveAsImage: {
+        show: true
       },
-      'restore': {
-        'show': true
+      restore: {
+        show: true
       }
     }
   }
@@ -352,41 +372,48 @@ const initChartData = () => {
   // 提示框的配置
   xkContext.value.chartData.tooltip = {
     show: true,
-    formatter: function(x) {
+    formatter: function (x) {
       return x.data.des
     }
   }
 
-  xkContext.value.chartData.series[0].edgeLabel.formatter = function(x) {
+  xkContext.value.chartData.series[0].edgeLabel.formatter = function (x) {
     return x.data.name
   }
 }
 
-watch(() => xkContext.value.updateChart, () => {
-  // 自动监听，刷新图表
-  // 保证chartInstance在当前文件中
-  // 让操作变重了，但是为了后面文件拆分做准备
-  // 更新图例，比如节点类别
-  // 生成类目和图例
-  let categories = [...new Set(xkContext.value.chartData.series[0].data.map((x) => {
-    return x.category
-  }))] // 将类型去重
-  xkContext.value.chartData.series[0].categories = categories.map((x) => {
-    return { 'name': x }
-  })
-  xkContext.value.chartData.legend[0].data = categories.map((x) => {
-    return x
-  })
+watch(
+  () => xkContext.value.updateChart,
+  () => {
+    // 自动监听，刷新图表
+    // 保证chartInstance在当前文件中
+    // 让操作变重了，但是为了后面文件拆分做准备
+    // 更新图例，比如节点类别
+    // 生成类目和图例
+    let categories = [
+      ...new Set(
+        xkContext.value.chartData.series[0].data.map((x) => {
+          return x.category
+        })
+      )
+    ] // 将类型去重
+    xkContext.value.chartData.series[0].categories = categories.map((x) => {
+      return { name: x }
+    })
+    xkContext.value.chartData.legend[0].data = categories.map((x) => {
+      return x
+    })
 
-  // 更新选择下拉框类目
-  categoryItems.value = categories
+    // 更新选择下拉框类目
+    categoryItems.value = categories
 
-  // 更新图表
-  chartInstance.setOption(xkContext.value.chartData, {
-    notMerge: true
-  })
-  saveNodeVisible.value = true
-})
+    // 更新图表
+    chartInstance.setOption(xkContext.value.chartData, {
+      notMerge: true
+    })
+    saveNodeVisible.value = true
+  }
+)
 
 const onChangeAttr = () => {
   const [series] = xkContext.value.chartData.series
@@ -395,7 +422,7 @@ const onChangeAttr = () => {
 
   series.edgeLabel = Object.assign({}, series.edgeLabel, {
     show: hasShowEdgeName,
-    formatter: x => x.data.name
+    formatter: (x) => x.data.name
   })
 
   series.draggable = hasDraggable
@@ -417,8 +444,8 @@ const shortcut = (event) => {
   // 焦点在按钮等普通控件上时快捷键照常生效，只在文本输入元素中屏蔽，
   // 否则点击工具栏/侧边栏控件后焦点残留，Insert/Delete/Ctrl+Z/Y 会静默失效
   const target = event.target
-  const isTypingContext = target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' || target.isContentEditable
+  const isTypingContext =
+    target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
   // 快捷键配置映射表
   const shortcutMap = {
@@ -433,11 +460,11 @@ const shortcut = (event) => {
     },
 
     // 图表区域快捷键（输入文本时不触发）
-    'insert': {
+    insert: {
       match: () => !isTypingContext && key === 'insert',
       action: () => triggerShortcut('create_node')
     },
-    'delete': {
+    delete: {
       match: () => !isTypingContext && key === 'delete',
       action: () => triggerShortcut('delete_node')
     },
@@ -466,20 +493,19 @@ const triggerShortcut = (actionName) => {
   shortcutWatch.value = !shortcutWatch.value
 }
 
-
 watch(shortcutWatch, () => {
   // 使用对象映射替代 switch-case 结构
   const actionMap = {
-    'save_file': saveFile,
-    'save_as': saveAs,
-    'create_new_file': createNewFile,
-    'open_file': openFile,
-    'create_node': createNode,
-    'delete_node': deleteNode,
-    'create_edge': createEdge,
-    'delete_edge': deleteEdge,
-    'undo': undo,
-    'redo': redo
+    save_file: saveFile,
+    save_as: saveAs,
+    create_new_file: createNewFile,
+    open_file: openFile,
+    create_node: createNode,
+    delete_node: deleteNode,
+    create_edge: createEdge,
+    delete_edge: deleteEdge,
+    undo: undo,
+    redo: redo
   }
 
   const actionName = shortcutActive.value
@@ -492,9 +518,7 @@ watch(shortcutWatch, () => {
 
 const downplayAllHightlight = () => {
   // 收起所有高亮的节点
-  highlightNodeList.value.forEach(node =>
-    operateChart(node, 'node', 'downplay')
-  )
+  highlightNodeList.value.forEach((node) => operateChart(node, 'node', 'downplay'))
 
   // 收起当前高亮的边（如果存在）
   const edgeIndex = currentEdgeDataIndex.value
@@ -532,7 +556,7 @@ const resetSider = () => {
   currentEdgeVisible.value = false
 }
 
-const clickChart = event => {
+const clickChart = (event) => {
   console.log(event)
   if (!event.dataType) return
   resetSider()
@@ -666,12 +690,10 @@ const openFile = async () => {
       message.info('该文件已在打开的窗口中')
       return
     }
-    window.electronAPI
-      .newChartWindow({ content: res.content, path: res.path })
-      .catch((err) => {
-        console.error('打开失败', err)
-        message.error('打开失败')
-      })
+    window.electronAPI.newChartWindow({ content: res.content, path: res.path }).catch((err) => {
+      console.error('打开失败', err)
+      message.error('打开失败')
+    })
   } catch (err) {
     console.error('打开失败', err)
     // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
@@ -758,13 +780,15 @@ const undo = () => {
   // 策略模式处理不同操作类型
   const actionHandlers = {
     createNode: () => {
-      xkContext.value.chartData.series[0].data = xkContext.value.chartData.series[0].data
-        .filter(node => node.name !== currentHistory.data.name)
+      xkContext.value.chartData.series[0].data = xkContext.value.chartData.series[0].data.filter(
+        (node) => node.name !== currentHistory.data.name
+      )
     },
 
     changeNode: () => {
-      const nodeIndex = xkContext.value.chartData.series[0].data
-        .findIndex(node => node.name === currentHistory.new.name)
+      const nodeIndex = xkContext.value.chartData.series[0].data.findIndex(
+        (node) => node.name === currentHistory.new.name
+      )
 
       if (nodeIndex > -1) {
         // 还原节点数据
@@ -772,7 +796,7 @@ const undo = () => {
 
         // 更新关联的边
         if (currentHistory.new.name !== currentHistory.old.name) {
-          xkContext.value.chartData.series[0].links.forEach(link => {
+          xkContext.value.chartData.series[0].links.forEach((link) => {
             if (link.source === currentHistory.new.name) link.source = currentHistory.old.name
             if (link.target === currentHistory.new.name) link.target = currentHistory.old.name
           })
@@ -786,19 +810,17 @@ const undo = () => {
     },
 
     createEdge: () => {
-      xkContext.value.chartData.series[0].links = xkContext.value.chartData.series[0].links
-        .filter(link =>
-          link.source !== currentHistory.data.source ||
-          link.target !== currentHistory.data.target
-        )
+      xkContext.value.chartData.series[0].links = xkContext.value.chartData.series[0].links.filter(
+        (link) =>
+          link.source !== currentHistory.data.source || link.target !== currentHistory.data.target
+      )
     },
 
     changeEdge: () => {
-      const edgeIndex = xkContext.value.chartData.series[0].links
-        .findIndex(link =>
-          link.source === currentHistory.new.source &&
-          link.target === currentHistory.new.target
-        )
+      const edgeIndex = xkContext.value.chartData.series[0].links.findIndex(
+        (link) =>
+          link.source === currentHistory.new.source && link.target === currentHistory.new.target
+      )
 
       if (edgeIndex > -1) {
         xkContext.value.chartData.series[0].links[edgeIndex] = currentHistory.old
@@ -838,14 +860,14 @@ const redo = () => {
 
     changeNode: () => {
       const seriesData = xkContext.value.chartData.series[0].data
-      const nodeIndex = seriesData.findIndex(n => n.name === currentHistory.old.name)
+      const nodeIndex = seriesData.findIndex((n) => n.name === currentHistory.old.name)
 
       if (nodeIndex > -1) {
         seriesData[nodeIndex] = currentHistory.new
 
         // 更新关联边名称
         if (currentHistory.new.name !== currentHistory.old.name) {
-          xkContext.value.chartData.series[0].links.forEach(link => {
+          xkContext.value.chartData.series[0].links.forEach((link) => {
             if (link.source === currentHistory.old.name) link.source = currentHistory.new.name
             if (link.target === currentHistory.old.name) link.target = currentHistory.new.name
           })
@@ -856,10 +878,9 @@ const redo = () => {
     deleteNode: () => {
       const series = xkContext.value.chartData.series[0]
 
-      series.data = series.data.filter(n => n.name !== currentHistory.data.name)
-      series.links = series.links.filter(l =>
-        l.source !== currentHistory.data.name &&
-        l.target !== currentHistory.data.name
+      series.data = series.data.filter((n) => n.name !== currentHistory.data.name)
+      series.links = series.links.filter(
+        (l) => l.source !== currentHistory.data.name && l.target !== currentHistory.data.name
       )
     },
 
@@ -869,9 +890,8 @@ const redo = () => {
 
     changeEdge: () => {
       const links = xkContext.value.chartData.series[0].links
-      const edgeIndex = links.findIndex(l =>
-        l.source === currentHistory.old.source &&
-        l.target === currentHistory.old.target
+      const edgeIndex = links.findIndex(
+        (l) => l.source === currentHistory.old.source && l.target === currentHistory.old.target
       )
 
       if (edgeIndex > -1) {
@@ -880,11 +900,9 @@ const redo = () => {
     },
 
     deleteEdge: () => {
-      xkContext.value.chartData.series[0].links =
-        xkContext.value.chartData.series[0].links.filter(l =>
-          l.source !== currentHistory.data.source ||
-          l.target !== currentHistory.data.target
-        )
+      xkContext.value.chartData.series[0].links = xkContext.value.chartData.series[0].links.filter(
+        (l) => l.source !== currentHistory.data.source || l.target !== currentHistory.data.target
+      )
     }
   }
 
@@ -920,23 +938,21 @@ const deleteNode = () => {
 
   // 更新历史记录
   const newHistory = {
-    'act': 'deleteNode',
-    'data': jsonReactive(deletedNode),
-    'links': currentSeries.links.filter(link =>
-      link.source === deletedNode.name || link.target === deletedNode.name
+    act: 'deleteNode',
+    data: jsonReactive(deletedNode),
+    links: currentSeries.links.filter(
+      (link) => link.source === deletedNode.name || link.target === deletedNode.name
     )
   }
 
   addHistory(xkContext, newHistory)
 
   // 使用 filter 替代循环
-  currentSeries.data = currentSeries.data.filter(
-    (_, index) => index !== currentNodeDataIndex.value
-  )
+  currentSeries.data = currentSeries.data.filter((_, index) => index !== currentNodeDataIndex.value)
 
   // 过滤保留不相关的边
   currentSeries.links = currentSeries.links.filter(
-    link => link.source !== deletedNode.name && link.target !== deletedNode.name
+    (link) => link.source !== deletedNode.name && link.target !== deletedNode.name
   )
 
   xkContext.value.updateChart = !xkContext.value.updateChart
@@ -964,8 +980,8 @@ const deleteEdge = () => {
 
   const series = xkContext.value.chartData.series[0]
   addHistory(xkContext, {
-    'act': 'deleteEdge',
-    'data': jsonReactive(series.links[currentEdgeDataIndex.value])
+    act: 'deleteEdge',
+    data: jsonReactive(series.links[currentEdgeDataIndex.value])
   })
 
   // 删除连接
@@ -995,7 +1011,6 @@ const contentStyle = {
   backgroundColor: '#ffffff'
   // height: "calc(100vh - 86px)"
 }
-
 </script>
 
 <style>
@@ -1013,7 +1028,7 @@ const contentStyle = {
   -webkit-app-region: no-drag;
   /* 可拖动 */
   height: 53px !important;
-  border-bottom: 1px solid #0505050F;
+  border-bottom: 1px solid #0505050f;
 }
 
 .move-show {
@@ -1028,7 +1043,7 @@ const contentStyle = {
   width: 100%;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid #0505050F;
+  border-bottom: 1px solid #0505050f;
   text-align: center;
   line-height: 64px;
 }
@@ -1045,7 +1060,7 @@ const contentStyle = {
   width: 100%;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid #0505050F;
+  border-bottom: 1px solid #0505050f;
 }
 
 .no-move-button {
@@ -1063,7 +1078,7 @@ const contentStyle = {
   justify-content: center;
   align-items: center;
   /* 添加悬停背景色 */
-  background-color: #0000000D;
+  background-color: #0000000d;
   /* 添加圆角 */
   border-radius: 4px;
 }
@@ -1073,7 +1088,7 @@ const contentStyle = {
   text-align: center;
   background-color: #f5f5f5;
   height: 33px !important;
-  border-top: 1px solid #0505050F;
+  border-top: 1px solid #0505050f;
 }
 
 .sider-style {
@@ -1115,7 +1130,7 @@ const contentStyle = {
   min-width: 53px !important;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid #0505050F;
+  border-bottom: 1px solid #0505050f;
   border-right: none;
 }
 

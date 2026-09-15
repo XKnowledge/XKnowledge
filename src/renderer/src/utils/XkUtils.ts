@@ -17,18 +17,18 @@ export function addHistory(xkContext, history) {
 
 export function resetNodeRef(node) {
   node.value = {
-    'name': '',
-    'des': '',
-    'symbolSize': 50,
-    'category': ''
+    name: '',
+    des: '',
+    symbolSize: 50,
+    category: ''
   }
 }
 
 export function resetEdgeRef(edge) {
   edge.value = {
-    'source': '',
-    'target': '',
-    'name': '',
-    'des': ''
+    source: '',
+    target: '',
+    name: '',
+    des: ''
   }
 }

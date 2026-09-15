@@ -26,9 +26,9 @@ const currentEdgeSubmit = () => {
    */
   const currentEdgeJson = jsonReactive(currentEdge.value)
   addHistory(xkContext, {
-    'act': 'changeEdge',
-    'old': jsonReactive(xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value]),
-    'new': currentEdgeJson
+    act: 'changeEdge',
+    old: jsonReactive(xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value]),
+    new: currentEdgeJson
   })
   xkContext.value.chartData.series[0].links[currentEdgeDataIndex.value] = currentEdgeJson
   xkContext.value.updateChart = !xkContext.value.updateChart
@@ -36,6 +36,4 @@ const currentEdgeSubmit = () => {
 }
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

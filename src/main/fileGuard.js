@@ -14,8 +14,7 @@ import fs from 'fs'
 export const createPathGuard = () => {
   const authorized = new Map() // 绝对/原始路径 -> 上次已知 mtimeMs（null 表示新文件）
 
-  const fail = (code, message, path) =>
-    Object.assign(new Error(message), { code, path })
+  const fail = (code, message, path) => Object.assign(new Error(message), { code, path })
 
   return {
     /** 记录授权。mtimeMs 传 null 表示磁盘上尚不存在的新文件。 */
@@ -29,11 +28,7 @@ export const createPathGuard = () => {
      */
     async assertWritable(path) {
       if (!authorized.has(path)) {
-        throw fail(
-          'PATH_NOT_AUTHORIZED',
-          '该文件未经过打开或另存为操作，不允许直接写入',
-          path
-        )
+        throw fail('PATH_NOT_AUTHORIZED', '该文件未经过打开或另存为操作，不允许直接写入', path)
       }
       const known = authorized.get(path)
       let current = null

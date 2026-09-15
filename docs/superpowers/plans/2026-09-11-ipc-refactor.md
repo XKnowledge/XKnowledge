@@ -22,26 +22,28 @@
 
 ## 现状调用点清单（迁移核对用）
 
-| 调用点 | 现状 | 迁移后 |
-|---|---|---|
-| `BasicLayout.vue:92` 打开本地文件按钮 | `sendAct('open_file')` | `await openFile()` + `setPendingChart` + `router.push('chart')` |
-| `BasicLayout.vue:95-99` receiveAct('chart') 跳路由 | 借道主进程 | 删除，本地跳转 |
-| `XkCardList.vue:37-38` 双击模板 | `sendAct('open_template')`+`sendData(...)` | 本地 `setPendingChart` + `router.push`，无 IPC |
-| `ChartView.vue:202-237` receiveData 装载 | 主进程发 data | `chartStore`/`take-pending-chart` + `loadChartData()` |
-| `ChartView.vue:574-575` 新建文件 | `sendAct`+`sendData` | `newChartWindow({ content })` |
-| `ChartView.vue:583` 打开其他文件 | `sendAct('open_other_file')` | `await openFile()` → `newChartWindow` |
-| `ChartView.vue:591-592` 保存 | `sendAct`+`sendData` | `await saveFile({ path, content })` |
-| `ChartView.vue:602-603` 另存为 | `sendAct`+`sendData` | `await saveFileAs({ content })` |
-| `ChartView.vue:608-630` receiveAct(save_success/save_failure/quit/save_file) | 反向通知 | 全部删除，由 invoke 返回值与 `onRequestClose` 取代 |
+| 调用点                                                                       | 现状                                       | 迁移后                                                          |
+| ---------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| `BasicLayout.vue:92` 打开本地文件按钮                                        | `sendAct('open_file')`                     | `await openFile()` + `setPendingChart` + `router.push('chart')` |
+| `BasicLayout.vue:95-99` receiveAct('chart') 跳路由                           | 借道主进程                                 | 删除，本地跳转                                                  |
+| `XkCardList.vue:37-38` 双击模板                                              | `sendAct('open_template')`+`sendData(...)` | 本地 `setPendingChart` + `router.push`，无 IPC                  |
+| `ChartView.vue:202-237` receiveData 装载                                     | 主进程发 data                              | `chartStore`/`take-pending-chart` + `loadChartData()`           |
+| `ChartView.vue:574-575` 新建文件                                             | `sendAct`+`sendData`                       | `newChartWindow({ content })`                                   |
+| `ChartView.vue:583` 打开其他文件                                             | `sendAct('open_other_file')`               | `await openFile()` → `newChartWindow`                           |
+| `ChartView.vue:591-592` 保存                                                 | `sendAct`+`sendData`                       | `await saveFile({ path, content })`                             |
+| `ChartView.vue:602-603` 另存为                                               | `sendAct`+`sendData`                       | `await saveFileAs({ content })`                                 |
+| `ChartView.vue:608-630` receiveAct(save_success/save_failure/quit/save_file) | 反向通知                                   | 全部删除，由 invoke 返回值与 `onRequestClose` 取代              |
 
 ---
 
 ### Task 1: 共享通道常量模块
 
 **Files:**
+
 - Create: `src/shared/ipc-channels.js`
 
 **Interfaces:**
+
 - Consumes: 无
 - Produces: `IPC` 对象（命名属性见下方代码），后续所有任务从此处 import。
 
@@ -89,12 +91,14 @@ git commit -m "refactor：新增共享 IPC 通道常量模块"
 ### Task 2: 拆分主进程文件（纯移动，行为不变）
 
 **Files:**
+
 - Create: `src/main/windowManager.js`
 - Create: `src/main/fileService.js`
 - Create: `src/main/ipc.js`
 - Modify: `src/main/index.js`（瘦身为装配入口）
 
 **Interfaces:**
+
 - Consumes: Task 1 的 `IPC`（本任务暂未用到，Task 3 起使用）。
 - Produces:
   - `windowManager.js`: `createWindow()` 返回 `BrowserWindow`；`openChartWindow(window, data, path)`（legacy，Task 5 拆除）。
@@ -275,7 +279,7 @@ export const openChartWindow = (current_window, data, path) => {
   current_window.setMinimumSize(900, 670)
   current_window.webContents.send('data', { value: data, path: path })
 
-  current_window.on('close', e => {
+  current_window.on('close', (e) => {
     e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
     current_window.webContents.send('act', 'quit')
   })
@@ -309,28 +313,32 @@ const getContext = (webContents) => {
  * 失败与取消时的弹窗/销毁行为与重构前一致。
  */
 const legacyOpenFile = (current_window) => {
-  fileService.showOpenDialog(current_window).then((res) => {
-    if (!res.canceled) {
-      fileService.readChartFile(res.filePaths[0])
-        .then(({ content, path }) => {
-          openChartWindow(current_window, content, path)
-        })
-        .catch((err) => {
-          dialog.showMessageBoxSync(current_window, {
-            type: 'error',
-            title: '打开失败',
-            message: err.message,
-            detail: err.detail
+  fileService
+    .showOpenDialog(current_window)
+    .then((res) => {
+      if (!res.canceled) {
+        fileService
+          .readChartFile(res.filePaths[0])
+          .then(({ content, path }) => {
+            openChartWindow(current_window, content, path)
           })
-          current_window.destroy()
-        })
-    } else {
+          .catch((err) => {
+            dialog.showMessageBoxSync(current_window, {
+              type: 'error',
+              title: '打开失败',
+              message: err.message,
+              detail: err.detail
+            })
+            current_window.destroy()
+          })
+      } else {
+        current_window.destroy()
+      }
+    })
+    .catch((err) => {
+      console.log(err)
       current_window.destroy()
-    }
-  }).catch((err) => {
-    console.log(err)
-    current_window.destroy()
-  })
+    })
 }
 
 /**
@@ -338,7 +346,9 @@ const legacyOpenFile = (current_window) => {
  */
 const legacySaveFile = async (data, dialogTitle, current_window, ctx) => {
   const res = await fileService.saveChartFileAs(
-    current_window, JSON.stringify(data.file), dialogTitle
+    current_window,
+    JSON.stringify(data.file),
+    dialogTitle
   )
   if (res.canceled) {
     current_window.webContents.send('act', 'save_failure')
@@ -414,8 +424,9 @@ export const registerIpc = () => {
       create_new_file: () => {
         console.log('create new file')
         const new_window = createWindow()
-        new_window.webContents.on('did-finish-load',
-          () => openChartWindow(new_window, JSON.stringify(arg), ''))
+        new_window.webContents.on('did-finish-load', () =>
+          openChartWindow(new_window, JSON.stringify(arg), '')
+        )
       }
     }
 
@@ -494,6 +505,7 @@ Expected: 构建成功。
 - [ ] **Step 6: 手动回归（本任务要求全量，因为是纯移动的基线）**
 
 Run: `npm run dev`，逐项验证与重构前一致：
+
 1. 首页"打开本地文件"：正常文件进入图表、损坏文件弹错误框后关窗、取消对话框关窗；
 2. 首页双击模板进入图表；
 3. 图表页保存（有路径/无路径）、另存为；
@@ -512,10 +524,12 @@ git commit -m "refactor：拆分主进程为 windowManager/fileService/ipc 三�
 ### Task 3: 保存通道（file:save / file:save-as）
 
 **Files:**
+
 - Modify: `src/main/ipc.js`（新增两个 handle；legacy 保存分支同步收敛）
 - Modify: `src/preload/index.js`（追加 `saveFile`/`saveFileAs`，旧方法保留）
 
 **Interfaces:**
+
 - Consumes: Task 1 `IPC`；Task 2 `fileService.saveChartFileAs/writeChartFile`。
 - Produces:
   - 主进程：`ipcMain.handle(IPC.FILE_SAVE, (e, { path, content }) => Promise<{path} | {canceled}>)`；`ipcMain.handle(IPC.FILE_SAVE_AS, (e, { content }) => 同上)`。
@@ -526,18 +540,18 @@ git commit -m "refactor：拆分主进程为 windowManager/fileService/ipc 三�
 在 `registerIpc()` 开头（legacy 注册之前）加入：
 
 ```js
-  ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
-    const current_window = BrowserWindow.fromWebContents(event.sender)
-    if (!path) {
-      return fileService.saveChartFileAs(current_window, content, '将文件保存到...')
-    }
-    return fileService.writeChartFile(path, content)
-  })
+ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
+  const current_window = BrowserWindow.fromWebContents(event.sender)
+  if (!path) {
+    return fileService.saveChartFileAs(current_window, content, '将文件保存到...')
+  }
+  return fileService.writeChartFile(path, content)
+})
 
-  ipcMain.handle(IPC.FILE_SAVE_AS, async (event, { content }) => {
-    const current_window = BrowserWindow.fromWebContents(event.sender)
-    return fileService.saveChartFileAs(current_window, content, '将文件另存为...')
-  })
+ipcMain.handle(IPC.FILE_SAVE_AS, async (event, { content }) => {
+  const current_window = BrowserWindow.fromWebContents(event.sender)
+  return fileService.saveChartFileAs(current_window, content, '将文件另存为...')
+})
 ```
 
 并在 ipc.js 顶部加 `import { IPC } from '../shared/ipc-channels'`。
@@ -638,6 +652,7 @@ window.electronAPI.receiveAct((act) => {
 ```
 
 主进程 `src/main/ipc.js` 对应收敛：
+
 - `unsaved` 分支删除 `ctx.status = 'exit'`（保存后退出改由渲染端发 `saved`），其余不动；
 - `data` 处理器删除 `save_file` 与 `save_as` 两个分支（渲染端不再经 data 通道保存）；
 - `legacySaveFile` 函数整个删除；
@@ -651,6 +666,7 @@ Expected: 构建成功。
 - [ ] **Step 6: 手动验证**
 
 `npm run dev`：
+
 1. 图表页 Ctrl+S（有 filePath）：写入成功、未保存提示消失、**图表不重绘**（对照：旧版会闪一下）；
 2. 新建模板后直接 Ctrl+S：弹另存对话框，保存后标题路径生效；取消对话框：无变化、未保存提示保留；
 3. 另存为：新路径保存成功；
@@ -670,6 +686,7 @@ git commit -m "refactor：保存/另存为迁移到 file:save 与 file:save-as i
 ### Task 4: 打开文件通道 + 首页本地跳转 + chartStore + enter-chart-mode + close-window
 
 **Files:**
+
 - Create: `src/renderer/src/store/chartStore.js`
 - Modify: `src/main/ipc.js`（`FILE_OPEN`/`APP_CLOSE_WINDOW`/`APP_ENTER_CHART_MODE` handle；删 legacy `open_file` act 分支）
 - Modify: `src/main/windowManager.js`（新增 `enterChartMode`，`openChartWindow` 复用它）
@@ -678,6 +695,7 @@ git commit -m "refactor：保存/另存为迁移到 file:save 与 file:save-as i
 - Modify: `src/renderer/src/page/ChartView.vue`（装载逻辑函数化 + 挂载时装载 + enterChartMode）
 
 **Interfaces:**
+
 - Consumes: Task 2 `fileService.showOpenDialog/readChartFile`。
 - Produces:
   - `chartStore.js`: `setPendingChart({ content, path })` / `takePendingChart()`（返回并清空）。
@@ -731,7 +749,7 @@ export const enterChartMode = (current_window) => {
   current_window.setResizable(true)
   current_window.setMinimumSize(900, 670)
 
-  current_window.on('close', e => {
+  current_window.on('close', (e) => {
     e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
     current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
   })
@@ -743,10 +761,10 @@ export const enterChartMode = (current_window) => {
 注意：`APP_REQUEST_CLOSE` 的推送需要 preload 的 `onRequestClose` 监听，但 preload 在 Task 7 才加该方法——期间图表页点关闭会收到一个无人监听的推送（无害，但窗口关不掉）。**因此本任务的过渡写法**：close 拦截仍发 `'quit'`（legacy），Task 7 再切换为 `IPC.APP_REQUEST_CLOSE`。即本任务 `enterChartMode` 里 close 拦截体暂时为：
 
 ```js
-  current_window.on('close', e => {
-    e.preventDefault()
-    current_window.webContents.send('act', 'quit') // 【legacy】Task 7 改为 APP_REQUEST_CLOSE
-  })
+current_window.on('close', (e) => {
+  e.preventDefault()
+  current_window.webContents.send('act', 'quit') // 【legacy】Task 7 改为 APP_REQUEST_CLOSE
+})
 ```
 
 `openChartWindow`（legacy，供模板/新建窗口流程继续使用）改为复用 enterChartMode：
@@ -764,23 +782,23 @@ export const openChartWindow = (current_window, data, path) => {
 `registerIpc()` 中新增（放在 Task 3 的 handle 之后）：
 
 ```js
-  ipcMain.handle(IPC.FILE_OPEN, async (event) => {
-    const current_window = BrowserWindow.fromWebContents(event.sender)
-    const res = await fileService.showOpenDialog(current_window)
-    if (res.canceled) return { canceled: true }
-    // readChartFile 失败时 throw，经 invoke 自动变为渲染端 reject
-    return fileService.readChartFile(res.filePaths[0])
-  })
+ipcMain.handle(IPC.FILE_OPEN, async (event) => {
+  const current_window = BrowserWindow.fromWebContents(event.sender)
+  const res = await fileService.showOpenDialog(current_window)
+  if (res.canceled) return { canceled: true }
+  // readChartFile 失败时 throw，经 invoke 自动变为渲染端 reject
+  return fileService.readChartFile(res.filePaths[0])
+})
 
-  ipcMain.handle(IPC.APP_CLOSE_WINDOW, (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.destroy()
-    return { ok: true }
-  })
+ipcMain.handle(IPC.APP_CLOSE_WINDOW, (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.destroy()
+  return { ok: true }
+})
 
-  ipcMain.handle(IPC.APP_ENTER_CHART_MODE, (event) => {
-    enterChartMode(BrowserWindow.fromWebContents(event.sender))
-    return { ok: true }
-  })
+ipcMain.handle(IPC.APP_ENTER_CHART_MODE, (event) => {
+  enterChartMode(BrowserWindow.fromWebContents(event.sender))
+  return { ok: true }
+})
 ```
 
 ipc.js 的 import 改为 `import { createWindow, openChartWindow, enterChartMode } from './windowManager'`（按实际使用调整）。
@@ -912,6 +930,7 @@ Expected: 构建成功。
 - [ ] **Step 8: 手动验证**
 
 `npm run dev`：
+
 1. 首页打开正常 .xk 文件：进入图表页、窗口变为可缩放/最大化；
 2. 首页打开损坏文件：应用内红色提示后窗口关闭（对照旧行为：系统对话框后关窗——已批准的差异）；
 3. 首页打开时取消对话框：**停留在首页**（旧行为是关窗——已批准的差异）；
@@ -931,6 +950,7 @@ git commit -m "refactor：首页打开文件迁移到 file:open 通道并本地�
 ### Task 5: 模板双击本地化（'chart' act 与 openChartWindow 退役）
 
 **Files:**
+
 - Modify: `src/renderer/src/components/XkCardList.vue`（双击改本地跳转）
 - Modify: `src/renderer/src/layouts/BasicLayout.vue`（删 `receiveAct`）
 - Modify: `src/renderer/src/page/ChartView.vue`（删 `receiveData` 监听）
@@ -938,6 +958,7 @@ git commit -m "refactor：首页打开文件迁移到 file:open 通道并本地�
 - Modify: `src/main/ipc.js`（删 legacy `open_template` 分支）
 
 **Interfaces:**
+
 - Consumes: Task 4 `chartStore.setPendingChart`。
 - Produces: 无新接口；`'chart'` act 与 `'data'` 的 open_template 用法消失（`'data'` 通道仍被 create_new_file 用，Task 6 删）。
 
@@ -985,15 +1006,16 @@ Expected: 构建成功。
 - [ ] **Step 6: 手动验证**
 
 `npm run dev`：
+
 1. 首页双击模板：进入图表页、图表正常渲染、窗口解锁；
 2. 双击进入的模板直接保存：弹另存对话框、保存成功；
 3. 图表页"新建文件"（legacy create_new_file）：新窗口流程仍正常（此时仍靠主进程发 data？——**否**：Step 4 已删 openChartWindow，而 create_new_file 依赖它。**因此本任务保留 create_new_file 分支但将其改为**：新窗口创建后由 Task 6 的机制装载。为避免破坏，本任务将 `create_new_file` 分支暂时改为"只创建空窗口"：
 
 ```js
-      create_new_file: () => {
-        console.log('create new file')
-        openNewWindow() // 【legacy】Task 6 由 new-chart-window 通道取代
-      }
+create_new_file: () => {
+  console.log('create new file')
+  openNewWindow() // 【legacy】Task 6 由 new-chart-window 通道取代
+}
 ```
 
 （即新建的窗口先停在首页，模板数据下个任务接上——本任务的手动验证中"新建文件"预期为：打开一个停在首页的新窗口，此为已知中间态。）
@@ -1010,12 +1032,14 @@ git commit -m "refactor：首页模板装载本地化，移除 chart act 与 ope
 ### Task 6: 新窗口通道（new-chart-window + take-pending-chart）
 
 **Files:**
+
 - Modify: `src/main/windowManager.js`（`createWindow` 支持 hash 路由；新增 `pendingCharts`/`createChartWindow`/`takePendingChart`）
 - Modify: `src/main/ipc.js`（注册两个 handle；删 legacy `create_new_file`/`open_other_file` 分支及 `'data'` 处理器）
 - Modify: `src/preload/index.js`（追加 `newChartWindow`/`takePendingChart`）
 - Modify: `src/renderer/src/page/ChartView.vue`（挂载时取 pending；`createNewFile`/`openFile` 改造）
 
 **Interfaces:**
+
 - Consumes: Task 4 `enterChartMode`。
 - Produces:
   - windowManager: `createChartWindow(content)`（创建并返回新窗口，新窗口直接加载 `#/chart`）；`takePendingChart(webContentsId)` → `string | null`。
@@ -1079,14 +1103,14 @@ export const createChartWindow = (content) => {
 新增：
 
 ```js
-  ipcMain.handle(IPC.APP_NEW_CHART_WINDOW, (event, { content }) => {
-    createChartWindow(content)
-    return { ok: true }
-  })
+ipcMain.handle(IPC.APP_NEW_CHART_WINDOW, (event, { content }) => {
+  createChartWindow(content)
+  return { ok: true }
+})
 
-  ipcMain.handle(IPC.APP_TAKE_PENDING_CHART, (event) => {
-    return { content: takePendingChart(event.sender.id) }
-  })
+ipcMain.handle(IPC.APP_TAKE_PENDING_CHART, (event) => {
+  return { content: takePendingChart(event.sender.id) }
+})
 ```
 
 import 更新：`import { createChartWindow, enterChartMode, takePendingChart } from './windowManager'`。
@@ -1105,17 +1129,17 @@ import 更新：`import { createChartWindow, enterChartMode, takePendingChart } 
 a) `onMounted` 中 chartStore 未命中时走 IPC（替换 Task 4 的版本）：
 
 ```js
-  // 同窗口跳转（首页打开/模板）：从 chartStore 取数据装载
-  const local = takePendingChart()
-  if (local) {
-    loadChartData(local)
-  } else {
-    // 新窗口（新建文件/打开其他文件）：取主进程暂存的数据
-    const res = await window.electronAPI.takePendingChart()
-    if (res?.content) {
-      loadChartData({ value: res.content, path: '' })
-    }
+// 同窗口跳转（首页打开/模板）：从 chartStore 取数据装载
+const local = takePendingChart()
+if (local) {
+  loadChartData(local)
+} else {
+  // 新窗口（新建文件/打开其他文件）：取主进程暂存的数据
+  const res = await window.electronAPI.takePendingChart()
+  if (res?.content) {
+    loadChartData({ value: res.content, path: '' })
   }
+}
 ```
 
 b) `createNewFile` / `openFile`（569-584 行）替换：
@@ -1153,6 +1177,7 @@ Expected: 构建成功。
 - [ ] **Step 6: 手动验证**
 
 `npm run dev`：
+
 1. 图表页菜单"新建文件"：新窗口打开且**直接进入图表页**、渲染模板、窗口解锁；
 2. 图表页菜单"打开文件"：对话框 → 选正常文件 → 新窗口进入图表页并渲染；选损坏文件 → 当前窗口红色提示、不开新窗；取消 → 无变化；
 3. 新窗口里再"新建文件"：再开新窗口（递归多窗口）；
@@ -1171,12 +1196,14 @@ git commit -m "refactor：新建/打开其他文件迁移到 new-chart-window �
 ### Task 7: 退出流程（request-close 线性决策）
 
 **Files:**
+
 - Modify: `src/main/windowManager.js`（close 拦截改发 `IPC.APP_REQUEST_CLOSE`）
 - Modify: `src/main/ipc.js`（`APP_CONFIRM_UNSAVED` handle；删 legacy `unsaved`/`saved` 分支与 `'act'` 处理器）
 - Modify: `src/preload/index.js`（追加 `onRequestClose`/`confirmUnsaved`）
 - Modify: `src/renderer/src/page/ChartView.vue`（`onRequestClose` 决策；删 `receiveAct`）
 
 **Interfaces:**
+
 - Consumes: Task 6 后的主进程结构；Task 3 `saveFile()`（返回 boolean）。
 - Produces:
   - 主进程 handle：`APP_CONFIRM_UNSAVED` → `'save' | 'discard' | 'cancel'`。
@@ -1187,10 +1214,10 @@ git commit -m "refactor：新建/打开其他文件迁移到 new-chart-window �
 `enterChartMode` 中 close 拦截的 legacy 行替换：
 
 ```js
-  current_window.on('close', e => {
-    e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
-    current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
-  })
+current_window.on('close', (e) => {
+  e.preventDefault() //先阻止一下默认行为，不然直接关了，提示框只会闪一下
+  current_window.webContents.send(IPC.APP_REQUEST_CLOSE)
+})
 ```
 
 - [ ] **Step 2: ipc.js 注册 confirm-unsaved 并删除 legacy act 处理器**
@@ -1198,16 +1225,16 @@ git commit -m "refactor：新建/打开其他文件迁移到 new-chart-window �
 新增：
 
 ```js
-  ipcMain.handle(IPC.APP_CONFIRM_UNSAVED, async () => {
-    const { response } = await dialog.showMessageBox({
-      type: 'info',
-      title: '确认退出',
-      message: '文件未保存，是否退出？',
-      buttons: ['保存', '放弃', '取消'],
-      cancelId: 2 // 直接关闭提示框视为"取消"
-    })
-    return ['save', 'discard', 'cancel'][response]
+ipcMain.handle(IPC.APP_CONFIRM_UNSAVED, async () => {
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    title: '确认退出',
+    message: '文件未保存，是否退出？',
+    buttons: ['保存', '放弃', '取消'],
+    cancelId: 2 // 直接关闭提示框视为"取消"
   })
+  return ['save', 'discard', 'cancel'][response]
+})
 ```
 
 删除：`ipcMain.on('act', ...)` 整段（`unsaved`/`saved` 分支随之消失）。此时 `getContext`/`windowContexts`/`cleanupWindowContext` 已无使用方——一并删除，`index.js` 的 `createWindow(cleanupWindowContext)` 调用改为 `createWindow()`（两处）。
@@ -1255,6 +1282,7 @@ Expected: 构建成功。
 - [ ] **Step 6: 手动验证**
 
 `npm run dev`：
+
 1. 无修改时点关闭：窗口直接关；
 2. 有修改点关闭 → "保存"（无 filePath）：弹另存框 → 保存 → 窗口关闭；
 3. 有修改点关闭 → "保存"：取消另存框 → **窗口留在原页面**、未保存提示仍在；
@@ -1275,10 +1303,12 @@ git commit -m "refactor：退出确认改为 request-close 线性流程，删除
 ### Task 8: 删除 legacy 通道与全量回归
 
 **Files:**
+
 - Modify: `src/preload/index.js`（删四个 legacy 方法）
 - Verify: 全部迁移完成，无 `sendAct/receiveAct/sendData/receiveData` 残留
 
 **Interfaces:**
+
 - Consumes: 无
 - Produces: 最终 API 面（`openFile/saveFile/saveFileAs/newChartWindow/takePendingChart/enterChartMode/closeWindow/confirmUnsaved/onRequestClose`）。
 
@@ -1304,8 +1334,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE),
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
-  onRequestClose: (callback) =>
-    ipcRenderer.on(IPC.APP_REQUEST_CLOSE, () => callback())
+  onRequestClose: (callback) => ipcRenderer.on(IPC.APP_REQUEST_CLOSE, () => callback())
 })
 ```
 
@@ -1322,6 +1351,7 @@ Expected: 构建成功；eslint 无错误（warning 参照仓库现状酌情处�
 - [ ] **Step 4: 全量手动回归（spec 验证清单）**
 
 `npm run dev` 逐项验证：
+
 1. 保存：有路径 Ctrl+S / 无路径（弹框）/ 取消另存框；
 2. 另存为；
 3. 打开：正常文件 / 损坏文件（首页与图表页两个场景）/ 取消对话框（首页停留、图表页无变化）；

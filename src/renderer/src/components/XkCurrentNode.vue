@@ -7,8 +7,12 @@
       <a-textarea v-model:value="currentNode.des" />
     </a-form-item>
     <a-form-item label="所属类目">
-      <a-select v-model:value="currentNode.category" placeholder="请选择类目" style="width: 200px"
-                :options="categoryItems.map(item => ({ value: item }))">
+      <a-select
+        v-model:value="currentNode.category"
+        placeholder="请选择类目"
+        style="width: 200px"
+        :options="categoryItems.map((item) => ({ value: item }))"
+      >
         <template #dropdownRender="{ menuNode: menu }">
           <v-nodes :vnodes="menu" />
           <a-divider style="margin: 4px 0" />
@@ -46,7 +50,7 @@ const xkContext = defineModel('xkContext')
 
 const inputRef = ref()
 
-const addCategory = e => {
+const addCategory = (e) => {
   e.preventDefault()
   console.log(categoryName.value)
   if (categoryName.value) {
@@ -88,14 +92,14 @@ const currentNodeSubmit = () => {
     // names.slice(0, currentNodeDataIndex.value).push(...names.slice(currentNodeDataIndex.value + 1)); // 去掉旧节点名称
     // 思考：为什么不需要去掉旧的节点名称？因为本身就不重名，所以不用去掉
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
-    const hasDuplicate = data.some(node => node.name === newName)
+    const hasDuplicate = data.some((node) => node.name === newName)
     if (hasDuplicate) {
       xkContext.value.errorMessage = '不能创建同名节点'
       return
     }
 
     // 修改新节点所在的边
-    links.forEach(link => {
+    links.forEach((link) => {
       if (link.source === oldName) link.source = newName
       if (link.target === oldName) link.target = newName
     })
@@ -104,9 +108,9 @@ const currentNodeSubmit = () => {
   data[currentNodeDataIndex.value] = newNode
 
   addHistory(xkContext, {
-    'act': 'changeNode',
-    'old': oldNode,
-    'new': newNode
+    act: 'changeNode',
+    old: oldNode,
+    new: newNode
   })
 
   xkContext.value.updateChart = !xkContext.value.updateChart
@@ -114,7 +118,4 @@ const currentNodeSubmit = () => {
 }
 </script>
 
-
-<style scoped>
-
-</style>
+<style scoped></style>

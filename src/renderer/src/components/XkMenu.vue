@@ -1,16 +1,12 @@
 <template>
   <a-dropdown>
     <a class="no-move" @click.prevent>
-      <img :src="MenuIcon" alt="MenuIcon" :style="{ width: '20px', height: '20px'}" />
+      <img :src="MenuIcon" alt="MenuIcon" :style="{ width: '20px', height: '20px' }" />
     </a>
     <template #overlay>
       <a-menu style="width: 200px">
-        <a-menu-item key="1" @click="createNewFile">
-          新建文件
-        </a-menu-item>
-        <a-menu-item key="2" @click="openFile">
-          打开文件
-        </a-menu-item>
+        <a-menu-item key="1" @click="createNewFile"> 新建文件 </a-menu-item>
+        <a-menu-item key="2" @click="openFile"> 打开文件 </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="3" @click="undo">
           <a-row>
@@ -24,9 +20,7 @@
             <a-col flex="auto">Ctrl+Y</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="5" @click="createEdge">
-          创建连接
-        </a-menu-item>
+        <a-menu-item key="5" @click="createEdge"> 创建连接 </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="6" @click="createNode">
           <a-row>
@@ -40,12 +34,8 @@
             <a-col flex="auto">Delete</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="8" @click="createEdge">
-          创建连接
-        </a-menu-item>
-        <a-menu-item key="9" @click="deleteEdge">
-          删除连接
-        </a-menu-item>
+        <a-menu-item key="8" @click="createEdge"> 创建连接 </a-menu-item>
+        <a-menu-item key="9" @click="deleteEdge"> 删除连接 </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="10" @click="saveFile">
           <a-row>
@@ -53,9 +43,7 @@
             <a-col flex="auto">Ctrl+S</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="11" @click="saveAs">
-          另存为...
-        </a-menu-item>
+        <a-menu-item key="11" @click="saveAs"> 另存为... </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>
@@ -116,7 +104,6 @@ const saveAs = () => {
   shortcutActive.value = 'save_as'
   shortcutWatch.value = !shortcutWatch.value
 }
-
 </script>
 
 <style scoped>

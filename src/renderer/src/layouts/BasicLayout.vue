@@ -12,7 +12,7 @@
           :items="items"
           @click="handleClick"
         />
-        <div style="position: fixed; bottom: -30px; width: 200px;">
+        <div style="position: fixed; bottom: -30px; width: 200px">
           <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
         </div>
       </a-layout-sider>
@@ -62,13 +62,12 @@ const siderStyle = {
 // 侧边菜单项预留：未来恢复菜单时用 a-menu items 重建（参考 git 历史）
 const items = reactive([])
 
-
 // window.electronAPI.openView((value) => {
 //   console.log(value);
 //   router.push(value);
 // });
 
-const handleClick = e => {
+const handleClick = (e) => {
   const itemObj = items.find((item) => item.key === e.key)
   if (!itemObj) return // 菜单项缺失时不应连带抛错
   title.value = itemObj.label
@@ -97,7 +96,7 @@ const openFile = async () => {
   router.push('chart')
 }
 
-watch(openKeys, val => {
+watch(openKeys, (val) => {
   console.log('openKeys', val)
 })
 </script>

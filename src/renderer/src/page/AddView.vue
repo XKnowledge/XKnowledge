@@ -16,12 +16,13 @@
         <a-typography-title :level="2">选取模板</a-typography-title>
         <!-- <a-typography-title :level="3">最近使用</a-typography-title> -->
         <!-- <a-typography-title :level="3">demo</a-typography-title> -->
-        <a-typography-title v-for="item in menuList" :key="item.key" :level="3">{{ item.name }}</a-typography-title>
+        <a-typography-title v-for="item in menuList" :key="item.key" :level="3">{{
+          item.name
+        }}</a-typography-title>
         <XkCardList :fileList="templates" />
       </a-typography>
     </div>
   </div>
-
 </template>
 
 <script setup>
@@ -70,7 +71,6 @@ const templates = ref([
   //   src: imgUrl
   // }
 ])
-
 </script>
 
 <style scoped>

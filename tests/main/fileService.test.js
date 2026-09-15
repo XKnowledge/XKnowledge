@@ -170,9 +170,9 @@ describe('writeChartFile（原子写入 + 授权 + 冲突检测）', () => {
     const path = join(dir, 'a.xk')
     await fs.promises.writeFile(path, VALID_CHART, 'utf-8')
     await readChartFile(path)
-    const renameSpy = vi.spyOn(fs.promises, 'rename').mockRejectedValue(
-      Object.assign(new Error('EPERM: file busy'), { code: 'EPERM' })
-    )
+    const renameSpy = vi
+      .spyOn(fs.promises, 'rename')
+      .mockRejectedValue(Object.assign(new Error('EPERM: file busy'), { code: 'EPERM' }))
     try {
       const content = VALID_CHART.replace('节点1', '节点2')
       await writeChartFile(path, content)

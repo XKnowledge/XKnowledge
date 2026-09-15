@@ -1,8 +1,14 @@
 <template>
   <a-space :size="[8, 16]" wrap>
-    <div v-for="file in fileList" :id="file.id" :key="file.id"
-         :class="[file.id!==selected?'xk-card':'xk-card xk-card-selected']" @click="handleClick(file.id)"
-         @dblclick="handleDoubleClick(file.id)" @contextmenu.prevent="handleRightClick(file.id, $event)">
+    <div
+      v-for="file in fileList"
+      :id="file.id"
+      :key="file.id"
+      :class="[file.id !== selected ? 'xk-card' : 'xk-card xk-card-selected']"
+      @click="handleClick(file.id)"
+      @dblclick="handleDoubleClick(file.id)"
+      @contextmenu.prevent="handleRightClick(file.id, $event)"
+    >
       <img :src="file.src" alt="" />
       <a-button type="link">{{ file.name }}</a-button>
     </div>
@@ -63,8 +69,6 @@ const handleRightClick = async (id, event) => {
   // const saveAns = await window.electronAPI.saveFile(fileName + '.xk', content)
   // console.log('保存结果:', saveAns)
 }
-
-
 </script>
 
 <style scoped>
