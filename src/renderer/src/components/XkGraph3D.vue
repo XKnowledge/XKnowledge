@@ -63,12 +63,24 @@ const toGraphNodes = () =>
     // 保留旧坐标（若有），编辑刷新后已布局的图不跳
     return old ? { ...n, __idx: i, x: old.x, y: old.y, z: old.z } : { ...n, __idx: i }
   })
-const toGraphLinks = () =>
-  props.links.map((l, i) => ({ ...l, __idx: i }))
+const toGraphLinks = () => props.links.map((l, i) => ({ ...l, __idx: i }))
+
+/** d3 布局会把 link 的 source/target 反解为节点对象；归一化回名字符串再比较 */
+const linkEnd = (v) => (typeof v === 'object' && v !== null ? v.name : v)
 
 /** 剥离内部字段的纯数据，发给父组件 */
-const pureNode = (n) => ({ name: n.name, des: n.des, symbolSize: n.symbolSize, category: n.category })
-const pureLink = (l) => ({ source: l.source, target: l.target, name: l.name, des: l.des })
+const pureNode = (n) => ({
+  name: n.name,
+  des: n.des,
+  symbolSize: n.symbolSize,
+  category: n.category
+})
+const pureLink = (l) => ({
+  source: linkEnd(l.source),
+  target: linkEnd(l.target),
+  name: l.name,
+  des: l.des
+})
 
 const applyVisibility = () => {
   if (!graph) return
@@ -77,7 +89,7 @@ const applyVisibility = () => {
     .nodeVisibility((n) => !hidden.has(n.category))
     // 两端任一隐藏，边随之隐藏
     .linkVisibility((l) => {
-      const s = props.nodes.find((n) => n.name === l.source)
+      const s = props.nodes.find((n) => n.name === linkEnd(l.source))
       return s ? !hidden.has(s.category) : true
     })
 }
@@ -89,7 +101,7 @@ const applyHighlight = () => {
   graph
     .nodeColor((n) => (hl.has(n.name) ? '#e8684a' : categoryColor(n.category)))
     .linkColor((l) =>
-      le && le.source === l.source && le.target === l.target && le.name === l.name
+      le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
         ? '#e8684a'
         : '#4b565b'
     )
@@ -136,6 +148,7 @@ onMounted(() => {
   }
 
   graph
+    .nodeId('name')
     .graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
     .nodeVal((n) => n.symbolSize ?? 50)
     .nodeRelSize(1)
