@@ -342,6 +342,11 @@ const initAttr = () => {
 }
 
 const initChartData = () => {
+  // echarts 6 起默认主题把 legend 移到底部，会与 bottom: 5% 的水印重叠；
+  // 显式锁定回顶部（v5 时代的外观）。旧 .xk 文件的 legend 没存位置字段，
+  // 也依赖这里补全，所以不能只改 template1.ts
+  xkContext.value.chartData.legend[0].top = 0
+
   // 增加水印
   xkContext.value.chartData.graphic = [
     {

@@ -17,6 +17,8 @@ const createTemplate1 = () => {
     legend: [
       {
         // selectedMode: "single",
+        // 显式锁定顶部：echarts 6 默认主题会移到底部，与水印重叠
+        top: 0,
         data: ['类目1', '类目0', '类目3', '类目2']
       }
     ],
