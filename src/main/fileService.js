@@ -129,7 +129,7 @@ export const readChartFile = async (filePath) => {
   let parsed
   try {
     parsed = JSON.parse(data)
-  } catch (err) {
+  } catch {
     throw Object.assign(new Error('文件已损坏或不是有效的 XKnowledge 文件'), {
       code: 'INVALID_JSON',
       detail: filePath,

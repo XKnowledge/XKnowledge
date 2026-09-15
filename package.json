@@ -38,20 +38,21 @@
     "vue-router": "^4.3.2"
   },
   "devDependencies": {
-    "@electron-toolkit/eslint-config": "^1.0.1",
-    "@rushstack/eslint-patch": "^1.6.1",
+    "@electron-toolkit/eslint-config": "^2",
+    "@rushstack/eslint-patch": "^1.16",
     "@vitejs/plugin-vue": "^6",
-    "@vue/eslint-config-prettier": "^9.0.0",
+    "@vue/eslint-config-prettier": "^10",
     "electron": "^44",
     "electron-builder": "^26",
     "electron-vite": "^5",
-    "eslint": "^8.56.0",
-    "eslint-plugin-vue": "^9.20.1",
+    "eslint": "^10",
+    "eslint-plugin-vue": "^10",
     "prettier": "^3.2.4",
     "typescript": "^5.9",
     "vite": "^7",
     "vitest": "^5",
     "vue": "^3.4.15",
+    "vue-eslint-parser": "^10",
     "vue-tsc": "^3"
   }
 }
