@@ -183,6 +183,12 @@ onMounted(() => {
   // 容器尺寸变化（侧边栏显隐、窗口缩放）由 ResizeObserver 自理，
   // 父组件不再需要 nextTick(resize) 联动；
   // 先于各 apply* 建立，避免任一 accessor 异常吞掉画布自适应
+  //
+  // 底部导航提示文案在 three-render-objects 内硬编码为英文且无配置项，
+  // 这里替换为中文；类名随库版本锁定（^1.80）
+  const navInfo = containerRef.value.querySelector('.scene-nav-info')
+  if (navInfo) navInfo.textContent = '左键：旋转　滚轮/中键：缩放　右键：平移'
+
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
     if (el && graph) graph.width(el.clientWidth).height(el.clientHeight)
