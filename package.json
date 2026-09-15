@@ -40,17 +40,17 @@
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.1",
     "@rushstack/eslint-patch": "^1.6.1",
-    "@vitejs/plugin-vue": "^5.0.3",
+    "@vitejs/plugin-vue": "^6",
     "@vue/eslint-config-prettier": "^9.0.0",
     "electron": "^44",
     "electron-builder": "^26",
-    "electron-vite": "^2.0.0",
+    "electron-vite": "^5",
     "eslint": "^8.56.0",
     "eslint-plugin-vue": "^9.20.1",
     "prettier": "^3.2.4",
     "typescript": "^5.3.3",
-    "vite": "^5.0.12",
-    "vitest": "^3",
+    "vite": "^7",
+    "vitest": "^5",
     "vue": "^3.4.15",
     "vue-tsc": "^1.8.25"
   }
