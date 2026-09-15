@@ -62,12 +62,6 @@ const handleRightClick = async (id, event) => {
 
   // 在这里执行其他你想要的操作，比如显示自定义右键菜单等
   console.log('右键', id)
-
-  // const content = 'test_save_content'
-  //
-  // const fileName = 'test_save'
-  // const saveAns = await window.electronAPI.saveFile(fileName + '.xk', content)
-  // console.log('保存结果:', saveAns)
 }
 </script>
 

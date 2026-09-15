@@ -62,11 +62,6 @@ const siderStyle = {
 // 侧边菜单项预留：未来恢复菜单时用 a-menu items 重建（参考 git 历史）
 const items = reactive([])
 
-// window.electronAPI.openView((value) => {
-//   console.log(value);
-//   router.push(value);
-// });
-
 const handleClick = (e) => {
   const itemObj = items.find((item) => item.key === e.key)
   if (!itemObj) return // 菜单项缺失时不应连带抛错
@@ -118,17 +113,6 @@ watch(openKeys, (val) => {
 .ant-layout-header {
   height: 30px !important;
   padding-inline: 0 !important;
-}
-
-.move-show {
-  display: flex;
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
-  -webkit-app-region: drag; /* 可拖动 */
-  background-color: #f5f5f5;
-  width: 100%;
-  height: 30px;
-  font: 13px sans-serif;
 }
 
 .top-not-show {

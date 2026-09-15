@@ -3,8 +3,6 @@
     <div class="content">
       <a-typography-title :level="1">我的文件</a-typography-title>
       <XkCardList :fileList="fileList" />
-      <!--      <button type="button" id="btn" @click="ipcHandle">Open a File</button>-->
-      <!--      File path: <strong id="filePath">{{ filePath }}</strong>-->
     </div>
   </div>
 </template>
@@ -17,7 +15,6 @@ const fileList = ref([])
 
 onMounted(async () => {
   const fileListValue = []
-  // let res = await myAxios.get("http://127.0.0.1:5000");
   const res = ['test']
   let counter = 0
   console.log(res)
@@ -26,7 +23,6 @@ onMounted(async () => {
     if (file.endsWith('.xk')) {
       fileListValue.push({
         id: counter,
-        // name: file.replace(/\.[^/.]+$/, ''),
         name: file,
         src: 'https://img0.baidu.com/it/u=365878481,4199784825&fm=253&fmt=auto&app=120&f=JPEG?w=750&h=500'
       })

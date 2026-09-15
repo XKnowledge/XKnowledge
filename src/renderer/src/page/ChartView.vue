@@ -122,7 +122,6 @@
           ></XkCurrentEdge>
         </a-layout-sider>
       </a-layout>
-      <a-layout-footer class="footer-style" v-show="false">Footer</a-layout-footer>
     </a-layout>
   </a-space>
 </template>
@@ -161,7 +160,6 @@ const saveNodeVisible = ref(false)
 const attributeVisible = ref(true)
 const checkedValues = ref([])
 const repulsion = ref(1000)
-// let windowID = null
 
 const createNodeVisible = ref(false)
 const newNode = ref({
@@ -297,11 +295,6 @@ onUnmounted(() => {
     console.error('退出图表模式失败', err)
   })
 })
-
-// window.electronAPI.getWindowId().then(id => {
-//   windowID = id
-//   console.log('窗口ID:', id)
-// })
 
 const loadChartData = (data) => {
   const chart = (() => {
@@ -879,7 +872,6 @@ const contentStyle = {
   minHeight: 120,
   lineHeight: '120px',
   backgroundColor: '#ffffff'
-  // height: "calc(100vh - 86px)"
 }
 </script>
 
@@ -953,14 +945,6 @@ const contentStyle = {
   border-radius: 4px;
 }
 
-.footer-style {
-  padding: 0 !important;
-  text-align: center;
-  background-color: #f5f5f5;
-  height: 33px !important;
-  border-top: 1px solid #0505050f;
-}
-
 .sider-style {
   text-align: center;
   line-height: 50px;
@@ -1007,22 +991,5 @@ const contentStyle = {
 /* 解决框架本身获取高度错误而显示进度条Bug */
 .ant-layout .ant-layout-sider-children {
   height: calc(100% - 33px);
-}
-
-.form-style {
-  background-color: #f5f5f5 !important;
-}
-
-.form-style input {
-  width: 200px !important;
-  max-width: 200px !important;
-  min-width: 200px !important;
-  height: 30px !important;
-}
-
-.form-style button {
-  height: 30px !important;
-  background-color: #0d5bc6 !important;
-  color: #ffffff;
 }
 </style>

@@ -89,7 +89,6 @@ const currentNodeSubmit = () => {
 
   if (oldName !== newName) {
     // 修改节点的时候修改了节点名称
-    // names.slice(0, currentNodeDataIndex.value).push(...names.slice(currentNodeDataIndex.value + 1)); // 去掉旧节点名称
     // 思考：为什么不需要去掉旧的节点名称？因为本身就不重名，所以不用去掉
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
     const hasDuplicate = data.some((node) => node.name === newName)

@@ -3,8 +3,6 @@
     <div class="content">
       <a-typography-title :level="1">最近</a-typography-title>
       <XkCardList :fileList="templates" />
-      <!--      <button type="button" id="btn" @click="ipcHandle">Open a File</button>-->
-      <!--      File path: <strong id="filePath">{{ filePath }}</strong>-->
     </div>
   </div>
 </template>
