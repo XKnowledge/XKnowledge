@@ -163,6 +163,8 @@ onMounted(() => {
 
   graph
     .nodeId('name')
+    // 场景背景对齐旧版 2D 图表白底；深色元素（标签/水印/边）在黑底不可见
+    .backgroundColor('#ffffff')
     .graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
     .nodeVal((n) => n.symbolSize ?? 50)
     .nodeRelSize(1)
