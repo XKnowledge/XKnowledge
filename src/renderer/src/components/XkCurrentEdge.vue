@@ -1,5 +1,5 @@
 <template>
-  <a-form>
+  <a-form layout="vertical">
     <a-form-item label="名称">
       <a-textarea v-model:value="currentEdge.name" />
     </a-form-item>

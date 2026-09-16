@@ -1,5 +1,5 @@
 <template>
-  <a-form>
+  <a-form layout="vertical">
     <a-form-item label="名称">
       <a-textarea v-model:value="newNode.name" />
     </a-form-item>
@@ -10,7 +10,6 @@
       <a-select
         v-model:value="newNode.category"
         placeholder="请选择类目"
-        style="width: 200px"
         :options="categoryItems.map((item) => ({ value: item }))"
       >
         <template #dropdownRender="{ menuNode: menu }">

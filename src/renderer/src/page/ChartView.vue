@@ -55,7 +55,9 @@
               <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
             </a-checkbox-group>
             <a-divider orientation="left">排斥力大小</a-divider>
-            <a-row>
+            <!-- align="middle"：滑块轨道高 12px、数字框高 32px，
+                 默认顶部对齐会让滑块明显偏上 -->
+            <a-row align="middle">
               <a-col :flex="4">
                 <a-slider
                   v-model:value="repulsion"
@@ -939,9 +941,11 @@ const contentStyle = {
 .attr-panel {
   /* 侧边栏属性面板的左右留白（复选框/分割线/滑杆/按钮）；
      text-align 左对齐顶掉 .sider-style 的 center——否则唯一的内联元素
-     checkbox-group 会被整行居中，与分割线错位 */
+     checkbox-group 会被整行居中，与分割线错位；
+     line-height 顶掉 50px，否则滑块行被撑高、与数字框错位 */
   padding: 0 12px;
   text-align: left;
+  line-height: 1.5715;
 }
 
 .sider-style {
@@ -954,6 +958,18 @@ const contentStyle = {
   overflow-y: scroll; /* 添加垂直滚动条 */
   overflow-x: hidden; /* 隐藏水平滚动条 */
   box-sizing: border-box; /* 使宽度包括内容、内边距和边框 */
+}
+
+/* 侧边栏表单同样顶掉 .sider-style 继承的 center/50px：
+   否则 input-number 这类 inline-block 控件被居中、表单行高异常 */
+.sider-style .ant-form {
+  text-align: left;
+  line-height: 1.5715;
+}
+
+/* 四个表单的最后一项都是提交按钮，保持居中 */
+.sider-style .ant-form .ant-form-item:last-child {
+  text-align: center;
 }
 
 /* 针对Webkit内核浏览器的滚动条样式 */
