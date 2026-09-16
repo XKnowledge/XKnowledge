@@ -39,6 +39,7 @@
             :highlight-nodes="highlightNodeNames"
             :highlight-link="highlightEdgeObj"
             :show-link-name="showLinkName"
+            :show-small-labels="showSmallLabels"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
           />
@@ -51,8 +52,9 @@
           <!-- 属性面板用普通块级容器：a-checkbox-group 是 inline-flex，
                divider/按钮行嵌在里面会被当 flex 子项挤到侧边栏外（按钮不可见） -->
           <div v-show="attributeVisible" class="attr-panel">
-            <a-checkbox-group v-model:value="checkedValues" @change="onChangeAttr">
+            <a-checkbox-group class="attr-checkboxes" v-model:value="checkedValues" @change="onChangeAttr">
               <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
+              <a-checkbox value="showSmallLabels"> 显示小节点名称 </a-checkbox>
             </a-checkbox-group>
             <a-divider orientation="left">排斥力大小</a-divider>
             <!-- align="middle"：滑块轨道高 12px、数字框高 32px，
@@ -62,7 +64,7 @@
                 <a-slider
                   v-model:value="repulsion"
                   :min="1"
-                  :max="10000"
+                  :max="500"
                   @change="onChangeRepulsion"
                 />
               </a-col>
@@ -70,7 +72,7 @@
                 <a-input-number
                   v-model:value="repulsion"
                   :min="1"
-                  :max="10000"
+                  :max="500"
                   @change="onChangeRepulsion"
                 />
               </a-col>
@@ -155,7 +157,7 @@ const saveNodeVisible = ref(false)
 
 const attributeVisible = ref(true)
 const checkedValues = ref([])
-const repulsion = ref(1000)
+const repulsion = ref(100)
 
 const createNodeVisible = ref(false)
 const newNode = ref({
@@ -198,6 +200,7 @@ const categoryName = ref()
 
 const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
+const showSmallLabels = ref(true) // 会话级渲染设置：是否常显小节点名称（默认开，全显）
 const highlightNodeList = ref([]) // 高亮节点 index 记录（最多 2 个，逻辑照旧）
 const highlightNodeNames = computed(() =>
   highlightNodeList.value.map((i) => xkContext.value.chartData?.nodes?.[i]?.name).filter(Boolean)
@@ -335,8 +338,9 @@ const loadChartData = (data) => {
 const initAttr = () => {
   // v2 格式不存渲染配置，恢复会话默认值
   showLinkName.value = false
-  repulsion.value = 1000
-  checkedValues.value = []
+  showSmallLabels.value = true
+  repulsion.value = 100
+  checkedValues.value = ['showSmallLabels']
 }
 
 watch(
@@ -350,6 +354,7 @@ watch(
 
 const onChangeAttr = () => {
   showLinkName.value = checkedValues.value.includes('showEdgeName')
+  showSmallLabels.value = checkedValues.value.includes('showSmallLabels')
   saveNodeVisible.value = true
 }
 
@@ -946,6 +951,13 @@ const contentStyle = {
   padding: 0 12px;
   text-align: left;
   line-height: 1.5715;
+}
+
+/* checkbox-group 默认横向排 inline-block，两个复选框并排超出侧栏宽度 */
+.attr-checkboxes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .sider-style {

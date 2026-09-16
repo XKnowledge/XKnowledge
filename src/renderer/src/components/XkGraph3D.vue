@@ -35,7 +35,8 @@ const props = defineProps({
   links: { type: Array, default: () => [] },
   highlightNodes: { type: Array, default: () => [] },
   highlightLink: { type: Object, default: null },
-  showLinkName: { type: Boolean, default: false }
+  showLinkName: { type: Boolean, default: false },
+  showSmallLabels: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['node-click', 'link-click', 'init-failed'])
@@ -121,14 +122,18 @@ const applyHighlight = () => {
     .refresh()
 }
 
-/** 前 30 个大节点常显名称（SpriteText），其余悬浮显示 */
+/** 大节点（symbolSize 前 30 名）常显名称，小节点按 showSmallLabels 开关决定 */
 const BIG_LABEL_COUNT = 30
 const applyLabels = () => {
   if (!graph) return
-  const threshold = [...props.nodes]
-    .sort((a, b) => (b.symbolSize ?? 0) - (a.symbolSize ?? 0))
-    .slice(BIG_LABEL_COUNT - 1)
-    .map((n) => n.symbolSize ?? 0)[0]
+  // 开关打开 → threshold 取 -Infinity，所有节点都过条件；
+  // 节点总数不足 30 时 slice 越界取到 undefined，比较结果为 false，同样全显（与旧模板行为一致）
+  const threshold = props.showSmallLabels
+    ? -Infinity
+    : [...props.nodes]
+        .sort((a, b) => (b.symbolSize ?? 0) - (a.symbolSize ?? 0))
+        .slice(BIG_LABEL_COUNT - 1)
+        .map((n) => n.symbolSize ?? 0)[0]
   graph
     .nodeThreeObjectExtend(true) // 库默认 false，不开会整个替换球体
     .nodeThreeObject((n) => {
@@ -166,7 +171,10 @@ onMounted(() => {
     // 场景背景对齐旧版 2D 图表白底；深色元素（标签/边）在黑底不可见
     .backgroundColor('#ffffff')
     .graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
-    .nodeVal((n) => n.symbolSize ?? 50)
+    // three-forcegraph 半径 = ∛val × nodeRelSize（val 映射体积）：直接传 symbolSize
+    // 时 40/50/70 的半径仅 3.4/3.7/4.1，大小几乎不可辨；立方再缩放让半径与
+    // symbolSize 线性成正比（40/50/70 → 2.9/3.7/5.2），与 2D 图 symbolSize 语义一致
+    .nodeVal((n) => Math.pow(n.symbolSize ?? 50, 3) / 2500)
     .nodeRelSize(1)
     .onNodeClick((n) => emit('node-click', pureNode(n), n.__idx))
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
@@ -199,7 +207,7 @@ onMounted(() => {
   applyHighlight()
   applyLabels()
   applyInteraction()
-  setRepulsion(1000)
+  setRepulsion(100)
 })
 
 onUnmounted(() => {
@@ -224,12 +232,13 @@ watch(
 watch(() => props.highlightNodes, applyHighlight, { deep: true })
 watch(() => props.highlightLink, applyHighlight, { deep: true })
 watch(() => props.showLinkName, applyInteraction)
+watch(() => props.showSmallLabels, applyLabels)
 
-/** 排斥力滑杆映射：d3 charge 强度 = -repulsion/10（滑杆 1~10000 → -0.1~-1000） */
+/** 排斥力滑杆映射：d3 charge 强度 = -repulsion/10（滑杆 1~500 → -0.1~-50） */
 const setRepulsion = (value) => {
   if (!graph) return
   const charge = graph.d3Force('charge')
-  if (charge) charge.strength(-(value ?? 1000) / 10)
+  if (charge) charge.strength(-(value ?? 100) / 10)
   graph.d3ReheatSimulation()
 }
 
