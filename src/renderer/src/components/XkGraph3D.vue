@@ -33,6 +33,7 @@ import {
   mergeGraphNodes,
   planHighlightRepaint,
   linkEnd,
+  labelThreshold,
   HL_COLOR,
   LINK_BASE_COLOR
 } from '../utils/graphData.js'
@@ -140,18 +141,11 @@ const applyHighlight = () => {
   prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
 }
 
-/** 大节点（symbolSize 前 30 名）常显名称，小节点按 showSmallLabels 开关决定 */
-const BIG_LABEL_COUNT = 30
+/** 标签显隐：最小的 60% 节点算小节点，按 showSmallLabels 开关决定其名称显隐；
+ *  阈值规则（分位值落在最小尺寸层时上提一档，避免开关失效）见 utils/graphData */
 const applyLabels = () => {
   if (!graph) return
-  // 开关打开 → threshold 取 -Infinity，所有节点都过条件；
-  // 节点总数不足 30 时 slice 越界取到 undefined，比较结果为 false，同样全显（与旧模板行为一致）
-  const threshold = props.showSmallLabels
-    ? -Infinity
-    : [...props.nodes]
-        .sort((a, b) => (b.symbolSize ?? 0) - (a.symbolSize ?? 0))
-        .slice(BIG_LABEL_COUNT - 1)
-        .map((n) => n.symbolSize ?? 0)[0]
+  const threshold = labelThreshold(props.nodes, props.showSmallLabels)
   graph
     .nodeThreeObjectExtend(true) // 库默认 false，不开会整个替换球体
     .nodeThreeObject((n) => {

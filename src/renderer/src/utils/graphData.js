@@ -36,6 +36,32 @@ export const mergeGraphNodes = (newNodes, oldNodes) => {
 /** d3 布局会把 link 的 source/target 反解为节点对象；归一化回名字符串再比较 */
 export const linkEnd = (v) => (typeof v === 'object' && v !== null ? v.name : v)
 
+/** 「小节点」判定：按大小排序后最小的 60% 视为小节点，开关关闭时隐藏其名称 */
+const SMALL_NODE_RATIO = 0.6
+
+/**
+ * 「显示小节点名称」开关的标签显示阈值：symbolSize >= 阈值的节点常显名称。
+ * 关闭开关时阈值取升序 60% 分位处的值（即最小的 60% 节点算小节点）；
+ * 分位值落在图中最小尺寸层（不存在比它更小的节点）时阈值会退化成最小值、
+ * 一个标签也藏不掉（开关看似失效），此时上提一档到次小尺寸。
+ * @param {Array} nodes chartData 的节点（纯数据）
+ * @param {boolean} showSmallLabels 开关状态
+ * @returns {number} 阈值；开关打开返回 -Infinity（全显），
+ *   空节点集合返回 undefined（比较恒为 false，同样全显）
+ */
+export const labelThreshold = (nodes, showSmallLabels) => {
+  if (showSmallLabels) return -Infinity
+  const sizes = [...(nodes ?? [])].map((n) => n.symbolSize ?? 0).sort((a, b) => a - b) // 升序：小节点在前
+  if (!sizes.length) return undefined
+  const threshold = sizes[Math.ceil(sizes.length * SMALL_NODE_RATIO) - 1]
+  // 退化态：没有节点小于阈值 → 上提到次小尺寸（升序首个更大值）；
+  // 全图同尺寸时无档可提，停在原值
+  if (!sizes.some((s) => s < threshold)) {
+    return sizes.find((s) => s > threshold) ?? threshold
+  }
+  return threshold
+}
+
 /** 高亮边匹配：两端名与边名都一致才算同一条（两端顺序敏感） */
 const isSameLink = (l, hl) =>
   !!hl && linkEnd(l.source) === hl.source && linkEnd(l.target) === hl.target && hl.name === l.name

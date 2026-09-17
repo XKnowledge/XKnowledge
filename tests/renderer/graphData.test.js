@@ -3,6 +3,7 @@ import {
   mergeGraphNodes,
   linkEnd,
   planHighlightRepaint,
+  labelThreshold,
   HL_COLOR,
   LINK_BASE_COLOR
 } from '../../src/renderer/src/utils/graphData'
@@ -65,6 +66,46 @@ describe('linkEnd：d3 反解对象归一化回名字', () => {
   it('对象取 name，字符串透传', () => {
     expect(linkEnd({ name: 'A', x: 1 })).toBe('A')
     expect(linkEnd('A')).toBe('A')
+  })
+})
+
+describe('labelThreshold：小节点标签开关的显示阈值', () => {
+  // 按尺寸列表生成节点（尺寸在真实示例里就是这样的分层：70/50/40）
+  const bySizes = (sizes) => sizes.map((s, i) => ({ name: `n${i}`, symbolSize: s }))
+
+  it('开关打开时返回 -Infinity，所有节点都显示名称', () => {
+    expect(labelThreshold(bySizes([70, 50, 40]), true)).toBe(-Infinity)
+  })
+
+  it('阈值取升序 60% 分位处的值：最小的 60% 节点算小节点（中国通史形态 → 50）', () => {
+    const nodes = bySizes([...Array(6).fill(70), ...Array(36).fill(50), ...Array(50).fill(40)])
+    expect(labelThreshold(nodes, false)).toBe(50)
+  })
+
+  it('分位值落在最小尺寸层时上提一档（人工智能形态 → 50），保证开关有效', () => {
+    // 最小层 40 占 75%：分位值取到 40（=最小值），没有节点小于它，
+    // 不上提的话取消勾选一个标签都藏不掉（开关失效）
+    const nodes = bySizes([...Array(4).fill(70), ...Array(20).fill(50), ...Array(75).fill(40)])
+    expect(labelThreshold(nodes, false)).toBe(50)
+  })
+
+  it('小图同样按 60% 分位切，不再有「不足 30 个全显」的例外', () => {
+    // 升序 [40,50,60,70,80]，60% 分位取第 3 个（60），40/50 被隐藏
+    expect(labelThreshold(bySizes([80, 40, 70, 50, 60]), false)).toBe(60)
+  })
+
+  it('全图同一尺寸时没有小节点可隐藏，阈值停在原值', () => {
+    expect(labelThreshold(bySizes(Array(60).fill(50)), false)).toBe(50)
+  })
+
+  it('空节点集合返回 undefined（比较恒为 false，全显）', () => {
+    expect(labelThreshold([], false)).toBeUndefined()
+  })
+
+  it('不修改入参顺序', () => {
+    const nodes = bySizes([40, 70, 50])
+    labelThreshold(nodes, false)
+    expect(nodes.map((n) => n.symbolSize)).toEqual([40, 70, 50])
   })
 })
 
