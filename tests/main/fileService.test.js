@@ -4,10 +4,11 @@ import os from 'os'
 import { join } from 'path'
 
 vi.mock('electron', () => ({
-  dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() }
+  dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() },
+  app: { getAppPath: vi.fn() }
 }))
 
-import { dialog } from 'electron'
+import { dialog, app } from 'electron'
 import {
   validateChartStructure,
   readChartFile,
@@ -27,6 +28,9 @@ const VALID_CHART = JSON.stringify({
 let dir
 beforeEach(async () => {
   dir = await fs.promises.mkdtemp(join(os.tmpdir(), 'xk-fs-'))
+  // fileService 的示例目录写保护经 app.getAppPath() 定位 examples，
+  // 默认指向临时目录（不在其中的路径不受保护影响）
+  app.getAppPath.mockReturnValue(dir)
 })
 afterEach(async () => {
   await fs.promises.rm(dir, { recursive: true, force: true })
@@ -213,5 +217,55 @@ describe('saveChartFileAs', () => {
     expect(err).toBeInstanceOf(Error)
     expect(err.code).toBe('WRITE_FAILED')
     expect(err.path).toBe(path)
+  })
+})
+
+describe('示例目录写保护（examples 内文件永不被写）', () => {
+  let exampleFile
+  beforeEach(async () => {
+    await fs.promises.mkdir(join(dir, 'examples'), { recursive: true })
+    exampleFile = join(dir, 'examples', '金融.xk')
+    await fs.promises.writeFile(exampleFile, VALID_CHART, 'utf-8')
+  })
+
+  it('未经授权直接写示例路径抛 EXAMPLE_PROTECTED，不落盘', async () => {
+    await expect(writeChartFile(exampleFile, '{}')).rejects.toMatchObject({
+      code: 'EXAMPLE_PROTECTED'
+    })
+    expect(await fs.promises.readFile(exampleFile, 'utf-8')).toBe(VALID_CHART)
+  })
+
+  it('经对话框打开授权后（真实场景）同样拒绝写回，原内容不被破坏', async () => {
+    await readChartFile(exampleFile) // 授权 mtime，模拟"打开本地文件"打开了示例
+    const err = await writeChartFile(exampleFile, '{}').catch((e) => e)
+    expect(err.code).toBe('EXAMPLE_PROTECTED')
+    expect(err.message).toContain('[EXAMPLE_PROTECTED]')
+    expect(err.message).toContain('示例')
+    expect(await fs.promises.readFile(exampleFile, 'utf-8')).toBe(VALID_CHART)
+  })
+
+  it('另存对话框选到示例目录内路径时拒绝写入', async () => {
+    dialog.showSaveDialog.mockResolvedValue({ filePath: exampleFile })
+    const err = await saveChartFileAs(null, '{}', 'title').catch((e) => e)
+    expect(err.code).toBe('EXAMPLE_PROTECTED')
+    expect(await fs.promises.readFile(exampleFile, 'utf-8')).toBe(VALID_CHART)
+  })
+
+  it('data 目录内的内置示例（如 test.xk）同样拒绝写回', async () => {
+    const dataFile = join(dir, 'data', 'test.xk')
+    await fs.promises.mkdir(join(dir, 'data'), { recursive: true })
+    await fs.promises.writeFile(dataFile, VALID_CHART, 'utf-8')
+    await readChartFile(dataFile) // 模拟对话框打开已授权
+    await expect(writeChartFile(dataFile, '{}')).rejects.toMatchObject({
+      code: 'EXAMPLE_PROTECTED'
+    })
+    expect(await fs.promises.readFile(dataFile, 'utf-8')).toBe(VALID_CHART)
+  })
+
+  it('普通目录（非 examples）不受影响，照常写入', async () => {
+    const path = join(dir, '正常.xk')
+    dialog.showSaveDialog.mockResolvedValue({ filePath: path })
+    await saveChartFileAs(null, VALID_CHART, 'title')
+    expect(fs.existsSync(path)).toBe(true)
   })
 })

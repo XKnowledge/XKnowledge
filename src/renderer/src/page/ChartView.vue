@@ -598,6 +598,9 @@ const saveFile = async () => {
     if (String(err?.message).includes('[FILE_CONFLICT]')) {
       autoSaveSuspended = true // 冲突未解决前不再自动保存，避免每分钟重复报错
       message.error('文件已被其他窗口或外部程序修改，请使用“另存为”保留修改')
+    } else if (String(err?.message).includes('[EXAMPLE_PROTECTED]')) {
+      // 另存对话框里选到了示例目录内（示例是内置资产，不允许覆盖）
+      message.error('示例文件不允许修改，请选择其他位置保存')
     } else {
       message.error('保存失败')
     }
@@ -628,7 +631,11 @@ const saveAs = async () => {
     resetRefData()
   } catch (err) {
     console.error('另存为失败', err)
-    message.error('另存为失败')
+    if (String(err?.message).includes('[EXAMPLE_PROTECTED]')) {
+      message.error('示例文件不允许修改，请选择其他位置保存')
+    } else {
+      message.error('另存为失败')
+    }
   }
 }
 

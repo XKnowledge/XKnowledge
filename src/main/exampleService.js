@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { app } from 'electron'
+import { examplesDir } from './examplePaths'
 import { readChartFile, validateChartStructure } from './fileService'
 
 /**
@@ -12,8 +12,6 @@ import { readChartFile, validateChartStructure } from './fileService'
 
 /** 允许的示例文件名：字母/数字/下划线/中文/连字符 + .xk，不含任何路径成分 */
 const EXAMPLE_NAME_RE = /^[\w一-龥-]+\.xk$/
-
-const examplesDir = () => path.join(app.getAppPath(), 'examples')
 
 /**
  * 列出全部可用示例的元数据。

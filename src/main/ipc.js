@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
+import { isExamplePath } from './examplePaths'
 import { createChartWindow, enterChartMode, exitChartMode, takePendingChart } from './windowManager'
 import { IPC } from '../shared/ipc-channels'
 
@@ -25,7 +26,8 @@ const cleanupAttached = new WeakSet()
 
 export const registerIpc = () => {
   ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
-    if (!path) {
+    // 示例文件永不写回：path 指向 examples 内时视同无路径，弹另存让用户存副本
+    if (!path || isExamplePath(path)) {
       return fileService.saveChartFileAs(senderWindow(event), content, '将文件保存到...')
     }
     return fileService.writeChartFile(path, content)
@@ -55,7 +57,13 @@ export const registerIpc = () => {
     }
 
     // readChartFile 失败时 throw，经 invoke 自动变为渲染端 reject
-    return fileService.readChartFile(path)
+    const read = await fileService.readChartFile(path)
+    // 用户经"打开文件"对话框打开了 examples 内的示例：视同图库打开，
+    // 置空 path 走副本语义，保存必弹"另存为"（示例永不被写坏）
+    if (isExamplePath(path)) {
+      return { content: read.content, path: '' }
+    }
+    return read
   })
 
   ipcMain.handle(IPC.FILE_OPENED, (event, { path }) => {

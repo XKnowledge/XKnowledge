@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { dialog } from 'electron'
 import { createPathGuard } from './fileGuard'
+import { isExamplePath } from './examplePaths'
 
 const FILE_FILTERS = [{ name: 'XKnowledge', extensions: ['xk'] }]
 
@@ -86,6 +87,22 @@ const wrapWriteError = (err, filePath) =>
   })
 
 /**
+ * 示例目录写保护：examples 内文件是内置资产，任何通道都不允许写。
+ * message 带稳定 token [EXAMPLE_PROTECTED]，供渲染端跨 IPC 分支提示
+ * （与 [FILE_CONFLICT] 同套路）。
+ */
+const assertNotExample = (filePath) => {
+  if (!isExamplePath(filePath)) return
+  throw Object.assign(
+    new Error('[EXAMPLE_PROTECTED] 示例文件不允许修改，请保存到其他位置'),
+    {
+      code: 'EXAMPLE_PROTECTED',
+      path: filePath
+    }
+  )
+}
+
+/**
  * 弹出"打开"对话框。返回 electron 原生的 ShowOpenDialogReturnValue
  * （canceled / filePaths），不负责后续读取。
  */
@@ -157,6 +174,7 @@ export const readChartFile = async (filePath) => {
  * 弹出另存对话框并写入文件（原子写入）。
  * 用户取消返回 { canceled: true }；成功返回 { path }。
  * dialog 选中的路径视为用户显式授权，写后记录 mtime。
+ * 选中示例目录内的路径时拒绝写入（示例是内置资产，不允许覆盖）。
  */
 export const saveChartFileAs = async (window, content, title) => {
   const { filePath } = await dialog.showSaveDialog(window, {
@@ -167,6 +185,7 @@ export const saveChartFileAs = async (window, content, title) => {
 
   if (!filePath) return { canceled: true }
 
+  assertNotExample(filePath)
   guard.authorize(filePath, null)
   try {
     await writeFileAtomic(filePath, content)
@@ -181,8 +200,10 @@ export const saveChartFileAs = async (window, content, title) => {
  * 按给定路径写入文件（保存/自动保存场景，不弹对话框）。
  * 写前经 guard 校验（路径已授权 + 无 mtime 冲突），写入原子化，
  * 失败包装为 WRITE_FAILED 中文错误。
+ * 示例目录内路径无条件拒绝（先于授权检查：无论是否授权都不许写）。
  */
 export const writeChartFile = async (filePath, content) => {
+  assertNotExample(filePath)
   await guard.assertWritable(filePath) // 未授权 / 冲突时 throw，带 code
   try {
     await writeFileAtomic(filePath, content)

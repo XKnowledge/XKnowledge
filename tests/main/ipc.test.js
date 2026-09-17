@@ -3,7 +3,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
   BrowserWindow: { fromWebContents: vi.fn(), fromId: vi.fn() },
-  dialog: { showMessageBox: vi.fn() }
+  dialog: { showMessageBox: vi.fn() },
+  // examplePaths 经 app.getAppPath() 定位 examples 目录
+  app: { getAppPath: vi.fn(() => 'C:/mock-app') }
 }))
 
 vi.mock('../../src/main/fileService', () => ({
@@ -207,6 +209,63 @@ describe('FILE_OPENED：closed 监听器去重', () => {
     fileService.readChartFile.mockResolvedValue({ content: '{}', path: 'C:/dup-4.xk' })
     const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
     expect(res).toEqual({ content: '{}', path: 'C:/dup-4.xk' })
+  })
+})
+
+describe('示例文件保护（examples 内文件只读，保存必走另存）', () => {
+  it('FILE_OPEN 打开 examples 内文件时返回 path 为空，装载即副本语义', async () => {
+    fileService.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/mock-app/examples/金融.xk']
+    })
+    fileService.readChartFile.mockResolvedValue({
+      content: '{}',
+      path: 'C:/mock-app/examples/金融.xk'
+    })
+    const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
+    expect(fileService.readChartFile).toHaveBeenCalledWith('C:/mock-app/examples/金融.xk')
+    expect(res).toEqual({ content: '{}', path: '' })
+  })
+
+  it('FILE_OPEN 打开普通文件不受影响，path 原样返回', async () => {
+    fileService.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/普通.xk']
+    })
+    fileService.readChartFile.mockResolvedValue({ content: '{}', path: 'C:/普通.xk' })
+    const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
+    expect(res).toEqual({ content: '{}', path: 'C:/普通.xk' })
+  })
+
+  it('FILE_SAVE 收到指向 examples 的 path 时改道 saveChartFileAs，不写原文件', async () => {
+    fileService.saveChartFileAs.mockResolvedValue({ path: 'C:/我的副本.xk' })
+    const res = await handlerOf(IPC.FILE_SAVE)(senderOf(1), {
+      path: 'C:/mock-app/examples/金融.xk',
+      content: '{}'
+    })
+    expect(fileService.saveChartFileAs).toHaveBeenCalled()
+    expect(fileService.writeChartFile).not.toHaveBeenCalled()
+    expect(res).toEqual({ path: 'C:/我的副本.xk' })
+  })
+
+  it('FILE_OPEN 打开 data 内置示例（test.xk）同样返回 path 为空', async () => {
+    fileService.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/mock-app/data/test.xk']
+    })
+    fileService.readChartFile.mockResolvedValue({
+      content: '{}',
+      path: 'C:/mock-app/data/test.xk'
+    })
+    const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
+    expect(res).toEqual({ content: '{}', path: '' })
+  })
+
+  it('FILE_SAVE 普通路径仍走 writeChartFile 原地写回', async () => {
+    fileService.writeChartFile.mockResolvedValue({ path: 'C:/普通.xk' })
+    await handlerOf(IPC.FILE_SAVE)(senderOf(1), { path: 'C:/普通.xk', content: '{}' })
+    expect(fileService.writeChartFile).toHaveBeenCalledWith('C:/普通.xk', '{}')
+    expect(fileService.saveChartFileAs).not.toHaveBeenCalled()
   })
 })
 
