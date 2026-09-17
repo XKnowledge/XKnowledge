@@ -15,7 +15,10 @@ __pycache__
 # 运行应用产生的本地用户/测试数据（如保存的 .xk 测试文件）
 data
 
+# agent
 .superpowers
+opencode.json
 
 # 冒烟脚本截图输出
 .smoke-shots/
+
