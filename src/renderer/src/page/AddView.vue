@@ -1,95 +1,107 @@
 <template>
   <div class="inner-div">
     <div class="content">
-      <a-typography>
-        <a-dropdown>
-          <a class="ant-dropdown-link" @click.prevent>
-            {{ curMenu }}
-            <UnorderedListOutlined />
-          </a>
-          <template #overlay>
-            <a-menu @click="onClick">
-              <a-menu-item v-for="item in menuList" :key="item.key">{{ item.name }}</a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
-        <a-typography-title :level="2">选取模板</a-typography-title>
-        <!-- <a-typography-title :level="3">最近使用</a-typography-title> -->
-        <!-- <a-typography-title :level="3">demo</a-typography-title> -->
-        <a-typography-title v-for="item in menuList" :key="item.key" :level="3">{{
-          item.name
-        }}</a-typography-title>
-        <XkCardList :fileList="templates" />
-        <a-typography-title :level="3">示例图库</a-typography-title>
-        <a-button type="link" class="gallery-link" @click="router.push('/gallery')">
-          浏览示例图库
-          <RightOutlined />
-        </a-button>
-      </a-typography>
+      <a-typography-title :level="2">示例图库</a-typography-title>
+      <a-space :size="[8, 16]" wrap>
+        <!-- 首卡：空框，单击新建空白文件 -->
+        <div class="new-blank-card" title="新建空白文件" @click="createBlankFile">
+          <PlusOutlined class="new-blank-icon" />
+          <div>新建空白文件</div>
+        </div>
+        <XkExampleCard
+          v-for="ex in examples"
+          :key="ex.fileName"
+          :example="ex"
+          :selected="ex.fileName === selected"
+          @select="selected = ex.fileName"
+          @open="openExampleChart(ex)"
+        />
+      </a-space>
+      <a-empty v-if="!loading && examples.length === 0" description="暂无示例" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { RightOutlined, UnorderedListOutlined } from '@ant-design/icons-vue'
-import { ref } from 'vue'
+import { PlusOutlined } from '@ant-design/icons-vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 
-import XkCardList from '../components/XkCardList.vue'
-import TemplatePreview from '../assets/template.png'
+import XkExampleCard from '../components/XkExampleCard.vue'
+import { setPendingChart } from '../store/chartStore'
 
 const router = useRouter()
 
-const menuList = ref([
-  { key: '1', name: '全部' }
-  // { key: "2", name: "基本" }
-  // { key: "3", name: "知识管理" },
-  // { key: "4", name: "会议和计划" },
-  // { key: "5", name: "学习和教育" },
-  // { key: "6", name: "项目管理" },
-  // { key: "7", name: "娱乐和生活" },
-  // { key: "8", name: "分析和决策" },
-  // { key: "9", name: "创造力" }
-])
+const examples = ref([])
+const loading = ref(true)
+const selected = ref('')
 
-const curMenu = ref('全部')
-
-const onClick = ({ key }) => {
-  // menu 的 key 是字符串，需按 key 查找而非当数组下标用
-  const item = menuList.value.find((item) => item.key === key)
-  if (item) {
-    curMenu.value = item.name
+onMounted(async () => {
+  try {
+    const res = await window.electronAPI.listExamples()
+    examples.value = res.examples ?? []
+  } catch (err) {
+    // 列表失败按空态处理，不弹错误框打扰首页浏览
+    console.error('加载示例列表失败', err)
+    examples.value = []
+  } finally {
+    loading.value = false
   }
+})
+
+/** 单击空框：空图模板同窗口进入图表页（未存盘，path 为空） */
+const createBlankFile = () => {
+  setPendingChart({ value: JSON.stringify({ version: 2, nodes: [], links: [] }), path: '' })
+  router.push('/chart')
 }
 
-const templates = ref([
-  {
-    id: 'template1',
-    name: '思维导图',
-    src: TemplatePreview
+/**
+ * 双击打开示例：与"打开本地文件"同一装载机制（同窗口跳转）。
+ * 副本语义——path 置空，保存时现有逻辑自动弹"另存为"，
+ * 安装包内示例只读，用户编辑的始终是自己的副本。
+ */
+const openExampleChart = async (ex) => {
+  try {
+    const { content } = await window.electronAPI.openExample({ fileName: ex.fileName })
+    setPendingChart({ value: content, path: '' })
+    router.push('/chart')
+  } catch (err) {
+    console.error('打开示例失败', err)
+    // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
+    message.error('打开失败：文件读取失败或已损坏')
   }
-  // {
-  //   id: "template2",
-  //   name: "思维导图2",
-  //   src: imgUrl
-  // },
-  // {
-  //   id: "template3",
-  //   name: "思维导图3",
-  //   src: imgUrl
-  // }
-])
+}
 </script>
 
 <style scoped>
-.gallery-link {
-  padding: 0 2px;
+/* 首卡空框：尺寸对齐 XkExampleCard（200×150），
+   line-height 重置理由同其注释——顶掉 BasicLayout 的 120px 行高 */
+.new-blank-card {
+  width: 200px;
+  height: 150px;
+  border: 1px dashed #c0c4cc;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  color: #8c8c8c;
+  background: #ffffff;
   font-size: 13px;
-  color: #535353;
+  line-height: 1.4;
 }
 
-.gallery-link:hover {
+.new-blank-card:hover {
+  border-color: #2e64d6;
   color: #2e64d6;
+}
+
+.new-blank-icon {
+  font-size: 28px;
 }
 
 .content {
@@ -132,6 +144,6 @@ const templates = ref([
 
 .inner-div::-webkit-scrollbar-corner {
   background: #f1f1f1;
-  /* 设置滚动条角落颜色 */
+  /* 设置滚动条角落背景颜色 */
 }
 </style>

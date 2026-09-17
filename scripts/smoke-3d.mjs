@@ -1,4 +1,4 @@
-// 冒烟驱动：生产构建启动应用，双击模板进入图表页，采样点击 canvas
+// 冒烟驱动：生产构建启动应用，双击首页示例卡进入图表页，采样点击 canvas
 // 验证 3D 渲染与点击高亮（增量重着色路径），收集渲染进程错误。
 // 用法：node scripts/smoke-3d.mjs   （需先 yarn build）
 import { _electron as electron } from 'playwright-core'
@@ -35,12 +35,12 @@ const shot = async (name) => {
   console.log(`shot: ${name}`)
 }
 
-// 1. 首页：等待模板卡出现
-await page.waitForSelector('#template1', { timeout: 15_000 })
+// 1. 首页：等待示例卡出现（示例列表经 IPC 异步加载，首卡为"新建空白"空框）
+await page.waitForSelector('.xk-example-card', { timeout: 15_000 })
 await shot('01-home')
 
-// 2. 双击模板卡 → 同窗口跳转图表页（模板 5 节点 6 边）
-await page.locator('#template1').dblclick()
+// 2. 双击第一张示例卡 → 同窗口跳转图表页
+await page.locator('.xk-example-card').first().dblclick()
 await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
 // WebGL 失败提示条不应出现
 await page.waitForTimeout(3_000) // 等布局稳定 + 首次 zoomToFit 完成
@@ -54,7 +54,13 @@ const probes = []
 if (canvasBox) {
   const cx = canvasBox.x + canvasBox.width / 2
   const cy = canvasBox.y + canvasBox.height / 2
-  for (const [dx, dy] of [[0, 0], [-70, 0], [70, 0], [0, -70], [0, 70]]) {
+  for (const [dx, dy] of [
+    [0, 0],
+    [-70, 0],
+    [70, 0],
+    [0, -70],
+    [0, 70]
+  ]) {
     probes.push([cx + dx, cy + dy])
   }
 }

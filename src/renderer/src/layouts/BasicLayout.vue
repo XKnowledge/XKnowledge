@@ -5,8 +5,8 @@
         <div style="height: 50px" />
         <a-menu
           id="left-menu"
-          v-model:openKeys="openKeys"
-          v-model:selectedKeys="selectedKeys"
+          v-model:open-keys="openKeys"
+          v-model:selected-keys="selectedKeys"
           style="width: 200px"
           mode="inline"
           :items="items"
@@ -60,11 +60,11 @@ const siderStyle = {
   backgroundColor: '#f5f5f5'
 }
 
-// 侧边菜单目前只放已实现的页面；"最近/我的文件"等仍预留，
-// 未来恢复时在此追加 items（参考 git 历史）
-const items = reactive([{ key: '/gallery', label: '图库' }])
+// 侧边菜单暂无菜单项：示例已直接上首页（图库页移除）；
+// "最近/我的文件"等仍预留，未来恢复时在此追加 items（参考 git 历史）
+const items = reactive([])
 
-// 菜单高亮跟随路由（/gallery）；首页等无菜单项的页面不高亮。
+// 菜单高亮跟随路由；首页等无菜单项的页面不高亮。
 // 注意必须在 items 声明之后（immediate 立即执行回调会访问 items，
 // 放在声明前是 TDZ 引用错误，BasicLayout 挂载失败即整页白屏）。
 // watch 随组件卸载自动停止（chart 页会卸载 BasicLayout）
