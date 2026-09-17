@@ -16,3 +16,6 @@ __pycache__
 data
 
 .superpowers
+
+# 冒烟脚本截图输出
+.smoke-shots/

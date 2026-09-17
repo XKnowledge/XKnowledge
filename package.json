@@ -48,6 +48,7 @@
     "electron-vite": "^5",
     "eslint": "^10",
     "eslint-plugin-vue": "^10",
+    "playwright-core": "^1.63.0",
     "prettier": "^3.9",
     "typescript": "^5.9",
     "vite": "^7",
