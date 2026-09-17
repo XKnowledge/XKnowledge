@@ -20,17 +20,25 @@
           item.name
         }}</a-typography-title>
         <XkCardList :fileList="templates" />
+        <a-typography-title :level="3">示例图库</a-typography-title>
+        <a-button type="link" class="gallery-link" @click="router.push('/gallery')">
+          浏览示例图库
+          <RightOutlined />
+        </a-button>
       </a-typography>
     </div>
   </div>
 </template>
 
 <script setup>
-import { UnorderedListOutlined } from '@ant-design/icons-vue'
+import { RightOutlined, UnorderedListOutlined } from '@ant-design/icons-vue'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import XkCardList from '../components/XkCardList.vue'
 import TemplatePreview from '../assets/template.png'
+
+const router = useRouter()
 
 const menuList = ref([
   { key: '1', name: '全部' }
@@ -74,6 +82,16 @@ const templates = ref([
 </script>
 
 <style scoped>
+.gallery-link {
+  padding: 0 2px;
+  font-size: 13px;
+  color: #535353;
+}
+
+.gallery-link:hover {
+  color: #2e64d6;
+}
+
 .content {
   padding-top: 10px;
   /* 上边距为 10px */

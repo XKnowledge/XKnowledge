@@ -10,6 +10,8 @@ import { IPC } from '../shared/ipc-channels'
 contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke(IPC.FILE_OPEN),
   fileOpened: (payload) => ipcRenderer.invoke(IPC.FILE_OPENED, payload),
+  listExamples: () => ipcRenderer.invoke(IPC.EXAMPLE_LIST),
+  openExample: (payload) => ipcRenderer.invoke(IPC.EXAMPLE_OPEN, payload),
   saveFile: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE, payload),
   saveFileAs: (payload) => ipcRenderer.invoke(IPC.FILE_SAVE_AS, payload),
   newChartWindow: (payload) => ipcRenderer.invoke(IPC.APP_NEW_CHART_WINDOW, payload),

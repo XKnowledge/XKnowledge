@@ -11,6 +11,10 @@ export const IPC = {
   FILE_SAVE: 'file:save',
   FILE_SAVE_AS: 'file:save-as',
 
+  // 内置示例域（examples/ 目录即图库）
+  EXAMPLE_LIST: 'example:list',
+  EXAMPLE_OPEN: 'example:open',
+
   // 应用/窗口域
   APP_NEW_CHART_WINDOW: 'app:new-chart-window',
   APP_TAKE_PENDING_CHART: 'app:take-pending-chart',

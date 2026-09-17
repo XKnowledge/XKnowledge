@@ -1,5 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
+import { listExamples, openExample } from './exampleService'
 import { createChartWindow, enterChartMode, exitChartMode, takePendingChart } from './windowManager'
 import { IPC } from '../shared/ipc-channels'
 
@@ -80,6 +81,12 @@ export const registerIpc = () => {
     }
     return { ok: true }
   })
+
+  ipcMain.handle(IPC.EXAMPLE_LIST, async () => ({ examples: await listExamples() }))
+
+  // openExample 失败时 throw（非法文件名/读取损坏），经 invoke 变为渲染端
+  // reject，由渲染端按固定文案提示
+  ipcMain.handle(IPC.EXAMPLE_OPEN, (event, { fileName }) => openExample(fileName))
 
   ipcMain.handle(IPC.APP_CLOSE_WINDOW, (event) => {
     BrowserWindow.fromWebContents(event.sender)?.destroy()

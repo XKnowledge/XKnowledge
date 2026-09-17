@@ -20,8 +20,14 @@ vi.mock('../../src/main/windowManager', () => ({
   takePendingChart: vi.fn()
 }))
 
+vi.mock('../../src/main/exampleService', () => ({
+  listExamples: vi.fn(),
+  openExample: vi.fn()
+}))
+
 import { ipcMain, BrowserWindow } from 'electron'
 import * as fileService from '../../src/main/fileService'
+import { listExamples, openExample } from '../../src/main/exampleService'
 import { createChartWindow, takePendingChart } from '../../src/main/windowManager'
 import { registerIpc } from '../../src/main/ipc'
 import { IPC } from '../../src/shared/ipc-channels'
@@ -201,6 +207,38 @@ describe('FILE_OPENED：closed 监听器去重', () => {
     fileService.readChartFile.mockResolvedValue({ content: '{}', path: 'C:/dup-4.xk' })
     const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
     expect(res).toEqual({ content: '{}', path: 'C:/dup-4.xk' })
+  })
+})
+
+describe('内置示例域', () => {
+  it('EXAMPLE_LIST 以 { examples } 包裹透传 exampleService 的列表结果', async () => {
+    const list = [
+      {
+        fileName: '金融.xk',
+        title: '金融',
+        description: '',
+        nodeCount: 87,
+        linkCount: 130,
+        categories: ['宏观经济', '货币与银行']
+      }
+    ]
+    listExamples.mockResolvedValue(list)
+    const res = await handlerOf(IPC.EXAMPLE_LIST)()
+    expect(res).toEqual({ examples: list })
+  })
+
+  it('EXAMPLE_OPEN 把 fileName 传给 openExample 并透传结果', async () => {
+    openExample.mockResolvedValue({ content: '{"version":2}' })
+    const res = await handlerOf(IPC.EXAMPLE_OPEN)(senderOf(1), { fileName: '金融.xk' })
+    expect(openExample).toHaveBeenCalledWith('金融.xk')
+    expect(res).toEqual({ content: '{"version":2}' })
+  })
+
+  it('EXAMPLE_OPEN 失败（非法文件名/损坏）时 reject 到渲染端', async () => {
+    openExample.mockRejectedValue(new Error('无效的示例文件名'))
+    await expect(
+      handlerOf(IPC.EXAMPLE_OPEN)(senderOf(1), { fileName: '../evil.xk' })
+    ).rejects.toThrow('无效的示例文件名')
   })
 })
 

@@ -30,14 +30,15 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { setPendingChart } from '../store/chartStore'
 
 const router = useRouter()
+const route = useRoute()
 const title = ref('新建')
 
-const selectedKeys = ref(['add'])
+const selectedKeys = ref([])
 const openKeys = ref([])
 
 const headerStyle = {
@@ -59,8 +60,21 @@ const siderStyle = {
   backgroundColor: '#f5f5f5'
 }
 
-// 侧边菜单项预留：未来恢复菜单时用 a-menu items 重建（参考 git 历史）
-const items = reactive([])
+// 侧边菜单目前只放已实现的页面；"最近/我的文件"等仍预留，
+// 未来恢复时在此追加 items（参考 git 历史）
+const items = reactive([{ key: '/gallery', label: '图库' }])
+
+// 菜单高亮跟随路由（/gallery）；首页等无菜单项的页面不高亮。
+// 注意必须在 items 声明之后（immediate 立即执行回调会访问 items，
+// 放在声明前是 TDZ 引用错误，BasicLayout 挂载失败即整页白屏）。
+// watch 随组件卸载自动停止（chart 页会卸载 BasicLayout）
+watch(
+  () => route.path,
+  (p) => {
+    selectedKeys.value = items.some((item) => item.key === p) ? [p] : []
+  },
+  { immediate: true }
+)
 
 const handleClick = (e) => {
   const itemObj = items.find((item) => item.key === e.key)

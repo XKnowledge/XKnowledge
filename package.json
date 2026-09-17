@@ -28,6 +28,7 @@
     "files": [
       "out/**/*",
       "resources/**/*",
+      "examples/**/*",
       "!**/node_modules/**/*"
     ]
   },
