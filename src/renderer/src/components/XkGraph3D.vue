@@ -53,7 +53,6 @@ const initFailed = ref(false)
 
 let graph = null
 let resizeObserver = null
-let didInitialFit = false // 首次布局稳定后自动 zoomToFit 一次
 
 // 图例：从节点派生类目；hiddenCategories 控制显隐
 const categories = computed(() => [...new Set(props.nodes.map((n) => n.category))])
@@ -197,13 +196,10 @@ onMounted(() => {
     .nodeRelSize(1)
     .onNodeClick((n) => emit('node-click', pureNode(n), n.__idx))
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
-    .onEngineStop(() => {
-      // 仅首次布局稳定时自动取景，之后的编辑刷新不打扰视角
-      if (!didInitialFit) {
-        didInitialFit = true
-        graph.zoomToFit(600, 80)
-      }
-    })
+    // 不做引擎停止后的自动取景：库的 cooldownTime 默认 15s，届时自动
+    // zoomToFit 会把用户已拖动过的视角抢回去。取景/复位只由「复位视图」
+    // 按钮手动触发；打开图的初始距离由库自带的数据装载粗取景兜底
+    // （那段带"相机未被用户修改"保护，不会抢视角）
     // 边默认宽度；link 的曲线默认直线即可
     .linkWidth(1)
 
