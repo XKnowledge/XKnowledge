@@ -29,6 +29,13 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import SpriteText from 'three-spritetext'
 import { categoryColor } from '../utils/categoryColor.js'
+import {
+  mergeGraphNodes,
+  planHighlightRepaint,
+  linkEnd,
+  HL_COLOR,
+  LINK_BASE_COLOR
+} from '../utils/graphData.js'
 
 const props = defineProps({
   nodes: { type: Array, default: () => [] },
@@ -58,26 +65,10 @@ const toggleCategory = (cat) => {
   applyVisibility()
 }
 
-/** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props */
-const toGraphNodes = () =>
-  props.nodes.map((n, i) => {
-    const old = graph?.graphData().nodes.find((o) => o.name === n.name)
-    // 保留旧坐标（若有），编辑刷新后已布局的图不跳
-    return old
-      ? {
-          ...n,
-          __idx: i,
-          x: old.x,
-          y: old.y,
-          z: old.z,
-          ...(old.fx !== undefined && { fx: old.fx, fy: old.fy, fz: old.fz })
-        }
-      : { ...n, __idx: i }
-  })
+/** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
+ *  同名节点保留旧坐标（编辑刷新后已布局的图不跳），按 name 建 Map 索引 O(n) 合并 */
+const toGraphNodes = () => mergeGraphNodes(props.nodes, graph?.graphData().nodes)
 const toGraphLinks = () => props.links.map((l, i) => ({ ...l, __idx: i }))
-
-/** d3 布局会把 link 的 source/target 反解为节点对象；归一化回名字符串再比较 */
-const linkEnd = (v) => (typeof v === 'object' && v !== null ? v.name : v)
 
 /** 剥离内部字段的纯数据，发给父组件 */
 const pureNode = (n) => ({
@@ -108,18 +99,46 @@ const applyVisibility = () => {
     })
 }
 
+/** 上一次应用的高亮状态：增量重着色只处理翻转（进入/退出高亮）的对象 */
+let prevHlNodes = new Set()
+let prevHlLink = null
+
 const applyHighlight = () => {
   if (!graph) return
   const hl = new Set(props.highlightNodes)
   const le = props.highlightLink
+  // accessor 描述"正确颜色"：graphData 重灌或 refresh 时库按它重建材质
   graph
-    .nodeColor((n) => (hl.has(n.name) ? '#e8684a' : categoryColor(n.category)))
+    .nodeColor((n) => (hl.has(n.name) ? HL_COLOR : categoryColor(n.category)))
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
-        ? '#e8684a'
-        : '#4b565b'
+        ? HL_COLOR
+        : LINK_BASE_COLOR
     )
-    .refresh()
+  // 高亮变化走增量：只改翻转对象的材质颜色。不调 refresh()——它会对每个节点
+  // 重新执行 nodeThreeObject，重建全部 SpriteText 标签，大图逐个点选持续掉帧。
+  // __threeObj 是 three-forcegraph 挂在 datum 上的内部引用，缺失（库升级破坏）
+  // 时回退全量 refresh，保证高亮功能仍生效
+  const { nodeRepaints, linkRepaints } = planHighlightRepaint({
+    nodes: graph.graphData().nodes,
+    links: graph.graphData().links,
+    prevNodes: prevHlNodes,
+    prevLink: prevHlLink,
+    nextNodes: hl,
+    nextLink: le
+  })
+  const repaints = [...nodeRepaints, ...linkRepaints]
+  let painted = 0
+  for (const [datum, color] of repaints) {
+    const colorizable = datum.__threeObj?.material?.color
+    if (colorizable?.set) {
+      colorizable.set(color)
+      painted++
+    }
+  }
+  if (repaints.length > 0 && painted === 0) graph.refresh()
+  prevHlNodes = hl
+  prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
 }
 
 /** 大节点（symbolSize 前 30 名）常显名称，小节点按 showSmallLabels 开关决定 */
