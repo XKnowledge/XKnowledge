@@ -17,6 +17,11 @@ const senderWindow = (event) => BrowserWindow.fromWebContents(event.sender) ?? u
  */
 const openedFiles = new Map()
 
+// 已挂 closed 清理监听器的窗口。渲染端在装载文件与每次保存/另存成功后都会
+// 上报 file:opened，若每次都新注册 once('closed') 会在长会话下无上限累积
+// （MaxListenersExceededWarning），故每个窗口只挂一个，关闭时清其全部记录。
+const cleanupAttached = new WeakSet()
+
 export const registerIpc = () => {
   ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
     if (!path) {
@@ -61,9 +66,17 @@ export const registerIpc = () => {
     }
     if (path) {
       openedFiles.set(path, id)
-      BrowserWindow.fromWebContents(event.sender)?.once('closed', () => {
-        if (openedFiles.get(path) === id) openedFiles.delete(path)
-      })
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win && !cleanupAttached.has(win)) {
+        cleanupAttached.add(win)
+        win.once('closed', () => {
+          // 清掉本窗口登记的全部记录（换文件后旧记录已即时清过，正常只有一条；
+          // 按窗口 id 而非按 path 判断，别的窗口覆盖登记的文件不受影响）
+          for (const [recorded, holderId] of openedFiles) {
+            if (holderId === id) openedFiles.delete(recorded)
+          }
+        })
+      }
     }
     return { ok: true }
   })
