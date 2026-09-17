@@ -51,7 +51,6 @@ const inputRef = ref()
 
 const addCategory = (e) => {
   e.preventDefault()
-  console.log(categoryName.value)
   if (categoryName.value) {
     currentNode.value.category = categoryName.value
     if (!categoryItems.value.includes(categoryName.value)) {

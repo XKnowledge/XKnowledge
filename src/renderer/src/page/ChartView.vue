@@ -128,6 +128,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
+import { applyUndo, applyRedo } from '../utils/historyActions'
 import { takePendingChart } from '../store/chartStore'
 import createTemplate1 from '../template/template1.ts'
 
@@ -634,6 +635,7 @@ const saveAs = async () => {
 const undo = () => {
   /**
    * 实现快捷键Ctrl+Z
+   * 数据补偿逻辑在 utils/historyActions（多重边安全），这里只管序号与 UI
    */
   const { historyList, historySequenceNumber } = xkContext.value
 
@@ -642,64 +644,7 @@ const undo = () => {
   const currentHistory = historyList[historySequenceNumber]
   xkContext.value.historySequenceNumber--
 
-  // 策略模式处理不同操作类型
-  const actionHandlers = {
-    createNode: () => {
-      xkContext.value.chartData.nodes = xkContext.value.chartData.nodes.filter(
-        (node) => node.name !== currentHistory.data.name
-      )
-    },
-
-    changeNode: () => {
-      const nodeIndex = xkContext.value.chartData.nodes.findIndex(
-        (node) => node.name === currentHistory.new.name
-      )
-
-      if (nodeIndex > -1) {
-        // 还原节点数据
-        xkContext.value.chartData.nodes[nodeIndex] = currentHistory.old
-
-        // 更新关联的边
-        if (currentHistory.new.name !== currentHistory.old.name) {
-          xkContext.value.chartData.links.forEach((link) => {
-            if (link.source === currentHistory.new.name) link.source = currentHistory.old.name
-            if (link.target === currentHistory.new.name) link.target = currentHistory.old.name
-          })
-        }
-      }
-    },
-
-    deleteNode: () => {
-      xkContext.value.chartData.nodes.push(currentHistory.data)
-      xkContext.value.chartData.links.push(...currentHistory.links)
-    },
-
-    createEdge: () => {
-      xkContext.value.chartData.links = xkContext.value.chartData.links.filter(
-        (link) =>
-          link.source !== currentHistory.data.source || link.target !== currentHistory.data.target
-      )
-    },
-
-    changeEdge: () => {
-      const edgeIndex = xkContext.value.chartData.links.findIndex(
-        (link) =>
-          link.source === currentHistory.new.source && link.target === currentHistory.new.target
-      )
-
-      if (edgeIndex > -1) {
-        xkContext.value.chartData.links[edgeIndex] = currentHistory.old
-      }
-    },
-
-    deleteEdge: () => {
-      xkContext.value.chartData.links.push(currentHistory.data)
-    }
-  }
-
-  // 执行对应操作处理
-  if (actionHandlers[currentHistory.act]) {
-    actionHandlers[currentHistory.act]()
+  if (applyUndo(xkContext.value.chartData, currentHistory)) {
     xkContext.value.updateChart = !xkContext.value.updateChart
   }
 
@@ -710,6 +655,7 @@ const undo = () => {
 const redo = () => {
   /**
    * 实现快捷键Ctrl+Y
+   * 数据补偿逻辑在 utils/historyActions（多重边安全），这里只管序号与 UI
    */
   const currentHSN = xkContext.value.historySequenceNumber + 1
   if (currentHSN >= xkContext.value.historyList.length) return
@@ -717,63 +663,7 @@ const redo = () => {
   const currentHistory = xkContext.value.historyList[currentHSN]
   xkContext.value.historySequenceNumber = currentHSN
 
-  // 策略模式处理不同操作类型
-  const actionHandlers = {
-    createNode: () => {
-      xkContext.value.chartData.nodes.push(currentHistory.data)
-    },
-
-    changeNode: () => {
-      const nodes = xkContext.value.chartData.nodes
-      const nodeIndex = nodes.findIndex((n) => n.name === currentHistory.old.name)
-
-      if (nodeIndex > -1) {
-        nodes[nodeIndex] = currentHistory.new
-
-        // 更新关联边名称
-        if (currentHistory.new.name !== currentHistory.old.name) {
-          xkContext.value.chartData.links.forEach((link) => {
-            if (link.source === currentHistory.old.name) link.source = currentHistory.new.name
-            if (link.target === currentHistory.old.name) link.target = currentHistory.new.name
-          })
-        }
-      }
-    },
-
-    deleteNode: () => {
-      const { nodes, links } = xkContext.value.chartData
-
-      xkContext.value.chartData.nodes = nodes.filter((n) => n.name !== currentHistory.data.name)
-      xkContext.value.chartData.links = links.filter(
-        (l) => l.source !== currentHistory.data.name && l.target !== currentHistory.data.name
-      )
-    },
-
-    createEdge: () => {
-      xkContext.value.chartData.links.push(currentHistory.data)
-    },
-
-    changeEdge: () => {
-      const links = xkContext.value.chartData.links
-      const edgeIndex = links.findIndex(
-        (l) => l.source === currentHistory.old.source && l.target === currentHistory.old.target
-      )
-
-      if (edgeIndex > -1) {
-        links[edgeIndex] = currentHistory.new
-      }
-    },
-
-    deleteEdge: () => {
-      xkContext.value.chartData.links = xkContext.value.chartData.links.filter(
-        (l) => l.source !== currentHistory.data.source || l.target !== currentHistory.data.target
-      )
-    }
-  }
-
-  // 执行对应操作处理
-  if (actionHandlers[currentHistory.act]) {
-    actionHandlers[currentHistory.act]()
+  if (applyRedo(xkContext.value.chartData, currentHistory)) {
     xkContext.value.updateChart = !xkContext.value.updateChart
   }
 

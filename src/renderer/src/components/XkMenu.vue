@@ -20,7 +20,6 @@
             <a-col flex="auto">Ctrl+Y</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="5" @click="createEdge"> 创建连接 </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="6" @click="createNode">
           <a-row>
