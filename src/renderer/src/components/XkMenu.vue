@@ -7,6 +7,7 @@
       <a-menu style="width: 200px">
         <a-menu-item key="1" @click="createNewFile"> 新建文件 </a-menu-item>
         <a-menu-item key="2" @click="openFile"> 打开文件 </a-menu-item>
+        <a-menu-item key="12" @click="closeFile"> 关闭文件 </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="3" @click="undo">
           <a-row>
@@ -61,6 +62,11 @@ const createNewFile = () => {
 
 const openFile = () => {
   shortcutActive.value = 'open_file'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const closeFile = () => {
+  shortcutActive.value = 'close_file'
   shortcutWatch.value = !shortcutWatch.value
 }
 

@@ -205,6 +205,10 @@ export const exitChartMode = (current_window) => {
   current_window.setMaximizable(false)
   current_window.setMinimizable(false)
   current_window.setResizable(false)
-  // 注：未回退 minimumSize/最大化状态——当前不存在同窗口内退出图表页的
-  // 路径（图表页卸载即窗口关闭），若未来支持 SPA 内退出需补对称恢复
+  // 对称恢复（图表页卸载不再只有关窗一条路——「关闭文件」会同窗口跳回首页）：
+  // 取消最大化、回退图表页设置的最小尺寸、恢复默认窗口尺寸。unmaximize 对
+  // 非最大化窗口是无害空操作，无须条件判断
+  current_window.unmaximize()
+  current_window.setMinimumSize(0, 0)
+  current_window.setSize(900, 670)
 }

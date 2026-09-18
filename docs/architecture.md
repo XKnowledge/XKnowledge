@@ -169,6 +169,9 @@ XKnowledge/
 模块内两个按 `webContents.id` 键控的 Map：`pendingCharts`（待装载图表，取后即清）与
 `chartModeWindows`（图表模式事件处理器引用，保证解绑幂等）。
 
+`exitChartMode` 含窗口对称恢复：取消最大化、回退图表页设置的最小尺寸并恢复
+900×670 默认尺寸——图表页卸载不再等同于关窗（「关闭文件」会经路由同窗口跳回首页）。
+
 关闭确认的健壮性设计：拦截 `close` 后若渲染进程崩溃（`render-process-gone`）或假死
 （`unresponsive`），自动解除拦截，保证用户点 X 永远能关掉窗口；恢复响应
 （`responsive`）后重新启用确认。
@@ -182,6 +185,8 @@ webContents.id 登记簿）：
   `{ alreadyOpen }`，不重复开窗；登记指向已销毁窗口时清掉陈旧记录。
 - `file:opened` 上报时，同一窗口只保留最新一条记录（另存为换路径后，旧文件不再聚焦
   到本窗口）；窗口 `closed` 时自动清理。
+- `file:opened` 上报**空路径**时只清除该窗口的记录、不登记新文件（「关闭文件」
+  返回首页时用它清登记，避免该文件继续被聚焦到已回首页的窗口）。
 
 ### 5.4 fileService.js
 

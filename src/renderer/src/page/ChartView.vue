@@ -126,6 +126,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
 import { applyUndo, applyRedo } from '../utils/historyActions'
@@ -143,6 +144,8 @@ import DeleteNodeIcon from '../assets/delete_node.png'
 import CreateEdgeIcon from '../assets/create_edge.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
 import EditIcon from '../assets/edit.png'
+
+const router = useRouter()
 
 const xkContext = ref({
   errorMessage: '',
@@ -423,6 +426,7 @@ watch(shortcutWatch, () => {
   const actionMap = {
     save_file: saveFile,
     save_as: saveAs,
+    close_file: closeFile,
     create_new_file: createNewFile,
     open_file: openFile,
     create_node: createNode,
@@ -564,6 +568,33 @@ const openFile = async () => {
     // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
     message.error('打开失败：文件读取失败或已损坏')
   }
+}
+
+const closeFile = async () => {
+  /**
+   * 实现关闭文件：未保存确认与窗口关闭按钮同款（保存/放弃/取消），
+   * 通过后清掉主进程的打开登记再跳回首页，其余清理由 onUnmounted 完成
+   */
+  if (saveNodeVisible.value) {
+    let choice
+    try {
+      choice = await window.electronAPI.confirmUnsaved()
+    } catch (err) {
+      console.error('关闭文件确认失败', err)
+      return // 确认框失败按“取消”处理，避免误丢用户数据
+    }
+    if (choice === 'cancel') return
+    if (choice === 'save') {
+      const ok = await saveFile()
+      if (!ok) return // 保存失败留在图表页（报错沿用 saveFile 现有分支）
+    }
+  }
+  // 清掉本窗口的打开登记（空路径只清不登）：不清的话，再次打开同一文件
+  // 会“聚焦”到这个实际已回到首页的窗口
+  window.electronAPI.fileOpened({ path: '' }).catch((err) => {
+    console.error('清除打开登记失败', err)
+  })
+  router.push('/')
 }
 
 const saveFile = async () => {

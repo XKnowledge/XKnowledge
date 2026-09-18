@@ -172,6 +172,26 @@ describe('FILE_OPENED：文件-窗口登记', () => {
     const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
     expect(res).toEqual({ content: '{}', path: 'C:/a.xk' })
   })
+
+  it('空路径上报只清本窗口记录、不登记新文件（关闭文件返回首页时清登记）', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/close-1.xk' })
+
+    // 关闭文件：上报空路径清登记
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: '' })
+
+    // 再次打开同一文件应正常读取，而不是聚焦到已回首页的窗口 2
+    BrowserWindow.fromId.mockReturnValue(win)
+    fileService.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/close-1.xk']
+    })
+    fileService.readChartFile.mockResolvedValue({ content: '{}', path: 'C:/close-1.xk' })
+    const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
+    expect(res).toEqual({ content: '{}', path: 'C:/close-1.xk' })
+    expect(win.focus).not.toHaveBeenCalled()
+  })
 })
 
 describe('FILE_OPENED：closed 监听器去重', () => {
