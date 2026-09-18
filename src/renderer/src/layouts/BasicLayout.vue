@@ -1,22 +1,22 @@
 <template>
-  <a-space direction="vertical" :style="{ width: '100%' }" :size="[0, 48]">
-    <a-layout style="height: 100vh">
-      <a-layout-sider :style="siderStyle">
-        <div style="height: 50px" />
-        <div style="position: fixed; bottom: -30px; width: 200px">
-          <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
-        </div>
-      </a-layout-sider>
-      <a-layout>
-        <a-layout-header :style="headerStyle">
-          <div class="top-not-show"></div>
-        </a-layout-header>
-        <a-layout-content :style="contentStyle">
-          <RouterView />
-        </a-layout-content>
-      </a-layout>
+  <!-- 根节点必须是块级（a-layout），勿再用 a-space 等行内级组件包裹：
+       inline-flex 的基线对齐会把行框撑到 100vh 之外，导致页面级滚动条 -->
+  <a-layout style="height: 100vh">
+    <a-layout-sider :style="siderStyle">
+      <div style="height: 50px" />
+      <div style="position: fixed; bottom: -30px; width: 200px">
+        <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
+      </div>
+    </a-layout-sider>
+    <a-layout>
+      <a-layout-header :style="headerStyle">
+        <div class="top-not-show"></div>
+      </a-layout-header>
+      <a-layout-content :style="contentStyle">
+        <RouterView />
+      </a-layout-content>
     </a-layout>
-  </a-space>
+  </a-layout>
 </template>
 
 <script setup>

@@ -39,6 +39,11 @@ const shot = async (name) => {
 await page.waitForSelector('.xk-example-card', { timeout: 15_000 })
 await shot('01-home')
 
+// 1.1 首页不应出现页面级滚动条（html 溢出即回归：
+// 曾因布局根为 inline-flex 的 a-space，基线对齐使行框高出视口 ~2px）
+const pageScrollbar = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth)
+console.log('page-scrollbar:', pageScrollbar === 0 ? 'absent (ok)' : `PRESENT ${pageScrollbar}px (FAIL)`)
+
 // 2. 双击第一张示例卡 → 同窗口跳转图表页
 await page.locator('.xk-example-card').first().dblclick()
 await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
@@ -88,6 +93,6 @@ await shot('04-after-second-click')
 console.log('renderer-errors:', errors.length === 0 ? 'none (ok)' : JSON.stringify(errors, null, 2))
 await app.close()
 
-const ok = fallbackCount === 0 && hit && errors.length === 0
+const ok = fallbackCount === 0 && pageScrollbar === 0 && hit && errors.length === 0
 console.log(ok ? 'SMOKE: PASS' : 'SMOKE: FAIL')
 process.exit(ok ? 0 : 1)
