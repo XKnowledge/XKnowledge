@@ -1,5 +1,6 @@
 import { BrowserWindow, Menu, shell } from 'electron'
 import { join } from 'path'
+import { DEFAULT_TITLE, UNTITLED_TITLE } from './titleService'
 import { IPC } from '../shared/ipc-channels'
 
 /**
@@ -136,6 +137,20 @@ export const createChartWindow = ({ content, path = '' }) => {
 const chartModeWindows = new Map()
 
 /**
+ * 设置窗口标题并同步推送渲染端自绘标题栏：setTitle 只影响任务栏/Alt-Tab
+ * （titleBarOverlay 仅绘制窗口控制按钮，不画标题文字），应用内标题条由
+ * BasicLayout 订阅 app:title-changed 渲染。判销毁：close 竞态下 win 或
+ * webContents 可能已销毁。
+ */
+export const setWindowTitle = (win, title) => {
+  if (!win || win.isDestroyed()) return
+  win.setTitle(title)
+  if (win.webContents && !win.webContents.isDestroyed()) {
+    win.webContents.send(IPC.APP_TITLE_CHANGED, title)
+  }
+}
+
+/**
  * 进入图表模式：解锁窗口尺寸限制，并注册"关闭前确认"拦截。
  * 由图表页挂载时 invoke app:enter-chart-mode 触发；幂等。
  * 与 exitChartMode 对称，图表页卸载（同窗口跳回其他页面）时调用。
@@ -177,6 +192,9 @@ export const enterChartMode = (current_window) => {
   current_window.setMinimizable(true)
   current_window.setResizable(true)
   current_window.setMinimumSize(900, 670)
+  // 进图表页先给默认标题；装载/保存上报路径后由 ipc 层按登记簿覆盖为文件名。
+  // 放这里而非渲染端：标题消歧需要跨窗口全局视角
+  setWindowTitle(current_window, UNTITLED_TITLE)
 
   current_window.on('close', closeHandler)
   current_window.on('closed', closedHandler)
@@ -211,4 +229,6 @@ export const exitChartMode = (current_window) => {
   current_window.unmaximize()
   current_window.setMinimumSize(0, 0)
   current_window.setSize(900, 670)
+  // 与 enterChartMode 的标题设置对称：图表页卸载（回首页/关窗）恢复默认标题
+  setWindowTitle(current_window, DEFAULT_TITLE)
 }

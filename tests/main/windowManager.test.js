@@ -6,7 +6,8 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn() }
 }))
 
-import { enterChartMode, exitChartMode } from '../../src/main/windowManager'
+import { enterChartMode, exitChartMode, setWindowTitle } from '../../src/main/windowManager'
+import { IPC } from '../../src/shared/ipc-channels'
 
 /** 造一个 fake BrowserWindow，带图表模式进入/退出用到的方法 */
 const fakeWindow = (overrides = {}) => ({
@@ -19,8 +20,9 @@ const fakeWindow = (overrides = {}) => ({
   setResizable: vi.fn(),
   setMinimumSize: vi.fn(),
   setSize: vi.fn(),
+  setTitle: vi.fn(),
   unmaximize: vi.fn(),
-  webContents: { id: 1 },
+  webContents: { id: 1, send: vi.fn(), isDestroyed: vi.fn(() => false) },
   ...overrides
 })
 
@@ -62,5 +64,63 @@ describe('exitChartMode：对称恢复', () => {
     enterChartMode(win)
     expect(() => exitChartMode(win)).not.toThrow()
     expect(win.setSize).not.toHaveBeenCalled()
+  })
+})
+
+describe('图表模式窗口标题', () => {
+  // chartModeWindows 是模块级 Map 且 vi.clearAllMocks() 清不掉，上一组用例
+  // （已销毁窗口 enter 后 exit 早退）会残留 id:1 记录；本组各用例用独立 id 隔离
+  it('enterChartMode 设「未命名 — XKnowledge」并推送渲染端', () => {
+    const win = fakeWindow({ id: 2 })
+    enterChartMode(win)
+    expect(win.setTitle).toHaveBeenCalledWith('未命名 — XKnowledge')
+    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, '未命名 — XKnowledge')
+  })
+
+  it('exitChartMode 恢复「XKnowledge」并推送渲染端', () => {
+    const win = fakeWindow({ id: 3 })
+    enterChartMode(win)
+    exitChartMode(win)
+    expect(win.setTitle).toHaveBeenCalledWith('XKnowledge')
+    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, 'XKnowledge')
+  })
+
+  it('未进入图表模式时 exitChartMode 不改标题', () => {
+    const win = fakeWindow({ id: 4 })
+    exitChartMode(win)
+    expect(win.setTitle).not.toHaveBeenCalled()
+    expect(win.webContents.send).not.toHaveBeenCalled()
+  })
+
+  it('窗口已销毁时 enterChartMode 后 exit 不抛也不恢复标题', () => {
+    const win = fakeWindow({ id: 5, isDestroyed: vi.fn(() => true) })
+    enterChartMode(win)
+    expect(() => exitChartMode(win)).not.toThrow()
+    expect(win.setTitle).not.toHaveBeenCalledWith('XKnowledge')
+  })
+})
+
+describe('setWindowTitle：setTitle + 推送双动作', () => {
+  it('同时 setTitle 与向渲染端推送标题', () => {
+    const win = fakeWindow()
+    setWindowTitle(win, '金融 — XKnowledge')
+    expect(win.setTitle).toHaveBeenCalledWith('金融 — XKnowledge')
+    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, '金融 — XKnowledge')
+  })
+
+  it('窗口为空或已销毁时空操作', () => {
+    expect(() => setWindowTitle(null, 'x')).not.toThrow()
+    const win = fakeWindow({ isDestroyed: vi.fn(() => true) })
+    setWindowTitle(win, 'x')
+    expect(win.setTitle).not.toHaveBeenCalled()
+  })
+
+  it('webContents 已销毁时跳过推送但 setTitle 仍执行', () => {
+    const win = fakeWindow({
+      webContents: { id: 1, send: vi.fn(), isDestroyed: vi.fn(() => true) }
+    })
+    setWindowTitle(win, 'x')
+    expect(win.setTitle).toHaveBeenCalledWith('x')
+    expect(win.webContents.send).not.toHaveBeenCalled()
   })
 })

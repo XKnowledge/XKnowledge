@@ -31,14 +31,15 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 │  index.js          应用入口：单实例锁、创建窗口、注册 IPC                                  │
 │  windowManager.js  窗口工厂、图表模式（解锁尺寸 + 关闭确认）、pendingCharts 暂存             │
 │  ipc.js            IPC 注册中心、openedFiles（文件-窗口登记簿，同文件去重聚焦）              │
+│  titleService.js   窗口标题计算（basename 分组 + 同名最短可区分目录链，纯函数）             │
 │  fileService.js    .xk 读写、结构校验、对话框、原子写入                                     │
 │  fileGuard.js      路径授权 + mtime 冲突检测（防任意路径写盘 / 丢失更新）                    │
 └──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
                │ ipcMain.handle / webContents.send                │
 ┌──────────────▼───────────── src/preload (contextBridge) ────────▼───────────────────────┐
-│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 13 个方法 │
+│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 14 个方法 │
 └──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
-               │ invoke（请求-响应） / onRequestClose（唯一推送）    │
+               │ invoke（请求-响应） / onRequestClose、onTitleChanged（推送）│
 ┌──────────────▼──────────────── 渲染进程 (src/renderer) ──────────▼───────────────────────┐
 │  vue-router:  / → AddView（首页示例图库）           /chart → ChartView（图表编辑页）        │
 │  ChartView ── XkMenu（下拉菜单）/ 工具栏按钮 / 全局快捷键                                   │
@@ -114,6 +115,11 @@ XKnowledge/
   `titleBarOverlay`，`autoHideMenuBar` 且应用菜单置空。
 - 窗口进入图表页时调用 `app:enter-chart-mode`：解锁尺寸限制（最小 900×670）并注册
   「关闭前确认」拦截；离开图表页对称调用 `app:exit-chart-mode` 恢复锁定。
+- 窗口标题由主进程统一管理：默认「XKnowledge」；进图表页设「未命名 — XKnowledge」；
+  装载/保存上报路径后按 `titleService` 计算「文件名[ — 目录链] — XKnowledge」（同名
+  自动补目录消歧）；图表页卸载恢复默认。`titleBarOverlay` 只画控制按钮不画标题文字，
+  故标题经 `setWindowTitle` 同时 `setTitle`（任务栏/Alt-Tab）并推送 `app:title-changed`，
+  由 BasicLayout 的 30px 自绘标题条纯展示（渲染端不自算）。
 - **单实例锁**：`requestSingleInstanceLock` 失败即退出。
 - **禁止刷新**（F5 / Ctrl+R / Ctrl+F5）：pending 图表数据取后即清，刷新会直接丢失
   图表内容，因此经 `before-input-event` 统一拦截。
@@ -140,6 +146,7 @@ XKnowledge/
 | `app:close-window` | 渲染 → 主 | — | `{ ok }`；`destroy()` 直接关窗（绕过 close 拦截） |
 | `app:confirm-unsaved` | 渲染 → 主 | — | `'save'` \| `'discard'` \| `'cancel'`（模态于触发窗口） |
 | `app:request-close` | 主 → 渲染 | — | 用户点击窗口关闭按钮时推送，由图表页决定后续 |
+| `app:title-changed` | 主 → 渲染 | `title: string` | 窗口标题变化时推送（未命名/文件名/默认），BasicLayout 标题条纯展示 |
 
 ### 4.3 错误跨 IPC 的约定
 
@@ -164,6 +171,7 @@ XKnowledge/
 | `createWindow(onWindowClosed, route)` | 窗口工厂。route 支持直达路由（dev 模式手动拼 hash）；安全配置（sandbox、webviewTag: false、打开行为、刷新拦截、DevTools 策略）都集中在这里 |
 | `createChartWindow({ content, path })` | 创建 `#/chart` 窗口并 `stashPendingChart`；path 使新窗口保存直接写回原文件 |
 | `takePendingChart(webContentsId)` | 渲染端取走暂存数据（取后即清） |
+| `setWindowTitle(win, title)` | `setTitle`（任务栏）+ 推送 `app:title-changed`（自绘标题栏），判销毁；enter/exit 图表模式与登记簿重算统一走它 |
 | `enterChartMode(window)` / `exitChartMode(window)` | 图表模式的进入/退出，见 §4.1 与 §7.4 |
 
 模块内两个按 `webContents.id` 键控的 Map：`pendingCharts`（待装载图表，取后即清）与
@@ -171,6 +179,8 @@ XKnowledge/
 
 `exitChartMode` 含窗口对称恢复：取消最大化、回退图表页设置的最小尺寸并恢复
 900×670 默认尺寸——图表页卸载不再等同于关窗（「关闭文件」会经路由同窗口跳回首页）。
+`enterChartMode`/`exitChartMode` 同时设置/恢复窗口标题（未命名/默认），与尺寸恢复
+同属对称状态管理。
 
 关闭确认的健壮性设计：拦截 `close` 后若渲染进程崩溃（`render-process-gone`）或假死
 （`unresponsive`），自动解除拦截，保证用户点 X 永远能关掉窗口；恢复响应
@@ -187,6 +197,10 @@ webContents.id 登记簿）：
   到本窗口）；窗口 `closed` 时自动清理。
 - `file:opened` 上报**空路径**时只清除该窗口的记录、不登记新文件（「关闭文件」
   返回首页时用它清登记，避免该文件继续被聚焦到已回首页的窗口）。
+- 登记变化（`file:opened` 上报、空路径清除、窗口 `closed` 清理）后调用 `refreshTitles()`：
+  按 `titleService.computeTitles` 重算并经 `setWindowTitle` 应用（任务栏 + 自绘标题栏），
+  同名窗口的开/关/换名联动（重名解除即恢复短标题）；窗口为空或已销毁时 setWindowTitle
+  自行跳过。
 
 ### 5.4 fileService.js
 
@@ -395,15 +409,21 @@ name 定位目标。历史为内存态，不落盘。
 
 ## 11. 测试
 
-`yarn test`（vitest run）共 **37 个用例、4 个文件**，全部不依赖真实 Electron 窗口
+`yarn test`（vitest run）共 **116 个用例、10 个文件**，全部不依赖真实 Electron 窗口
 （mock `electron` 模块）：
 
 | 文件 | 覆盖 |
 | --- | --- |
 | `tests/main/fileGuard.test.js` | 授权/未授权路径、mtime 冲突、错误对象形状 |
 | `tests/main/fileService.test.js` | v2 结构校验矩阵、读取错误码、原子写入、EPERM 回退、冲突 token |
-| `tests/main/ipc.test.js` | 同文件聚焦、文件-窗口登记与清理、新窗口 pending 透传 |
+| `tests/main/ipc.test.js` | 同文件聚焦、文件-窗口登记与清理、新窗口 pending 透传、窗口标题联动 |
+| `tests/main/titleService.test.js` | 标题计算：唯一名、同名补 1/2 级目录链、混合深度互不相同 |
+| `tests/main/windowManager.test.js` | exitChartMode 对称恢复、图表模式进入/退出设置窗口标题 |
+| `tests/main/exampleService.test.js` | 示例列表元数据提取与缺省回退 |
+| `tests/main/examplePaths.test.js` | `isExamplePath` 示例目录判定 |
 | `tests/renderer/categoryColor.test.js` | 调色板稳定性（同名同色、循环取模） |
+| `tests/renderer/graphData.test.js` | 节点合并、连接归一化、标签阈值、增量重着色计划 |
+| `tests/renderer/historyActions.test.js` | 撤销/重做：多重边安全与常规序列回归 |
 
 主进程的文件与 IPC 层是回归重点；渲染层 UI 依赖人工冒烟。
 

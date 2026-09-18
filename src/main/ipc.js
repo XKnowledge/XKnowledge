@@ -2,7 +2,14 @@ import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
 import { isExamplePath } from './examplePaths'
-import { createChartWindow, enterChartMode, exitChartMode, takePendingChart } from './windowManager'
+import {
+  createChartWindow,
+  enterChartMode,
+  exitChartMode,
+  takePendingChart,
+  setWindowTitle
+} from './windowManager'
+import { computeTitles } from './titleService'
 import { IPC } from '../shared/ipc-channels'
 
 /**
@@ -23,6 +30,20 @@ const openedFiles = new Map()
 // 上报 file:opened，若每次都新注册 once('closed') 会在长会话下无上限累积
 // （MaxListenersExceededWarning），故每个窗口只挂一个，关闭时清其全部记录。
 const cleanupAttached = new WeakSet()
+
+/**
+ * 按 openedFiles 登记簿重算所有已登记窗口的标题（setWindowTitle：任务栏 +
+ * 渲染端自绘标题栏同步）。同名文件的开/关/换名都要联动（后来者补目录链、
+ * 冲突解除恢复短名），故登记变化处（file:opened 与 closed 清理）统一走这里。
+ * fromId 为空或窗口已销毁时 setWindowTitle 自行跳过——登记清理依赖 closed
+ * 事件，重算发生在窗口销毁竞态窗口期是正常的。
+ */
+const refreshTitles = () => {
+  const entries = [...openedFiles].map(([path, webContentsId]) => ({ path, webContentsId }))
+  for (const [id, title] of computeTitles(entries)) {
+    setWindowTitle(BrowserWindow.fromId(id), title)
+  }
+}
 
 export const registerIpc = () => {
   ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
@@ -84,9 +105,13 @@ export const registerIpc = () => {
           for (const [recorded, holderId] of openedFiles) {
             if (holderId === id) openedFiles.delete(recorded)
           }
+          // 本窗口关闭后，与其同名的其他窗口可恢复短标题
+          refreshTitles()
         })
       }
     }
+    // 有路径与空路径上报都重算：登记变化可能影响其他同名窗口的标题
+    refreshTitles()
     return { ok: true }
   })
 

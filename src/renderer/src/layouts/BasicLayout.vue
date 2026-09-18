@@ -10,7 +10,9 @@
     </a-layout-sider>
     <a-layout>
       <a-layout-header :style="headerStyle">
-        <div class="top-not-show"></div>
+        <div class="title-bar">
+          <XkTitleText />
+        </div>
       </a-layout-header>
       <a-layout-content :style="contentStyle">
         <RouterView />
@@ -23,6 +25,7 @@
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { setPendingChart } from '../store/chartStore'
+import XkTitleText from '../components/XkTitleText.vue'
 
 const router = useRouter()
 
@@ -83,7 +86,7 @@ const openFile = async () => {
   padding-inline: 0 !important;
 }
 
-.top-not-show {
+.title-bar {
   display: flex;
   align-items: center; /* 垂直居中 */
   justify-content: center; /* 水平居中 */
@@ -91,8 +94,6 @@ const openFile = async () => {
   background-color: #ffffff;
   width: 100%;
   height: 30px;
-  font: 13px sans-serif;
-  color: #ffffff; /* 设置字体颜色与背景相同 */
 }
 
 .ant-layout-content {

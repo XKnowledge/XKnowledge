@@ -19,7 +19,8 @@ vi.mock('../../src/main/windowManager', () => ({
   createChartWindow: vi.fn(),
   enterChartMode: vi.fn(),
   exitChartMode: vi.fn(),
-  takePendingChart: vi.fn()
+  takePendingChart: vi.fn(),
+  setWindowTitle: vi.fn()
 }))
 
 vi.mock('../../src/main/exampleService', () => ({
@@ -30,7 +31,7 @@ vi.mock('../../src/main/exampleService', () => ({
 import { ipcMain, BrowserWindow } from 'electron'
 import * as fileService from '../../src/main/fileService'
 import { listExamples, openExample } from '../../src/main/exampleService'
-import { createChartWindow, takePendingChart } from '../../src/main/windowManager'
+import { createChartWindow, takePendingChart, setWindowTitle } from '../../src/main/windowManager'
 import { registerIpc } from '../../src/main/ipc'
 import { IPC } from '../../src/shared/ipc-channels'
 
@@ -48,6 +49,7 @@ const fakeWindow = (overrides = {}) => ({
   isMinimized: vi.fn(() => false),
   isDestroyed: vi.fn(() => false),
   once: vi.fn(),
+  setTitle: vi.fn(),
   ...overrides
 })
 
@@ -338,5 +340,73 @@ describe('新窗口 pending 数据传递', () => {
     // 双层包裹回归检查：res.content 必须是字符串（渲染端要 JSON.parse 它）
     takePendingChart.mockReturnValue(null)
     expect(await handlerOf(IPC.APP_TAKE_PENDING_CHART)(senderOf(2))).toBeNull()
+  })
+})
+
+describe('FILE_OPENED：窗口标题联动', () => {
+  // 用例间登记簿是模块级状态，各用例用独立文件名避免跨用例同名分组干扰
+  it('登记路径后窗口标题设为「文件名 — XKnowledge」', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    BrowserWindow.fromId.mockReturnValue(win)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t1.xk' })
+    expect(setWindowTitle).toHaveBeenCalledWith(win, 't1 — XKnowledge')
+  })
+
+  it('第二个窗口打开同名文件时，两个窗口都带目录链', async () => {
+    const win2 = fakeWindow()
+    const win3 = fakeWindow()
+    const byId = { 2: win2, 3: win3 }
+    BrowserWindow.fromId.mockImplementation((id) => byId[id])
+    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t2.xk' })
+    BrowserWindow.fromWebContents.mockReturnValue(win3)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t2.xk' })
+    // refreshTitles 按登记顺序逐窗口调用，后登记的 win3 是最后一次调用
+    expect(setWindowTitle).toHaveBeenCalledWith(win2, 't2 — 资料 — XKnowledge')
+    expect(setWindowTitle).toHaveBeenLastCalledWith(win3, 't2 — 下载 — XKnowledge')
+  })
+
+  it('空路径上报（关闭文件）触发重算：另一同名窗口恢复短标题，本窗口标题不动', async () => {
+    const win2 = fakeWindow()
+    const win3 = fakeWindow()
+    const byId = { 2: win2, 3: win3 }
+    BrowserWindow.fromId.mockImplementation((id) => byId[id])
+    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t3.xk' })
+    BrowserWindow.fromWebContents.mockReturnValue(win3)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t3.xk' })
+
+    setWindowTitle.mockClear()
+    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: '' })
+    expect(setWindowTitle).toHaveBeenCalledTimes(1)
+    expect(setWindowTitle).toHaveBeenCalledWith(win3, 't3 — XKnowledge') // 重名解除恢复短名
+    // 空路径不改本窗口标题（win2 不在重算结果中）
+  })
+
+  it('窗口 closed 清理登记后，其余同名窗口恢复短标题', async () => {
+    const win2 = fakeWindow()
+    const win3 = fakeWindow()
+    const byId = { 2: win2, 3: win3 }
+    BrowserWindow.fromId.mockImplementation((id) => byId[id])
+    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t4.xk' })
+    BrowserWindow.fromWebContents.mockReturnValue(win3)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t4.xk' })
+
+    const closedCb = win2.once.mock.calls.find(([evt]) => evt === 'closed')?.[1]
+    expect(closedCb).toBeTypeOf('function')
+    setWindowTitle.mockClear()
+    closedCb()
+    expect(setWindowTitle).toHaveBeenCalledWith(win3, 't4 — XKnowledge')
+  })
+
+  it('fromId 找不到窗口（已销毁）时跳过，不抛异常', async () => {
+    BrowserWindow.fromWebContents.mockReturnValue(fakeWindow())
+    BrowserWindow.fromId.mockReturnValue(null)
+    // handler 为同步函数返回普通对象，不能用 .resolves
+    const res = await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\t5.xk' })
+    expect(res).toEqual({ ok: true })
   })
 })

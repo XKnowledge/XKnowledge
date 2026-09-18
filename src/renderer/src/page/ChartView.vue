@@ -6,6 +6,8 @@
           <a-layout-sider class="sider-menu-style">
             <XkMenu v-model:shortcutActive="shortcutActive" v-model:shortcutWatch="shortcutWatch" />
           </a-layout-sider>
+          <!-- 窗口标题：紧挨菜单图标右侧（与首页标题条共用 XkTitleText，主进程统一推送） -->
+          <XkTitleText class="chart-title" />
           <a-space v-show="saveNodeVisible" direction="vertical" class="save-note">
             <a-alert message="未保存" type="error" />
           </a-space>
@@ -138,6 +140,7 @@ import XkCreateEdge from '../components/XkCreateEdge.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
 import XkMenu from '../components/XkMenu.vue'
 import XkGraph3D from '../components/XkGraph3D.vue'
+import XkTitleText from '../components/XkTitleText.vue'
 
 import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
@@ -833,6 +836,17 @@ const contentStyle = {
   border-bottom: 1px solid #0505050f;
   text-align: center;
   line-height: 64px;
+  position: relative; /* 作为 .chart-title 绝对定位的上下文 */
+}
+
+/* 菜单图标右侧的窗口标题：绝对定位不占布局空间，按钮组（.move-header）
+   保持原有几何与居中不被挤偏；菜单 sider 固定 53px，left 锚其右侧 */
+.chart-title {
+  position: absolute;
+  left: 65px; /* 菜单 53px + 12px 间距 */
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none; /* 不挡头部 drag 区拖拽窗口 */
 }
 
 .move-header {
