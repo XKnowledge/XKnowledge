@@ -18,6 +18,7 @@ data
 # agent
 .superpowers
 opencode.json
+docs/superpowers/
 
 # 冒烟脚本截图输出
 .smoke-shots/
