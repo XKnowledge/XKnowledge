@@ -130,7 +130,6 @@ import { message } from 'ant-design-vue'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
 import { applyUndo, applyRedo } from '../utils/historyActions'
 import { takePendingChart } from '../store/chartStore'
-import createTemplate1 from '../template/template1.ts'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
 import XkCurrentNode from '../components/XkCurrentNode.vue'
@@ -534,10 +533,10 @@ const toggleSider = () => {
 
 const createNewFile = () => {
   /**
-   * 实现新建文件：新窗口装载空白模板（未存盘，path 为空）
+   * 实现新建文件：新窗口装载空白图谱（未存盘，path 为空）
    */
   window.electronAPI
-    .newChartWindow({ content: JSON.stringify(createTemplate1()), path: '' })
+    .newChartWindow({ content: JSON.stringify({ version: 2, nodes: [], links: [] }), path: '' })
     .catch((err) => {
       console.error('新建图表窗口失败', err)
       message.error('新建图表窗口失败')

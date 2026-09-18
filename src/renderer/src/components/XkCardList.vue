@@ -17,11 +17,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { setPendingChart } from '../store/chartStore'
-import createTemplate1 from '../template/template1.ts'
-
-const router = useRouter()
 
 defineProps({
   fileList: {
@@ -40,14 +35,9 @@ const handleClick = (id) => {
 }
 
 /**
- * 双击事件打开这个 文件 or 模板
+ * 双击事件打开这个 文件 or 模板（当前仅用于预留页面，打开逻辑待实现）
  */
-const handleDoubleClick = async (id) => {
-  if (id === 'template1') {
-    setPendingChart({ value: JSON.stringify(createTemplate1()), path: '' })
-    router.push('chart')
-  }
-}
+const handleDoubleClick = async () => {}
 
 /**
  * 右键事件 弹出右键窗口

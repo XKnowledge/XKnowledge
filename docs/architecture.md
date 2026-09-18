@@ -93,13 +93,12 @@ XKnowledge/
 │        │  ├─ XkCurrentNode.vue    # 侧边栏：修改节点表单
 │        │  ├─ XkCreateEdge.vue     # 侧边栏：创建连接表单
 │        │  ├─ XkCurrentEdge.vue    # 侧边栏：修改连接表单
-│        │  ├─ XkCardList.vue       # 卡片列表（模板/文件卡片，单击选中双击打开）
+│        │  ├─ XkCardList.vue       # 卡片列表（预留页面的文件卡片，单击选中）
 │        │  └─ XkOption.vue         # 菜单项布局组件（当前无引用，预留）
 │        ├─ store/chartStore.js     # 同窗口「首页 → 图表页」的一次性数据传递
 │        ├─ utils/
 │        │  ├─ XkUtils.ts          # jsonReactive / addHistory / resetNodeRef / resetEdgeRef
 │        │  └─ categoryColor.js    # 类目 12 色稳定哈希调色板
-│        └─ template/template1.ts  # 新建文件的默认模板（v2 格式）
 ├─ tests/
 │  ├─ main/                     # fileGuard / fileService / ipc 单元测试
 │  └─ renderer/categoryColor.test.js
