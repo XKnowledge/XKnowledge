@@ -3,22 +3,13 @@
     <a-layout style="height: 100vh">
       <a-layout-sider :style="siderStyle">
         <div style="height: 50px" />
-        <a-menu
-          id="left-menu"
-          v-model:open-keys="openKeys"
-          v-model:selected-keys="selectedKeys"
-          style="width: 200px"
-          mode="inline"
-          :items="items"
-          @click="handleClick"
-        />
         <div style="position: fixed; bottom: -30px; width: 200px">
           <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
         </div>
       </a-layout-sider>
       <a-layout>
         <a-layout-header :style="headerStyle">
-          <div class="top-not-show">{{ title }}</div>
+          <div class="top-not-show"></div>
         </a-layout-header>
         <a-layout-content :style="contentStyle">
           <RouterView />
@@ -29,17 +20,11 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { setPendingChart } from '../store/chartStore'
 
 const router = useRouter()
-const route = useRoute()
-const title = ref('新建')
-
-const selectedKeys = ref([])
-const openKeys = ref([])
 
 const headerStyle = {
   textAlign: 'center',
@@ -58,29 +43,6 @@ const siderStyle = {
   textAlign: 'center',
   lineHeight: '120px',
   backgroundColor: '#f5f5f5'
-}
-
-// 侧边菜单暂无菜单项：示例已直接上首页（图库页移除）；
-// "最近/我的文件"等仍预留，未来恢复时在此追加 items（参考 git 历史）
-const items = reactive([])
-
-// 菜单高亮跟随路由；首页等无菜单项的页面不高亮。
-// 注意必须在 items 声明之后（immediate 立即执行回调会访问 items，
-// 放在声明前是 TDZ 引用错误，BasicLayout 挂载失败即整页白屏）。
-// watch 随组件卸载自动停止（chart 页会卸载 BasicLayout）
-watch(
-  () => route.path,
-  (p) => {
-    selectedKeys.value = items.some((item) => item.key === p) ? [p] : []
-  },
-  { immediate: true }
-)
-
-const handleClick = (e) => {
-  const itemObj = items.find((item) => item.key === e.key)
-  if (!itemObj) return // 菜单项缺失时不应连带抛错
-  title.value = itemObj.label
-  router.push(e.key)
 }
 
 const openFile = async () => {
@@ -104,20 +66,12 @@ const openFile = async () => {
   setPendingChart({ value: res.content, path: res.path })
   router.push('chart')
 }
-
-watch(openKeys, (val) => {
-  console.log('openKeys', val)
-})
 </script>
 
 <style>
 #uploadFile {
   height: 30px;
   padding: 4px 30px;
-}
-
-#left-menu {
-  border-inline-end: 0 solid rgba(5, 5, 5, 0.06);
 }
 
 .ant-layout-sider {
@@ -139,26 +93,6 @@ watch(openKeys, (val) => {
   height: 30px;
   font: 13px sans-serif;
   color: #ffffff; /* 设置字体颜色与背景相同 */
-}
-
-.ant-menu {
-  background-color: transparent;
-}
-
-.ant-menu > .ant-menu-item {
-  height: 30px;
-  border-radius: 4px; /* 弧度 */
-  margin-inline: 10px; /* 左边距 */
-  margin-block: 0; /* 上下间隔 */
-  width: calc(100% - 20px); /* 总长度 */
-}
-
-.ant-menu > .ant-menu-item-selected {
-  background-color: #e2e2e2;
-}
-
-.ant-menu > .ant-menu-item {
-  color: black;
 }
 
 .ant-layout-content {

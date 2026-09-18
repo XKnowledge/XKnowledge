@@ -36,12 +36,11 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 └──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
                │ ipcMain.handle / webContents.send                │
 ┌──────────────▼───────────── src/preload (contextBridge) ────────▼───────────────────────┐
-│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 10 个方法 │
+│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 13 个方法 │
 └──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
                │ invoke（请求-响应） / onRequestClose（唯一推送）    │
 ┌──────────────▼──────────────── 渲染进程 (src/renderer) ──────────▼───────────────────────┐
-│  vue-router:  / /add → AddView（首页模板选择）      /chart → ChartView（图表编辑页）        │
-│               /history /gallery /myFiles → 预留占位页（见 §6.2）                           │
+│  vue-router:  / → AddView（首页示例图库）           /chart → ChartView（图表编辑页）        │
 │  ChartView ── XkMenu（下拉菜单）/ 工具栏按钮 / 全局快捷键                                   │
 │      ├── XkGraph3D        3D 力导向图（渲染、图例、高亮、导出）                              │
 │      └── 侧边栏四表单      XkCreateNode / XkCurrentNode / XkCreateEdge / XkCurrentEdge     │
@@ -78,23 +77,18 @@ XKnowledge/
 │     └─ src/
 │        ├─ main.ts             # Vue 应用入口（注册 Antd、router）
 │        ├─ App.vue             # chart 路由独立渲染，其余套 BasicLayout
-│        ├─ router.ts           # 6 条路由（hash 模式）
-│        ├─ layouts/BasicLayout.vue   # 首页框架：侧边栏（预留）+「打开本地文件」
+│        ├─ router.ts           # 2 条路由（hash 模式）
+│        ├─ layouts/BasicLayout.vue   # 首页框架：侧边栏 +「打开本地文件」
 │        ├─ page/
-│        │  ├─ AddView.vue      # 首页：模板选择，双击模板进图表页
-│        │  ├─ ChartView.vue    # 图表编辑页（核心，~1000 行）
-│        │  ├─ HistoryView.vue  # 「最近」预留占位页
-│        │  ├─ GalleryView.vue  # 「图库」预留占位页
-│        │  └─ MyFilesView.vue  # 「我的文件」预留占位页
+│        │  ├─ AddView.vue      # 首页：示例图库 + 新建空白文件
+│        │  └─ ChartView.vue    # 图表编辑页（核心，~1000 行）
 │        ├─ components/
 │        │  ├─ XkGraph3D.vue        # 3D 力导向图封装（详见 §8）
 │        │  ├─ XkMenu.vue           # 图表页左上角下拉菜单
 │        │  ├─ XkCreateNode.vue     # 侧边栏：创建节点表单
 │        │  ├─ XkCurrentNode.vue    # 侧边栏：修改节点表单
 │        │  ├─ XkCreateEdge.vue     # 侧边栏：创建连接表单
-│        │  ├─ XkCurrentEdge.vue    # 侧边栏：修改连接表单
-│        │  ├─ XkCardList.vue       # 卡片列表（预留页面的文件卡片，单击选中）
-│        │  └─ XkOption.vue         # 菜单项布局组件（当前无引用，预留）
+│        │  └─ XkCurrentEdge.vue    # 侧边栏：修改连接表单
 │        ├─ store/chartStore.js     # 同窗口「首页 → 图表页」的一次性数据传递
 │        ├─ utils/
 │        │  ├─ XkUtils.ts          # jsonReactive / addHistory / resetNodeRef / resetEdgeRef
@@ -220,22 +214,14 @@ webContents.id 登记簿）：
 ### 6.1 路由与布局
 
 `App.vue` 按路由二分：`#/chart` 独占整窗（无侧边布局），其余路由套 `BasicLayout`
-（左侧预留菜单 + 底部「打开本地文件」按钮 + 顶部拖拽区）。
+（左侧「打开本地文件」按钮 + 顶部拖拽区）。
 
 | 路由 | 页面 | 状态 |
 | --- | --- | --- |
-| `/`、`/add` | AddView：模板卡片列表，双击模板装载默认图谱进图表页 | 可用 |
+| `/` | AddView：示例图库 + 新建空白文件卡片 | 可用 |
 | `/chart` | ChartView：图表编辑页 | 可用（核心） |
-| `/history` | HistoryView「最近」 | 占位预留 |
-| `/gallery` | GalleryView「图库」 | 占位预留 |
-| `/myFiles` | MyFilesView「我的文件」 | 占位预留 |
 
-### 6.2 预留页面说明
-
-侧边菜单（当前为空）、最近 / 图库 / 我的文件均为**未来功能的预留占位**，不含实现；
-`XkOption.vue` 同为未引用的预留组件。修改这些页面不属于缺陷修复范围。
-
-### 6.3 ChartView 状态模型
+### 6.2 ChartView 状态模型
 
 图表页状态集中在单个 `xkContext` ref：
 
@@ -256,7 +242,7 @@ webContents.id 登记簿）：
 侧边栏以 `xxxVisible` 布尔族互斥切换显示：属性面板 / 创建节点 / 修改节点 / 创建连接 /
 修改连接五选一；图表点击节点/边时自动切换到对应表单并记录高亮。
 
-### 6.4 操作触发的统一分发
+### 6.3 操作触发的统一分发
 
 工具栏按钮、`XkMenu` 菜单项、全局快捷键、60 秒自动保存定时器**四种来源**统一走同一条
 分发链：来源方设置 `shortcutActive`（动作名）并翻转 `shortcutWatch` → ChartView 的
@@ -267,7 +253,7 @@ Delete 删除节点、Ctrl+R 阻止刷新；Insert/Delete/Ctrl+Z/Ctrl+Y 在焦�
 INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载时移除监听，防止同窗口反复
 挂载导致快捷键跑两遍。
 
-### 6.5 侧边栏表单组件
+### 6.4 侧边栏表单组件
 
 四个表单（XkCreateNode / XkCurrentNode / XkCreateEdge / XkCurrentEdge）均通过
 `defineModel` 双向绑定 ChartView 的 ref，只负责校验与提交，不做 I/O：
