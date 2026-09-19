@@ -93,7 +93,7 @@ XKnowledge/
 │        ├─ store/chartStore.js     # 同窗口「首页 → 图表页」的一次性数据传递
 │        ├─ utils/
 │        │  ├─ XkUtils.ts          # jsonReactive / addHistory / resetNodeRef / resetEdgeRef
-│        │  └─ categoryColor.js    # 类目 12 色稳定哈希调色板
+│        │  └─ categoryColor.js    # 类目彩虹 20 色调色板，集合顺延分配
 ├─ tests/
 │  ├─ main/                     # fileGuard / fileService / ipc 单元测试
 │  └─ renderer/categoryColor.test.js
@@ -352,8 +352,9 @@ name 定位目标。历史为内存态，不落盘。
   「显示小节点名称」开关决定；悬浮提示为 `名称：描述`，边悬浮名由开关控制。
 - **类目图例**：覆盖层（DOM，位于库挂载点之外——库初始化会清空挂载容器）点击切换
   类目显隐，边随两端节点显隐；配色来自 `categoryColor`。
-- **配色**：`categoryColor.js` 12 色调色板，按类目名 31 进制多项式哈希取模分配——
-  同名类目永远同色，不依赖插入顺序，保存重开/多窗口一致。高亮色 `#e8684a`。
+- **配色**：`categoryColor.js` 彩虹 20 色调色板，按类型集合分配——类目名 31 进制
+  多项式哈希取位、被占顺延，类型数 ≤ 20 时零撞色；同一集合结果确定，保存重开/
+  多窗口一致，不依赖插入顺序；颜色不落盘 .xk。高亮色 `#1f1f1f`（黑，与 20 色全区分）。
 - **排斥力**：`setRepulsion(v)` 映射 d3 charge 强度 `-v/10`（滑杆 1~500），
   `d3ReheatSimulation` 重热。
 - **导出 PNG**：renderer 开 `preserveDrawingBuffer`（否则 toDataURL 黑屏），离屏
