@@ -6,12 +6,12 @@
   >
     <div class="name" :title="example.title">{{ example.title }}</div>
     <div class="dots">
-      <!-- 色点用与图谱内相同的调色板按类目名取色：卡片配色与打开后一致 -->
+      <!-- 色点按本图谱类型集合顺延分配：卡片配色与打开后一致 -->
       <span
         v-for="c in example.categories"
         :key="c"
         class="dot"
-        :style="{ background: categoryColor(c) }"
+        :style="{ background: catColor(c) }"
         :title="c"
       />
     </div>
@@ -21,9 +21,10 @@
 </template>
 
 <script setup>
-import { categoryColor } from '../utils/categoryColor'
+import { computed } from 'vue'
+import { assignCategoryColors } from '../utils/categoryColor'
 
-defineProps({
+const props = defineProps({
   example: {
     type: Object,
     required: true
@@ -35,6 +36,10 @@ defineProps({
 })
 
 defineEmits(['select', 'open'])
+
+/** 色点按本图谱类型集合顺延分配：卡片配色与打开后的图内一致 */
+const categoryColors = computed(() => assignCategoryColors(props.example.categories))
+const catColor = (c) => categoryColors.value.get(String(c ?? ''))
 </script>
 
 <style scoped>

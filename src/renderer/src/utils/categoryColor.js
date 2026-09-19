@@ -60,6 +60,3 @@ export const assignCategoryColors = (categories) => {
   }
   return result
 }
-
-/** @deprecated 过渡期保留（graphData.test.js 仍引用）；调用点迁移完成后删除 */
-export const categoryColor = (name) => PALETTE[hash(String(name ?? '')) % PALETTE.length]
