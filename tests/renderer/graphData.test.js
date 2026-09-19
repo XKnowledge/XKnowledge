@@ -134,16 +134,18 @@ describe('planHighlightRepaint：高亮变化的增量重着色计划', () => {
   })
 
   it('取消高亮节点：该节点还原为类目底色', async () => {
-    const { categoryColor } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const { assignCategoryColors } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const categoryColors = assignCategoryColors(['x', 'y'])
     const { nodeRepaints } = planHighlightRepaint({
       nodes,
       links,
       prevNodes: ['A'],
       prevLink: null,
       nextNodes: [],
-      nextLink: null
+      nextLink: null,
+      categoryColors
     })
-    expect(nodeRepaints).toEqual([[nodes[0], categoryColor('x')]])
+    expect(nodeRepaints).toEqual([[nodes[0], categoryColors.get('x')]])
   })
 
   it('高亮集合不变时不产生任何重着色', () => {

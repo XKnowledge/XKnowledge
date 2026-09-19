@@ -1,7 +1,5 @@
-import { categoryColor } from './categoryColor.js'
-
-/** 高亮色（选中节点/边），与旧版图例视觉一致 */
-export const HL_COLOR = '#e8684a'
+/** 高亮色（选中节点/边）：黑，白底上与彩虹 20 色全部拉开距离（熄灯语义） */
+export const HL_COLOR = '#1f1f1f'
 /** 边底色 */
 export const LINK_BASE_COLOR = '#4b565b'
 
@@ -71,6 +69,8 @@ const isSameLink = (l, hl) =>
  * refresh 会对每个节点重新执行 nodeThreeObject，重建全部 SpriteText 标签，
  * 大图下逐个点选持续掉帧）。
  * 只返回高亮翻转（进入/退出）的对象，颜色由调用方写入其 threeObj 材质。
+ * @param {Map<string,string>} categoryColors 本图类型集合的色映射（assignCategoryColors 产物），
+ *   退出高亮的还原色从这里查；查询统一 get(String(category ?? ''))
  * @returns {{ nodeRepaints: Array<[datum, color]>, linkRepaints: Array<[datum, color]> }}
  */
 export const planHighlightRepaint = ({
@@ -79,7 +79,8 @@ export const planHighlightRepaint = ({
   prevNodes,
   prevLink,
   nextNodes,
-  nextLink
+  nextLink,
+  categoryColors
 }) => {
   const prevSet = new Set(prevNodes ?? [])
   const nextSet = new Set(nextNodes ?? [])
@@ -87,7 +88,8 @@ export const planHighlightRepaint = ({
   for (const n of nodes ?? []) {
     const was = prevSet.has(n.name)
     const is = nextSet.has(n.name)
-    if (was !== is) nodeRepaints.push([n, is ? HL_COLOR : categoryColor(n.category)])
+    if (was !== is)
+      nodeRepaints.push([n, is ? HL_COLOR : categoryColors.get(String(n.category ?? ''))])
   }
   const linkRepaints = []
   for (const l of links ?? []) {

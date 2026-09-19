@@ -13,7 +13,7 @@
         :class="{ 'graph3d-legend-off': hiddenCategories.has(cat) }"
         @click="toggleCategory(cat)"
       >
-        <span class="graph3d-legend-dot" :style="{ background: categoryColor(cat) }"></span>
+        <span class="graph3d-legend-dot" :style="{ background: catColor(cat) }"></span>
         <span>{{ cat }}</span>
       </div>
     </div>
@@ -28,7 +28,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import SpriteText from 'three-spritetext'
-import { categoryColor } from '../utils/categoryColor.js'
+import { assignCategoryColors } from '../utils/categoryColor.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
@@ -57,6 +57,9 @@ let resizeObserver = null
 
 // 图例：从节点派生类目；hiddenCategories 控制显隐
 const categories = computed(() => [...new Set(props.nodes.map((n) => n.category))])
+/** 类目 → 颜色：按本图类型集合顺延分配，nodeColor/图例/高亮还原共用同一份 */
+const categoryColors = computed(() => assignCategoryColors(categories.value))
+const catColor = (cat) => categoryColors.value.get(String(cat ?? ''))
 const hiddenCategories = ref(new Set())
 const toggleCategory = (cat) => {
   const next = new Set(hiddenCategories.value)
@@ -109,7 +112,7 @@ const applyHighlight = () => {
   const le = props.highlightLink
   // accessor 描述"正确颜色"：graphData 重灌或 refresh 时库按它重建材质
   graph
-    .nodeColor((n) => (hl.has(n.name) ? HL_COLOR : categoryColor(n.category)))
+    .nodeColor((n) => (hl.has(n.name) ? HL_COLOR : catColor(n.category)))
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
         ? HL_COLOR
@@ -125,7 +128,8 @@ const applyHighlight = () => {
     prevNodes: prevHlNodes,
     prevLink: prevHlLink,
     nextNodes: hl,
-    nextLink: le
+    nextLink: le,
+    categoryColors: categoryColors.value
   })
   const repaints = [...nodeRepaints, ...linkRepaints]
   let painted = 0
