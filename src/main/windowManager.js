@@ -137,16 +137,18 @@ export const createChartWindow = ({ content, path = '' }) => {
 const chartModeWindows = new Map()
 
 /**
- * 设置窗口标题并同步推送渲染端自绘标题栏：setTitle 只影响任务栏/Alt-Tab
- * （titleBarOverlay 仅绘制窗口控制按钮，不画标题文字），应用内标题条由
- * BasicLayout 订阅 app:title-changed 渲染。判销毁：close 竞态下 win 或
+ * 设置窗口标题并同步推送渲染端自绘标题栏。两个字符串分工：setTitle 只影响
+ * 任务栏/Alt-Tab（titleBarOverlay 仅绘制窗口控制按钮，不画标题文字），
+ * 应用内标题条由 BasicLayout 订阅 app:title-changed 渲染——未保存圆点在
+ * 两处位置不同（标题条在文件名后、任务栏在标题前），故拆双参；单参调用
+ * （默认/未命名/恢复标题）两值天然一致。判销毁：close 竞态下 win 或
  * webContents 可能已销毁。
  */
-export const setWindowTitle = (win, title) => {
+export const setWindowTitle = (win, display, taskbar = display) => {
   if (!win || win.isDestroyed()) return
-  win.setTitle(title)
+  win.setTitle(taskbar)
   if (win.webContents && !win.webContents.isDestroyed()) {
-    win.webContents.send(IPC.APP_TITLE_CHANGED, title)
+    win.webContents.send(IPC.APP_TITLE_CHANGED, display)
   }
 }
 

@@ -108,6 +108,20 @@ describe('setWindowTitle：setTitle + 推送双动作', () => {
     expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, '金融 — XKnowledge')
   })
 
+  it('display 与 taskbar 不同时：setTitle 用 taskbar，推送用 display', () => {
+    const win = fakeWindow()
+    setWindowTitle(win, '金融 ● — XKnowledge', '● 金融 — XKnowledge')
+    expect(win.setTitle).toHaveBeenCalledWith('● 金融 — XKnowledge')
+    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, '金融 ● — XKnowledge')
+  })
+
+  it('只传 display 时 taskbar 缺省同 display（现状调用不变）', () => {
+    const win = fakeWindow()
+    setWindowTitle(win, 'XKnowledge')
+    expect(win.setTitle).toHaveBeenCalledWith('XKnowledge')
+    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, 'XKnowledge')
+  })
+
   it('窗口为空或已销毁时空操作', () => {
     expect(() => setWindowTitle(null, 'x')).not.toThrow()
     const win = fakeWindow({ isDestroyed: vi.fn(() => true) })

@@ -350,7 +350,7 @@ describe('FILE_OPENED：窗口标题联动', () => {
     BrowserWindow.fromWebContents.mockReturnValue(win)
     BrowserWindow.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t1.xk' })
-    expect(setWindowTitle).toHaveBeenCalledWith(win, 't1 — XKnowledge')
+    expect(setWindowTitle).toHaveBeenCalledWith(win, 't1 — XKnowledge', 't1 — XKnowledge')
   })
 
   it('第二个窗口打开同名文件时，两个窗口都带目录链', async () => {
@@ -363,8 +363,16 @@ describe('FILE_OPENED：窗口标题联动', () => {
     BrowserWindow.fromWebContents.mockReturnValue(win3)
     await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t2.xk' })
     // refreshTitles 按登记顺序逐窗口调用，后登记的 win3 是最后一次调用
-    expect(setWindowTitle).toHaveBeenCalledWith(win2, 't2 — 资料 — XKnowledge')
-    expect(setWindowTitle).toHaveBeenLastCalledWith(win3, 't2 — 下载 — XKnowledge')
+    expect(setWindowTitle).toHaveBeenCalledWith(
+      win2,
+      't2 — 资料 — XKnowledge',
+      't2 — 资料 — XKnowledge'
+    )
+    expect(setWindowTitle).toHaveBeenLastCalledWith(
+      win3,
+      't2 — 下载 — XKnowledge',
+      't2 — 下载 — XKnowledge'
+    )
   })
 
   it('空路径上报（关闭文件）触发重算：另一同名窗口恢复短标题，本窗口标题不动', async () => {
@@ -381,7 +389,7 @@ describe('FILE_OPENED：窗口标题联动', () => {
     BrowserWindow.fromWebContents.mockReturnValue(win2)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: '' })
     expect(setWindowTitle).toHaveBeenCalledTimes(1)
-    expect(setWindowTitle).toHaveBeenCalledWith(win3, 't3 — XKnowledge') // 重名解除恢复短名
+    expect(setWindowTitle).toHaveBeenCalledWith(win3, 't3 — XKnowledge', 't3 — XKnowledge') // 重名解除恢复短名
     // 空路径不改本窗口标题（win2 不在重算结果中）
   })
 
@@ -399,7 +407,7 @@ describe('FILE_OPENED：窗口标题联动', () => {
     expect(closedCb).toBeTypeOf('function')
     setWindowTitle.mockClear()
     closedCb()
-    expect(setWindowTitle).toHaveBeenCalledWith(win3, 't4 — XKnowledge')
+    expect(setWindowTitle).toHaveBeenCalledWith(win3, 't4 — XKnowledge', 't4 — XKnowledge')
   })
 
   it('fromId 找不到窗口（已销毁）时跳过，不抛异常', async () => {
@@ -408,5 +416,64 @@ describe('FILE_OPENED：窗口标题联动', () => {
     // handler 为同步函数返回普通对象，不能用 .resolves
     const res = await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\t5.xk' })
     expect(res).toEqual({ ok: true })
+  })
+})
+
+describe('FILE_DIRTY：未保存圆点', () => {
+  it('已登记窗口上报 dirty 后标题双位置带圆点', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    BrowserWindow.fromId.mockReturnValue(win)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d1.xk' })
+    setWindowTitle.mockClear()
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
+    expect(setWindowTitle).toHaveBeenCalledWith(win, 'd1 ● — XKnowledge', '● d1 — XKnowledge')
+  })
+
+  it('未命名窗口（无文件登记）上报 dirty 走未命名分支', async () => {
+    // sender id 须未被任何先前用例登记过（openedFiles 是模块级状态，
+    // 旧用例给 2/3 留有登记残留，会把上报误导向 refreshTitles 分支）
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(7), { dirty: true })
+    expect(setWindowTitle).toHaveBeenCalledWith(
+      win,
+      '未命名 ● — XKnowledge',
+      '● 未命名 — XKnowledge'
+    )
+  })
+
+  it('上报 dirty: false 恢复干净标题', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    BrowserWindow.fromId.mockReturnValue(win)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d2.xk' })
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
+    setWindowTitle.mockClear()
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: false })
+    expect(setWindowTitle).toHaveBeenCalledWith(win, 'd2 — XKnowledge', 'd2 — XKnowledge')
+  })
+
+  it('file:opened 上报重置 dirty：登记后立即按干净态计算标题', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    BrowserWindow.fromId.mockReturnValue(win)
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true }) // 未命名窗口先弄脏
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d3.xk' })
+    expect(setWindowTitle).toHaveBeenLastCalledWith(win, 'd3 — XKnowledge', 'd3 — XKnowledge')
+  })
+
+  it('空路径上报（关闭文件）同样重置 dirty', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    BrowserWindow.fromId.mockReturnValue(win)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d4.xk' })
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
+    // 关闭文件：空路径上报清登记并重置 dirty；本窗口无登记项不再设标题
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: '' })
+    setWindowTitle.mockClear()
+    // 同窗口再开新文件：若 dirty 未被重置，此处会带圆点
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d5.xk' })
+    expect(setWindowTitle).toHaveBeenLastCalledWith(win, 'd5 — XKnowledge', 'd5 — XKnowledge')
   })
 })

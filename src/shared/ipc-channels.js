@@ -9,6 +9,7 @@ export const IPC = {
   FILE_OPENED: 'file:opened',
   FILE_SAVE: 'file:save',
   FILE_SAVE_AS: 'file:save-as',
+  FILE_DIRTY: 'file:dirty',
 
   // 内置示例域（examples/ 目录即图库）
   EXAMPLE_LIST: 'example:list',

@@ -8,9 +8,6 @@
           </a-layout-sider>
           <!-- 窗口标题：紧挨菜单图标右侧（与首页标题条共用 XkTitleText，主进程统一推送） -->
           <XkTitleText class="chart-title" />
-          <a-space v-show="saveNodeVisible" direction="vertical" class="save-note">
-            <a-alert message="未保存" type="error" />
-          </a-space>
           <a-layout-content class="move-header">
             <a-space size="large" style="margin-top: 5px">
               <a-space
@@ -357,6 +354,15 @@ watch(
     saveNodeVisible.value = true
   }
 )
+
+// 未保存状态上报主进程：窗口标题加/去圆点（标题条文件名后、任务栏标题前）。
+// 现有置位/清零点（编辑、属性开关、保存、另存、装载）全部照旧翻转
+// saveNodeVisible，这里统一上报；红条警示已删，标题圆点是唯一未保存提示
+watch(saveNodeVisible, (v) => {
+  window.electronAPI.fileDirty({ dirty: v }).catch((err) => {
+    console.error('未保存状态上报失败', err)
+  })
+})
 
 const onChangeAttr = () => {
   showLinkName.value = checkedValues.value.includes('showEdgeName')
@@ -807,18 +813,6 @@ const contentStyle = {
 .echarts-style {
   width: 100%;
   height: 100%;
-}
-
-.save-note {
-  display: flex;
-  align-items: center;
-  /* 垂直居中 */
-  justify-content: center;
-  /* 水平居中 */
-  -webkit-app-region: no-drag;
-  /* 可拖动 */
-  height: 53px !important;
-  border-bottom: 1px solid #0505050f;
 }
 
 .move-show {

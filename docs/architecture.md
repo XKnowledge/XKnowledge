@@ -19,7 +19,7 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 | 路由 | vue-router 5（hash 模式） | `loadFile` 场景下无需服务端路由 |
 | UI 组件库 | Ant Design Vue 4 | 布局、表单、菜单、提示 |
 | 图可视化 | 3d-force-graph（Three.js）+ three-spritetext | 3D 力导向图与节点文字标签 |
-| 测试 | Vitest 5 | 37 个单元测试（`yarn test`） |
+| 测试 | Vitest 5 | 135 个单元测试（`yarn test`） |
 | 质量 | ESLint 10（flat config）、Prettier 3、TypeScript 5.9 + vue-tsc | `yarn typecheck` |
 
 代码语言为 JS 为主、TS 为辅：主进程与 preload 全部为 JS，渲染层入口与工具函数为 TS。
@@ -37,7 +37,7 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 └──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
                │ ipcMain.handle / webContents.send                │
 ┌──────────────▼───────────── src/preload (contextBridge) ────────▼───────────────────────┐
-│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 14 个方法 │
+│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 15 个方法 │
 └──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
                │ invoke（请求-响应） / onRequestClose、onTitleChanged（推送）│
 ┌──────────────▼──────────────── 渲染进程 (src/renderer) ──────────▼───────────────────────┐
@@ -119,7 +119,9 @@ XKnowledge/
   装载/保存上报路径后按 `titleService` 计算「文件名[ — 目录链] — XKnowledge」（同名
   自动补目录消歧）；图表页卸载恢复默认。`titleBarOverlay` 只画控制按钮不画标题文字，
   故标题经 `setWindowTitle` 同时 `setTitle`（任务栏/Alt-Tab）并推送 `app:title-changed`，
-  由 BasicLayout 的 30px 自绘标题条纯展示（渲染端不自算）。
+  由 BasicLayout 的 30px 自绘标题条纯展示（渲染端不自算）。未保存修改时标题带
+  圆点且两处位置不同：标题条在文件名后（`金融 ● — XKnowledge`）、任务栏在标题前
+  （`● 金融 — XKnowledge`），由渲染端 `file:dirty` 上报驱动。
 - **单实例锁**：`requestSingleInstanceLock` 失败即退出。
 - **禁止刷新**（F5 / Ctrl+R / Ctrl+F5）：pending 图表数据取后即清，刷新会直接丢失
   图表内容，因此经 `before-input-event` 统一拦截。
@@ -139,6 +141,7 @@ XKnowledge/
 | `file:opened` | 渲染 → 主 | `{ path }` | `{ ok }`；登记「本窗口正在编辑该文件」 |
 | `file:save` | 渲染 → 主 | `{ path, content }` | path 为空时弹另存为；成功 `{ path }`，失败 reject（`WRITE_FAILED` / `PATH_NOT_AUTHORIZED` / `FILE_CONFLICT`） |
 | `file:save-as` | 渲染 → 主 | `{ content }` | `{ canceled }` \| `{ path }` |
+| `file:dirty` | 渲染 → 主 | `{ dirty: boolean }` | `{ ok }`；登记/清除窗口未保存态并重算标题（未命名窗口直接设未命名标题） |
 | `app:new-chart-window` | 渲染 → 主 | `{ content, path }` | `{ ok }`；新窗口加载 `#/chart` 并暂存数据 |
 | `app:take-pending-chart` | 渲染 → 主 | — | `{ content, path }` \| `null`；**取后即清** |
 | `app:enter-chart-mode` | 渲染 → 主 | — | `{ ok }`；幂等 |
@@ -146,7 +149,7 @@ XKnowledge/
 | `app:close-window` | 渲染 → 主 | — | `{ ok }`；`destroy()` 直接关窗（绕过 close 拦截） |
 | `app:confirm-unsaved` | 渲染 → 主 | — | `'save'` \| `'discard'` \| `'cancel'`（模态于触发窗口） |
 | `app:request-close` | 主 → 渲染 | — | 用户点击窗口关闭按钮时推送，由图表页决定后续 |
-| `app:title-changed` | 主 → 渲染 | `title: string` | 窗口标题变化时推送（未命名/文件名/默认），BasicLayout 标题条纯展示 |
+| `app:title-changed` | 主 → 渲染 | `title: string`（display 变体） | 窗口标题变化时推送（未命名/文件名/默认），BasicLayout 标题条纯展示；任务栏 `setTitle` 用 taskbar 变体（未保存圆点两处位置不同） |
 
 ### 4.3 错误跨 IPC 的约定
 
@@ -171,7 +174,7 @@ XKnowledge/
 | `createWindow(onWindowClosed, route)` | 窗口工厂。route 支持直达路由（dev 模式手动拼 hash）；安全配置（sandbox、webviewTag: false、打开行为、刷新拦截、DevTools 策略）都集中在这里 |
 | `createChartWindow({ content, path })` | 创建 `#/chart` 窗口并 `stashPendingChart`；path 使新窗口保存直接写回原文件 |
 | `takePendingChart(webContentsId)` | 渲染端取走暂存数据（取后即清） |
-| `setWindowTitle(win, title)` | `setTitle`（任务栏）+ 推送 `app:title-changed`（自绘标题栏），判销毁；enter/exit 图表模式与登记簿重算统一走它 |
+| `setWindowTitle(win, display, taskbar = display)` | `setTitle(taskbar)`（任务栏/Alt-Tab）+ 推送 `app:title-changed(display)`（自绘标题栏），判销毁；enter/exit 图表模式与登记簿重算统一走它。双参拆分仅服务未保存圆点的两处位置差异，单参调用两值一致 |
 | `enterChartMode(window)` / `exitChartMode(window)` | 图表模式的进入/退出，见 §4.1 与 §7.4 |
 
 模块内两个按 `webContents.id` 键控的 Map：`pendingCharts`（待装载图表，取后即清）与
@@ -201,6 +204,9 @@ webContents.id 登记簿）：
   按 `titleService.computeTitles` 重算并经 `setWindowTitle` 应用（任务栏 + 自绘标题栏），
   同名窗口的开/关/换名联动（重名解除即恢复短标题）；窗口为空或已销毁时 setWindowTitle
   自行跳过。
+- `dirtyWindows`（有未保存修改的窗口集合）：`file:dirty` 上报维护并重算标题——有
+  登记的窗口走 `refreshTitles()`，未命名窗口直接设「未命名[ ●] — XKnowledge」双标题；
+  `file:opened` 上报（含空路径）重置（装载即干净）；窗口 `closed` 清理时一并删除。
 
 ### 5.4 fileService.js
 
@@ -307,8 +313,12 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 
 ### 7.2 未保存标记
 
-`saveNodeVisible`（顶栏「未保存」红条）在**任何**修改后置 true：编辑操作、属性开关、
-排斥力调节等；`saveFile / saveAs` 成功后置 false，并经 `file:opened` 更新主进程登记。
+`saveNodeVisible` 在**任何**修改后置 true：编辑操作、属性开关、排斥力调节等；
+`saveFile / saveAs` 成功后置 false，并经 `file:opened` 更新主进程登记。它不再驱动
+顶栏红条（已删除），而是由 `watch` 经 `file:dirty` 上报主进程，窗口标题加圆点提示
+未保存：应用内标题条圆点在文件名后（`金融 ● — XKnowledge`）、任务栏/Alt-Tab 圆点
+在标题前（`● 金融 — XKnowledge`）；保存成功后圆点随干净态消失。60 秒自动保存与
+关闭确认继续读 `saveNodeVisible`。
 
 ### 7.3 保存 / 自动保存 / 冲突
 
@@ -410,16 +420,16 @@ name 定位目标。历史为内存态，不落盘。
 
 ## 11. 测试
 
-`yarn test`（vitest run）共 **116 个用例、10 个文件**，全部不依赖真实 Electron 窗口
+`yarn test`（vitest run）共 **135 个用例、10 个文件**，全部不依赖真实 Electron 窗口
 （mock `electron` 模块）：
 
 | 文件 | 覆盖 |
 | --- | --- |
 | `tests/main/fileGuard.test.js` | 授权/未授权路径、mtime 冲突、错误对象形状 |
 | `tests/main/fileService.test.js` | v2 结构校验矩阵、读取错误码、原子写入、EPERM 回退、冲突 token |
-| `tests/main/ipc.test.js` | 同文件聚焦、文件-窗口登记与清理、新窗口 pending 透传、窗口标题联动 |
-| `tests/main/titleService.test.js` | 标题计算：唯一名、同名补 1/2 级目录链、混合深度互不相同 |
-| `tests/main/windowManager.test.js` | exitChartMode 对称恢复、图表模式进入/退出设置窗口标题 |
+| `tests/main/ipc.test.js` | 同文件聚焦、文件-窗口登记与清理、新窗口 pending 透传、窗口标题联动、file:dirty 上报与重置 |
+| `tests/main/titleService.test.js` | 标题计算：唯一名、同名补 1/2 级目录链、混合深度互不相同、未保存圆点双位置 |
+| `tests/main/windowManager.test.js` | exitChartMode 对称恢复、图表模式进入/退出设置窗口标题、setWindowTitle 双位置标题 |
 | `tests/main/exampleService.test.js` | 示例列表元数据提取与缺省回退 |
 | `tests/main/examplePaths.test.js` | `isExamplePath` 示例目录判定 |
 | `tests/renderer/categoryColor.test.js` | 调色板稳定性（同名同色、循环取模） |

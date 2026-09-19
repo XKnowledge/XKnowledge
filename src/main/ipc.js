@@ -9,7 +9,7 @@ import {
   takePendingChart,
   setWindowTitle
 } from './windowManager'
-import { computeTitles } from './titleService'
+import { computeTitles, composeWindowTitles } from './titleService'
 import { IPC } from '../shared/ipc-channels'
 
 /**
@@ -26,6 +26,14 @@ const senderWindow = (event) => BrowserWindow.fromWebContents(event.sender) ?? u
  */
 const openedFiles = new Map()
 
+/**
+ * 有未保存修改的窗口：webContents.id 集合。渲染端翻转 saveNodeVisible 时经
+ * file:dirty 上报维护；file:opened 上报（含空路径）重置——装载即干净；
+ * 窗口 closed 时随登记簿一并清理。未命名窗口从未存过文件、没挂 closed
+ * 监听，其残留条目无害（webContents id 单调递增不复用）。
+ */
+const dirtyWindows = new Set()
+
 // 已挂 closed 清理监听器的窗口。渲染端在装载文件与每次保存/另存成功后都会
 // 上报 file:opened，若每次都新注册 once('closed') 会在长会话下无上限累积
 // （MaxListenersExceededWarning），故每个窗口只挂一个，关闭时清其全部记录。
@@ -39,9 +47,13 @@ const cleanupAttached = new WeakSet()
  * 事件，重算发生在窗口销毁竞态窗口期是正常的。
  */
 const refreshTitles = () => {
-  const entries = [...openedFiles].map(([path, webContentsId]) => ({ path, webContentsId }))
-  for (const [id, title] of computeTitles(entries)) {
-    setWindowTitle(BrowserWindow.fromId(id), title)
+  const entries = [...openedFiles].map(([path, webContentsId]) => ({
+    path,
+    webContentsId,
+    dirty: dirtyWindows.has(webContentsId)
+  }))
+  for (const [id, titles] of computeTitles(entries)) {
+    setWindowTitle(BrowserWindow.fromId(id), titles.display, titles.taskbar)
   }
 }
 
@@ -89,6 +101,8 @@ export const registerIpc = () => {
 
   ipcMain.handle(IPC.FILE_OPENED, (event, { path }) => {
     const id = event.sender.id
+    // 装载/换文件即干净：防「关闭文件回首页、同窗口再开新文件」残留旧圆点
+    dirtyWindows.delete(id)
     // 一个窗口同时只编辑一个文件：清掉本窗口的其他文件记录
     // （另存为换路径后旧文件不应再聚焦到本窗口）
     for (const [recorded, holderId] of openedFiles) {
@@ -105,6 +119,7 @@ export const registerIpc = () => {
           for (const [recorded, holderId] of openedFiles) {
             if (holderId === id) openedFiles.delete(recorded)
           }
+          dirtyWindows.delete(id)
           // 本窗口关闭后，与其同名的其他窗口可恢复短标题
           refreshTitles()
         })
@@ -112,6 +127,21 @@ export const registerIpc = () => {
     }
     // 有路径与空路径上报都重算：登记变化可能影响其他同名窗口的标题
     refreshTitles()
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.FILE_DIRTY, (event, { dirty }) => {
+    const id = event.sender.id
+    dirty ? dirtyWindows.add(id) : dirtyWindows.delete(id)
+    const registered = [...openedFiles.values()].includes(id)
+    if (registered) {
+      // 有文件登记：走登记簿统一重算（同名窗口联动）
+      refreshTitles()
+    } else {
+      // 未命名窗口没有登记项：直接设未命名标题（干净/带圆点）
+      const { display, taskbar } = composeWindowTitles('未命名', !!dirty)
+      setWindowTitle(BrowserWindow.fromWebContents(event.sender), display, taskbar)
+    }
     return { ok: true }
   })
 
