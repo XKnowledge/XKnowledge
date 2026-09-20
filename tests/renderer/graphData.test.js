@@ -102,6 +102,24 @@ describe('labelThreshold：小节点标签开关的显示阈值', () => {
     expect(labelThreshold([], false)).toBeUndefined()
   })
 
+  it('大图（>2000 节点）按预算封顶：开关关时取头部 600 个的尺寸层', () => {
+    // 1400 个 40 + 601 个 50：降序第 600 个落在 50 层 → 阈值 50，头部整层保留
+    const nodes = bySizes([...Array(1400).fill(40), ...Array(601).fill(50)])
+    expect(labelThreshold(nodes, false)).toBe(50)
+  })
+
+  it('大图开关打开时预算放宽到 1200，不再全显（防万级 canvas 纹理卡死）', () => {
+    const nodes = bySizes([...Array(1400).fill(40), ...Array(601).fill(50)])
+    // 降序第 1200 个落在 40 层 → 阈值 40
+    expect(labelThreshold(nodes, true)).toBe(40)
+  })
+
+  it('恰好 2000 节点不算大图，仍走分位逻辑', () => {
+    const nodes = bySizes([...Array(1000).fill(50), ...Array(1000).fill(40)])
+    expect(labelThreshold(nodes, true)).toBe(-Infinity)
+    expect(labelThreshold(nodes, false)).toBe(50)
+  })
+
   it('不修改入参顺序', () => {
     const nodes = bySizes([40, 70, 50])
     labelThreshold(nodes, false)

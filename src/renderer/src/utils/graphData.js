@@ -36,21 +36,35 @@ export const linkEnd = (v) => (typeof v === 'object' && v !== null ? v.name : v)
 
 /** 「小节点」判定：按大小排序后最小的 60% 视为小节点，开关关闭时隐藏其名称 */
 const SMALL_NODE_RATIO = 0.6
+/**
+ * 大图标签预算：节点数超过 HEAVY_LABEL_COUNT 后分位/开关全显逻辑都让位
+ * （全显 = 万级节点各建一张 canvas 纹理，世界树规模一打开就卡死），
+ * 改为按 symbolSize 头部预算封顶；开关打开只放宽预算，不解除封顶
+ */
+const HEAVY_LABEL_COUNT = 2000
+const LABEL_BUDGET = 600
+const LABEL_BUDGET_EXTENDED = 1200
 
 /**
  * 「显示小节点名称」开关的标签显示阈值：symbolSize >= 阈值的节点常显名称。
- * 关闭开关时阈值取升序 60% 分位处的值（即最小的 60% 节点算小节点）；
+ * 中小图：关闭开关时阈值取升序 60% 分位处的值（即最小的 60% 节点算小节点）；
  * 分位值落在图中最小尺寸层（不存在比它更小的节点）时阈值会退化成最小值、
  * 一个标签也藏不掉（开关看似失效），此时上提一档到次小尺寸。
+ * 大图（> HEAVY_LABEL_COUNT）：按预算封顶，取降序第 budget 个的值——
+ * 大于等于阈值的节点不超过预算量级（同尺寸并列整层保留）。
  * @param {Array} nodes chartData 的节点（纯数据）
  * @param {boolean} showSmallLabels 开关状态
- * @returns {number} 阈值；开关打开返回 -Infinity（全显），
+ * @returns {number} 阈值；中小图开关打开返回 -Infinity（全显），
  *   空节点集合返回 undefined（比较恒为 false，同样全显）
  */
 export const labelThreshold = (nodes, showSmallLabels) => {
-  if (showSmallLabels) return -Infinity
   const sizes = [...(nodes ?? [])].map((n) => n.symbolSize ?? 0).sort((a, b) => a - b) // 升序：小节点在前
   if (!sizes.length) return undefined
+  if (sizes.length > HEAVY_LABEL_COUNT) {
+    const budget = showSmallLabels ? LABEL_BUDGET_EXTENDED : LABEL_BUDGET
+    return sizes[sizes.length - budget]
+  }
+  if (showSmallLabels) return -Infinity
   const threshold = sizes[Math.ceil(sizes.length * SMALL_NODE_RATIO) - 1]
   // 退化态：没有节点小于阈值 → 上提到次小尺寸（升序首个更大值）；
   // 全图同尺寸时无档可提，停在原值

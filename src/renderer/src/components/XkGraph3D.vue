@@ -90,13 +90,16 @@ const pureLink = (l) => ({
 const applyVisibility = () => {
   if (!graph) return
   const hidden = hiddenCategories.value
+  // 端点类目按名索引：库对每条边调用 linkVisibility，find 是 O(n²)——
+  // 万级节点图（世界树 23k 边 × 16k 节点）同步跑数亿次比较，直接卡死
+  const categoryByName = new Map(props.nodes.map((n) => [n.name, n.category]))
   graph
     .nodeVisibility((n) => !hidden.has(n.category))
     // 两端任一隐藏，边随之隐藏
     .linkVisibility((l) => {
       const endVisible = (name) => {
-        const n = props.nodes.find((x) => x.name === name)
-        return n ? !hidden.has(n.category) : true
+        const cat = categoryByName.get(name)
+        return cat === undefined ? true : !hidden.has(cat)
       }
       return endVisible(linkEnd(l.source)) && endVisible(linkEnd(l.target))
     })
@@ -169,6 +172,19 @@ const applyInteraction = () => {
     .linkLabel((l) => (props.showLinkName && l.name ? l.name : ''))
 }
 
+/** 大图力模拟自适应：库默认 ~300 tick / 15s 冷却，万级节点期间持续低帧率；
+ *  提高温度衰减并压低冷却时长让布局尽快稳定，中小图保持库默认。
+ *  须在 graphData 装载前调用，参数随本次引擎启动生效 */
+const HEAVY_SIM_COUNT = 2000
+const applySimulationScale = () => {
+  if (!graph) return
+  if (props.nodes.length > HEAVY_SIM_COUNT) {
+    graph.d3AlphaDecay(0.05).cooldownTime(10000)
+  } else {
+    graph.d3AlphaDecay(0.0228).cooldownTime(15000)
+  }
+}
+
 onMounted(() => {
   try {
     // preserveDrawingBuffer 让 toDataURL 导出 PNG 不黑屏
@@ -181,6 +197,8 @@ onMounted(() => {
     emit('init-failed')
     return
   }
+
+  applySimulationScale()
 
   graph
     .nodeId('name')
@@ -236,6 +254,7 @@ watch(
   () => [props.nodes, props.links],
   () => {
     if (!graph) return
+    applySimulationScale()
     graph.graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
     applyLabels()
   },
