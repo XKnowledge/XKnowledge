@@ -73,14 +73,18 @@ const sameRow =
 expectTrue('搜索框与标题同行', sameRow, `title y=${titleBox?.y?.toFixed(0)} search y=${searchBox?.y?.toFixed(0)}`)
 await shot('01-home')
 
-// 1.5 色点封顶：最大分类卡「饮食与风味」（19 分类）只渲 18 点 + 1 个「+1」，
-//     描述行仍在（未被色点挤没）；普通卡无 +N 点
-//     （原 75 分类的「计算机与芯片」已不在示例库，以当前最大卡复现 18 封顶）
-const bigCard = page.locator('.xk-example-card', { hasText: '饮食与风味' }).first()
+// 1.5 色点封顶：最大分类卡「茶」（17 分类，饮食与风味拆分后居首）点数与类目数
+//     一致、无 +N 收纳点、描述行仍在（未被色点挤没）；普通卡无 +N 点。
+//     18 封顶 + 「+N」路径需 ≥19 分类的卡，饮食拆分（19→7 类）后库中暂无，
+//     该防御逻辑仍在组件内但无真实图可触发
+const bigCard = page
+  .locator('.xk-example-card')
+  .filter({ has: page.locator('.name', { hasText: /^茶$/ }) })
+  .first()
 await bigCard.scrollIntoViewIfNeeded()
-expectEq('极端卡色点总数（18+1）', await bigCard.locator('.dot').count(), 19)
-expectEq('+N 点文本', (await bigCard.locator('.dot-more').innerText()).trim(), '+1')
-expectTrue('极端卡描述行未被挤没', await bigCard.locator('.desc').isVisible())
+expectEq('最大卡色点数（=类目数 17）', await bigCard.locator('.dot').count(), 17)
+expectTrue('最大卡无 +N 点', (await bigCard.locator('.dot-more').count()) === 0)
+expectTrue('最大卡描述行未被挤没', await bigCard.locator('.desc').isVisible())
 const normalCard = page.locator('.xk-example-card', { hasText: '玩具与桌游' }).first()
 expectTrue('普通卡无 +N 点', (await normalCard.locator('.dot-more').count()) === 0)
 await shot('01b-dots-capped')
@@ -95,14 +99,13 @@ expectTrue('命中包含「文具与书写工具」', hitTitles.includes('文具
 expectTrue('搜索时隐藏新建空白卡', !(await page.locator('.new-blank-card').isVisible()))
 await shot('02-search-partial')
 
-// 3. 「风土」按分类子串命中「茶」（山头风土）、「葡萄酒」（品鉴与风土，咖啡茶与葡萄酒
-//    并入后的新增命中）与「饮食与风味」（产地风土）
+// 3. 「风土」按分类子串命中「茶」（山头风土）与「葡萄酒」（品鉴与风土，咖啡茶与
+//    葡萄酒并入后的新增命中）；「饮食与风味」的「产地风土」类目已随咖啡部分迁出
 await input.fill('风土')
 await page.waitForTimeout(300)
 const fengtu = await cardTitles()
 expectTrue('分类命中「茶」', fengtu.includes('茶'), `共 ${fengtu.length} 张`)
 expectTrue('分类命中「葡萄酒」', fengtu.includes('葡萄酒'))
-expectTrue('分类命中「饮食与风味」', fengtu.includes('饮食与风味'))
 await shot('03-search-desc')
 
 // 4. 无匹配：空态文案区分
