@@ -73,13 +73,14 @@ const sameRow =
 expectTrue('搜索框与标题同行', sameRow, `title y=${titleBox?.y?.toFixed(0)} search y=${searchBox?.y?.toFixed(0)}`)
 await shot('01-home')
 
-// 1.5 色点封顶：极端卡「计算机与芯片」（75 分类）只渲 18 点 + 1 个「+N」，
+// 1.5 色点封顶：最大分类卡「饮食与风味」（19 分类）只渲 18 点 + 1 个「+1」，
 //     描述行仍在（未被色点挤没）；普通卡无 +N 点
-const chipCard = page.locator('.xk-example-card', { hasText: '计算机与芯片' }).first()
-await chipCard.scrollIntoViewIfNeeded()
-expectEq('极端卡色点总数（18+1）', await chipCard.locator('.dot').count(), 19)
-expectEq('+N 点文本', (await chipCard.locator('.dot-more').innerText()).trim(), '+57')
-expectTrue('极端卡描述行未被挤没', await chipCard.locator('.desc').isVisible())
+//     （原 75 分类的「计算机与芯片」已不在示例库，以当前最大卡复现 18 封顶）
+const bigCard = page.locator('.xk-example-card', { hasText: '饮食与风味' }).first()
+await bigCard.scrollIntoViewIfNeeded()
+expectEq('极端卡色点总数（18+1）', await bigCard.locator('.dot').count(), 19)
+expectEq('+N 点文本', (await bigCard.locator('.dot-more').innerText()).trim(), '+1')
+expectTrue('极端卡描述行未被挤没', await bigCard.locator('.desc').isVisible())
 const normalCard = page.locator('.xk-example-card', { hasText: '玩具与桌游' }).first()
 expectTrue('普通卡无 +N 点', (await normalCard.locator('.dot-more').count()) === 0)
 await shot('01b-dots-capped')
@@ -94,11 +95,13 @@ expectTrue('命中包含「文具与书写工具」', hitTitles.includes('文具
 expectTrue('搜索时隐藏新建空白卡', !(await page.locator('.new-blank-card').isVisible()))
 await shot('02-search-partial')
 
-// 3. 「风土」命中「咖啡茶与葡萄酒」（标题子串）与「饮食与风味」（分类「产地风土」）
+// 3. 「风土」按分类子串命中「茶」（山头风土）、「葡萄酒」（品鉴与风土，咖啡茶与葡萄酒
+//    并入后的新增命中）与「饮食与风味」（产地风土）
 await input.fill('风土')
 await page.waitForTimeout(300)
 const fengtu = await cardTitles()
-expectTrue('标题命中「咖啡茶与葡萄酒」', fengtu.includes('咖啡茶与葡萄酒'), `共 ${fengtu.length} 张`)
+expectTrue('分类命中「茶」', fengtu.includes('茶'), `共 ${fengtu.length} 张`)
+expectTrue('分类命中「葡萄酒」', fengtu.includes('葡萄酒'))
 expectTrue('分类命中「饮食与风味」', fengtu.includes('饮食与风味'))
 await shot('03-search-desc')
 
@@ -115,6 +118,22 @@ await page.waitForTimeout(300)
 expectEq('清空后恢复全量', await cardCount(), total)
 expectTrue('清空后新建空白卡回归', await page.locator('.new-blank-card').isVisible())
 await shot('05-cleared')
+
+// 6. 滚到底留隙：末行卡片与视口底边至少隔 10px，不贴窗口底。
+//    滚动与测量都在页面内做——Playwright 的 boundingBox 跨内部滚动容器
+//    （.inner-div 自滚）时坐标与视口对不上，量出过假值。
+//    .content 的 padding-bottom 30px 经 Chromium 末端 padding 截断后
+//    实际兑现约 13px，阈值取 10 留余量（AddView.vue 注释有说明）
+const gap = await page.evaluate(() => {
+  const el = document.querySelector('.inner-div')
+  if (el) el.scrollTop = el.scrollHeight
+  const cards = document.querySelectorAll('.xk-example-card')
+  const last = cards[cards.length - 1]
+  return last ? window.innerHeight - last.getBoundingClientRect().bottom : -1
+})
+await page.waitForTimeout(300)
+expectTrue('滚到底卡片与底边留隙', gap >= 10, `gap=${Math.round(gap)}px`)
+await shot('06-bottom-gap')
 
 console.log(errors.length ? `渲染错误 ${errors.length} 条:` : '渲染无错误', errors)
 await app.close()

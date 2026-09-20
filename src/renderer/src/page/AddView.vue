@@ -147,6 +147,10 @@ const openExampleChart = async (ex) => {
   /* 左边距为 30px */
   padding-right: 30px;
   /* 右边距为 30px */
+  padding-bottom: 30px;
+  /* 底部留隙：滚到底后末行卡片不贴窗口底边。
+     注：Chromium 滚动容器会截断末端 padding（CSS Overflow 规范允许），
+     30px 实际视觉兑现约 13px（1.25 DPI 下约 16 物理像素），已确认够用 */
 }
 
 .inner-div {
