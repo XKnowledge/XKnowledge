@@ -1,0 +1,1377 @@
+{
+  "version": 2,
+  "title": "嘻哈文化",
+  "description": "一九七三年布朗克斯的返校派对上，DJ Kool Herc 把唱针放回间奏——由此长出的 DJ、MC、涂鸦与街舞四要素，历经唱片业入场、黄金时代、匪帮说唱与东西岸血案、采样判例、南部 Trap 与 Auto-Tune，直至流媒体时代的全球方言。",
+  "nodes": [
+    {
+      "name": "嘻哈",
+      "des": "布朗克斯废墟上长出的文化总称：DJ 打碟、MC 说唱、涂鸦与街舞四大要素，从一九七三年的社区派对长成覆盖全球的商业与语言体系，「嘻哈不是住在五个区，它是一种觉悟」。",
+      "symbolSize": 70,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "布朗克斯",
+      "des": "纽约最北的行政区：战后红线的绞索、撤离计划与纵火潮令南布朗克斯化为废墟，也腾出了被主流放弃的文化空间，嘻哈在灰烬里开party。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "被烧毁的布朗克斯",
+      "des": "七十年代的房东纵火保险欺诈与「焦土撤离」：一整片街区在十年大火中化为空地，一九七七年大停电夜的洗劫与「布朗克斯在燃烧」登上全国头条，废墟美学是嘻哈的第一层底色。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "1520塞奇威克大道",
+      "des": "一九七三年八月十一日，辛迪·坎贝尔在自家社区活动室办返校筹款派对，请了哥哥打碟——史上第一场嘻哈派对的地址，二零零七年被纽约正式列为历史保护建筑。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "DJ Kool Herc",
+      "des": "牙买加移民克莱夫·坎贝尔，「嘻哈之父」：把迪斯科与放克的鼓点间奏用两台唱盘来回接长，间奏加长的那段就是 break，break 上跳舞的少年就是 b-boy。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "鼓点间奏",
+      "des": "Breakbeat，歌曲里去掉人声只剩鼓与贝斯的的高潮段：两拍或四拍的纯节奏缝隙，被 Herc 的双手无限延长，既是舞步的跑道，也是后来整个采样美学的最小单元。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "Grandmaster Flash",
+      "des": "技术派的开山祖师：发明快速混音理论，把唱盘做成可精确重复的乐器，铁轮上的现场即兴与《The Message》的街头纪实令其成为首批入驻摇滚名人堂的嘻哈人。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "《铁轮上的冒险》",
+      "des": "一九八一年单曲：Flash 把 Blondie、Queen 与 Chic 的碎片在唱盘上现场拼成整首歌，首张把 DJ 技术本身当作唱片的录音，唱盘主义的最早文献。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "Afrika Bambaataa",
+      "des": "前黑帮少年转身的文化组织者，以祖鲁民族把帮派青年收编进音乐与舞蹈，一九八二年《Planet Rock》把德国电子乐引入嘻哈基因，三大创始 DJ 里的大使。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "《Planet Rock》",
+      "des": "一九八二年 Bambaataa 与制作组的合成器宣言：主 riff 采自 Kraftwerk 的《Trans-Europe Express》与《Numbers》，布朗克斯与杜塞尔多夫的一次跨国授精，电音嘻哈的共同祖先。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "祖鲁民族",
+      "des": "Universal Zulu Nation，Bambaataa 一九七三年前后组建的团体：以非洲之名重组街头能量，订立「和平、爱、团结与尽情享乐」的信条，嘻哈的第一座教堂。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "Grand Wizzard Theodore",
+      "des": "搓碟的发明者：一九七五年前后，母亲喝止他关小音量，他按住唱片的手掌意外让唱针「叫」了起来—— scratch 由这记斥责催生，当时他只有十来岁。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "唱盘主义",
+      "des": "Turntablism，把唱机当乐器的完整技艺：搓碟、跳针、鼓花与双唱盘对拍，DMC 世界大赛把技术推向竞技体育，唱盘手的双手是嘻哈最初的心脏。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "Technics SL-1200",
+      "des": "松下一九七二年推出的直驱唱盘，MK2 版以钢性机身与起扭即达的电机成为 DJ 行业标准武器，四十年不换的军械，嘻哈与舞曲文化的硬件图腾。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "The Furious Five",
+      "des": "Flash 领衔的传奇团体：牛仔、妙手与 Melle Mel 等五人把说唱从派对口令升级为叙事艺术，《The Message》令全员名垂青史。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "《The Message》",
+      "des": "一九八二年的街头纪实：「别逼我靠近疯人院」，碎玻璃、老鼠与账单的布朗克斯写实主义，嘻哈第一次证明说唱可以是社会檄文，滚石百大金曲常客。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "Melle Mel",
+      "des": "Furious Five 的主音笔杆，《The Message》的真正说唱者，押韵与叙事技术的第一代宗师，后来的《White Lines》再证实力。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "街舞",
+      "des": "Breaking，b-boy 与 b-girl 在鼓点间奏上的竞技舞：地板步、冻结与力动的体操化语法，从布朗克斯水泥地跳进一九八四洛杉矶奥运闭幕式的全球视野。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "洛克斯特迪集团",
+      "des": "Rock Steady Crew，一九七七年成立的街舞战队：把 breaking 从街区救活并带向世界，一九八三年的同名金曲与《Flashdance》令满世界开始练头旋。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "涂鸦",
+      "des": "Graffiti，写在地铁与墙上的第三要素：标签、抛字与整车涂装的字体战争，违法的签名系统长成二十世纪最后的美术运动，画廊与市政的拉锯至今未停。",
+      "symbolSize": 50,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "TAKI 183",
+      "des": "华盛顿高地的小信使塔基，把「名字+街道号」签遍所到之处，一九七一年《纽约时报》的报道《TAKI 183 孳生笔友》令全城少年一夜拿起喷雾罐，涂鸦时代的点火新闻。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "《地铁艺术》",
+      "des": "玛莎·库珀与亨利·查尔方特一九八四年的影集：整辆整车涂装的黄金档案，与纪录片《Style Wars》一道把纽约地铁字体送往全球每个街区。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "哈林与巴斯奇亚",
+      "des": "涂鸦双星从地铁走向画廊的两条路：哈林以白色粉笔占领地铁广告位再开 Pop Shop；巴斯奇亚以 SAMO 之名涂写警句，数年间从街头登上新表现主义的天价神坛。",
+      "symbolSize": 40,
+      "category": "布朗克斯创世"
+    },
+    {
+      "name": "《Rapper's Delight》",
+      "des": "一九七九年十月的新泽西录音棚：Sugar Hill 三人组十五分钟的饶舌马拉松，好时光贝斯线一路到底，第一首进入商业发行的嘻哈单曲，全世界的收音机第一次听见说唱。",
+      "symbolSize": 50,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "Sugar Hill Gang",
+      "des": "厂牌老板临时拼凑的三人组：Big Bank Hank、Wonder Mike 与 Master Gee，多数人从未在派对界出道，却因一首《Rapper's Delight》成为嘻哈的第一张名片。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "西尔维娅·罗宾逊",
+      "des": "「嘻哈教母」，前歌手出身的 Sugar Hill 唱片创办人：嗅到派对经济的第一位商人，签下先锋乐手并把说唱做成唱片，行业规则的最初书写者之一。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "Sugar Hill唱片",
+      "des": "一九七九年成立的先锋厂牌：《Rapper's Delight》《The Message》与格拉迪斯·奈特的合作皆出此地，以自有乐队现场重录放克伴奏，嘻哈唱片工业的第一座车间。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "Def Jam唱片",
+      "des": "一九八四年鲁宾与西蒙斯在纽约大学宿舍起家的厂牌：LL、野兽男孩、公敌与后来的 Jay-Z 阵营，嘻哈从街头生意长成跨国公司的主干道，「Def Jam 的历史就是嘻哈史的一半」。",
+      "symbolSize": 50,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "西蒙斯与鲁宾",
+      "des": "Def Jam 的双创始人：西蒙斯是跑巡演的街头企业家，鲁宾是宿舍里的重型摇滚青年，两人的组合令说唱与摇滚在同一厂牌下互为燃料。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "Run-DMC",
+      "des": "皇后区三人组：阿迪达斯鞋带外系、黑帽黑衣的极简美学与硬朗鼓机，把说唱从迪斯科化编曲带回街头，史上第一支白金、第一支登滚石封面的说唱组合。",
+      "symbolSize": 50,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "《Raising Hell》",
+      "des": "一九八六年专辑：制作交由里克·鲁宾，鼓机与电吉他的钢筋骨架，说唱第一张白金专辑，嘻哈商业帝国的奠基文件。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "《Walk This Way》",
+      "des": "一九八六年 Run-DMC 翻唱空中铁匠旧作：说唱与摇滚在 MTV 时代的握手，嘻哈首支公告牌前五单曲，白人郊区从此大规模收听黑人街头之声。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "LL Cool J",
+      "des": "「Ladies Love Cool James」，Def Jam 首张专辑《Radio》的主人：十六岁的壮汉以情歌与 Battle 双线定义了说唱明星的 longevity 模板，厂牌的第一张王牌。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "Beastie Boys",
+      "des": "纽约硬核朋克转型的犹太三人组：《Licensed to Ill》成为首张冠军说唱专辑，此后二十年从 frat 派对进化成采样炼金与乐器大师，白人参与嘻哈的最早正解。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "《Licensed to Ill》",
+      "des": "一九八六年首张专辑：击打式采样与自嘲式派对叙事，首张登顶公告牌的说唱专辑，Def Jam 的第一桶金与「为嬉皮士战斗」的传世口号。",
+      "symbolSize": 40,
+      "category": "唱片业入场"
+    },
+    {
+      "name": "公敌",
+      "des": "Public Enemy，长岛的黑色电台：《It Takes a Nation of Millions to Hold Us Back》以信息高速率的政治说唱与炸弹小队的噪音墙，把嘻哈做成黑人美国的新闻编辑部。",
+      "symbolSize": 50,
+      "category": "黄金时代"
+    },
+    {
+      "name": "查克·D",
+      "des": "公敌的司令嗓：「说唱是黑人的 CNN」，以演说家的密度重写了歌词的信息标准，与搭档 Flavor Flav 的小丑闹钟构成嘻哈史上最锋利的双簧。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "炸弹小队",
+      "des": "The Bomb Squad，公敌背后的制作集体：几十层警报、警笛与放克片段叠成的高压音墙，密度与失真的美学至今无人超越，噪音作为配乐的极限实验。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "Eric B. & Rakim",
+      "des": "DJ 与 MC 的原型双人组：Eric B 的唱盘考古与拉基姆的词格革命，《Paid in Full》是黄金时代的第一块界碑，「Eric B. for President」即竞选宣言。",
+      "symbolSize": 50,
+      "category": "黄金时代"
+    },
+    {
+      "name": "拉基姆",
+      "des": "Rakim，说唱格律的牛顿：把押韵从鼓点的锁链里解放，韵脚内嵌、跨行与爵士即兴式的乐句从此成为可能，此后所有技术流 MC 都是其后裔。",
+      "symbolSize": 50,
+      "category": "黄金时代"
+    },
+    {
+      "name": "《Paid in Full》",
+      "des": "一九八七年专辑：冷淡流的说唱配灵魂乐采样，标题曲被无数后人重混，「思考是为你自己」的金钱伦理课，黄金时代开局的教科书。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "KRS-One与BDP",
+      "des": "Boogie Down Productions 与其首领：南布朗克斯的街头学者，《Criminal Minded》开硬核先声，《Stop the Violence》运动证明说唱可以自我教育，「教师」之名由此而来。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "大爹凯恩",
+      "des": "Big Daddy Kane，布鲁克林的丝绒快枪手：流畅律动与高帽西装的情人形象，八十年代末技术流与偶像派的双料标杆，影响了整整一代东岸 MC。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "Native Tongues",
+      "des": "以非洲为名的松散联盟：丛林兄弟、迪拉灵魂、部落叫阵与女王拉蒂法互相串场，以乐观、泛非与爵士采样对抗匪帮叙事，嘻哈的良心派系。",
+      "symbolSize": 50,
+      "category": "黄金时代"
+    },
+    {
+      "name": "A Tribe Called Quest",
+      "des": "部落叫阵，Native Tongues 的旗舰：Q-Tip 与 Phife Dawg 的双声部、贝斯手式的爵士采样，《The Low End Theory》是九零年代初纽约最柔软的一块金牌。",
+      "symbolSize": 50,
+      "category": "黄金时代"
+    },
+    {
+      "name": "《The Low End Theory》",
+      "des": "一九九一年专辑：Ron Carter 的直立贝斯与灰尘鼓机，爵士与嘻哈的正式联姻，从「Scenario」到「Excursions」的说唱室内乐，历代乐评榜常客。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "De La Soul",
+      "des": "长岛三人组：雏菊时代的玩笑家，《3 Feet High and Rising》以拼贴喜剧与三色心形宣告嘻哈可以古怪温柔，版权壁垒却令其流媒体时代姗姗来迟。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "《3 Feet High and Rising》",
+      "des": "一九八九年专辑：王子保罗制作的问答剧与玩具钢琴采样，反英雄的乐观主义宣言，「麻将牌一代」的正式入场券。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "皇后拉蒂法",
+      "des": "Queen Latifah，Newark 出身的女性先驱：《Ladies First》为女性说唱立碑，此后横跨演技与主持，嘻哈艺人跨界主流娱乐的最早成功样板。",
+      "symbolSize": 40,
+      "category": "黄金时代"
+    },
+    {
+      "name": "匪帮说唱",
+      "des": "Gangsta Rap，从洛杉矶长出的报道文学：以第一人称写毒品、警察与街头经济学，被斥为暴力叫嚣的同时也是被回避的街区实录，嘻哈商业引擎中最轰的一部。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "艾斯·T",
+      "des": "Ice-T，洛杉矶匪帮叙事的先行者：一九八六年《6 in the Mornin'》以冷静笔法写街头一天，九二年金属乐队 Body Count 的《Cop Killer》再掀全国禁播风暴。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "N.W.A",
+      "des": "「有态度的黑帮」五人组：Cube 执笔、Eazy 出资、Dre 制作，《Straight Outta Compton》令 FBI 来函警告，匪帮说唱从此成为全国议题，成员单飞后各自撑起半壁西岸。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《Straight Outta Compton》",
+      "des": "一九八八年专辑：康普顿的枪声报道文学，FBI 的警告信反而成了最佳广告，西岸声音登上主舞台的开场炮，二零一五年的同名传记片再收两亿票房。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "艾斯·库伯",
+      "des": "Ice Cube，N.W.A 的主笔与首个出走者：《AmeriKKKa's Most Wanted》由公敌班底制作，以剧本式叙事成为最具政治锋芒的西岸 MC，后以《周五》系列再建电影版图。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "Eazy-E",
+      "des": "「康普顿之神」，Ruthless 唱片的创办人与 N.W.A 的资金方：高音匪腔与毒资起家的传奇人生，九五年艾滋病去世令全行业第一次直视艾滋，三十一岁。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "德瑞博士",
+      "des": "Dr. Dre，制作人至上的化身：从 N.W.A 到《The Chronic》开创 G-Funk，此后发掘 Eminem 与 50 Cent，Beats 耳机再把他送上亿万身家，嘻哈最成功的耳朵。",
+      "symbolSize": 60,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《The Chronic》",
+      "des": "一九九二年专辑：Death Row 发行的 G-Funk 圣经，锡塔琴滑音、女声副歌与大麻喜剧，把西岸制作美学推成全国标准，史努比在其中的亮相即巨星诞生。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "G-Funk",
+      "des": "甘放克：帕拉门特与 George Clinton 放克样本放缓加锡塔琴旋律线的西岸配方，九十年代前半的全国流行底色，从lowrider音响里长出的温柔暴力。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "史努比狗狗",
+      "des": "Snoop Dogg，长滩的慵懒声线：《Deep Cover》与《Doggystyle》令他成为 G-Funk 的脸面，此后三十年从 Murder 案审判到烹饪节目与奥运火炬，流行文化的长青变体。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《Doggystyle》",
+      "des": "一九九三年首张专辑：德瑞操刀的低音大船配上史努比的漫画叙事，首周登顶公告牌——说唱专辑第一次，G-Funk 商业与艺术的双高点。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "死亡行唱片",
+      "des": "Death Row Records，Suge Knight 与 Dre 一九九一年共立的西岸帝国：以强硬手腕签下 2Pac，九六年前的销量霸主，暴力与挥霍的旋涡最终吞噬自身。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "2Pac",
+      "des": "图帕克·沙库尔，嘻哈最复杂的殉道者：艺术学校出身的剧院之心配街头之躯，《Dear Mama》的温柔与《Hit 'Em Up》的烈焰同在，九六年拉斯维加斯中枪身亡，二十五岁，死后唱片仍在畅销。",
+      "symbolSize": 60,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《All Eyez on Me》",
+      "des": "一九九六年双碟：Death Row 时期的全面爆发，西岸音墙与生平自传的合流，史上第一张登顶的说唱双碟，嘻哈商业规模的重新定义。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "声名狼藉先生",
+      "des": "The Notorious B.I.G.，布鲁克林的叙事巨匠：浑厚低音区的镜头感说唱，《Ready to Die》令东岸重获话语权，九七年洛杉矶遇刺，二十四岁，东西岸战争最著名的伤亡。",
+      "symbolSize": 60,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《Ready to Die》",
+      "des": "一九九四年专辑：从「某些事情怪异」的自杀独白到「多汁」的自创神话，纽约街区的完整长镜头，东岸复兴的引擎与不良小子唱片的开山。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "吹牛老爹",
+      "des": "Sean \"Puffy\" Combs，Bad Boy 唱片的创办人：以闪亮西装与舞池翻拍重振东岸商业，《I'll Be Missing You》为亡友致哀的同时垄断九七年夏天，此后转型企业家与时尚帝国。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "东西岸之战",
+      "des": "九四至九七年的海岸对峙：Death Row 与 Bad Boy 的口水歌、媒体加油与真实枪火，两位巨星的先后遇刺令全行业低头，此后「海岸」退位给「厂牌」与「城市」。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "武当派",
+      "des": "Wu-Tang Clan，史泰登岛的九人军团：功夫片样本与五百分制黑经济学的自成宇宙，《三十六室》以三万七千美元成本重写东岸规则，「武当派是为孩子们做的」。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《进入武当36室》",
+      "des": "一九九三年首专：RZA 的脏鼓与电影碎片拼出武术神话，九人轮番轰炸的马拉松叙事，五百美元预付改写行业数学，东岸硬核的永恒坐标。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "RZA",
+      "des": "武当的建筑师：以「武当风格」制作哲学掌舵全团声音，此后配乐（鬼狗、杀死比尔）与商务实验（一_album_only 拍卖）皆出其手，军团的肝脏与大脑。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "纳斯",
+      "des": "Nas，皇后桥的天才少年：《Illmatic》二十岁封神，此后从街头编年史转向商业与自觉的双线，纽约说唱「谁是最好的」辩论的永久席位。",
+      "symbolSize": 50,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《Illmatic》",
+      "des": "一九九四年专辑：十个制作人的完美接力配纳斯的项目区百科，销量平平却公认史上最伟大说唱专辑之一，「纽约州之心」的第一节车厢。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "Jay-Z",
+      "des": "布鲁克林出身的小贩长成的帝国缔造者：《Reasonable Doubt》起步，Roc-A-Fella 与 Roc Nation 的双塔，从街头记录员到亿万企业家的完整抛物线，说唱商业化的终极答卷。",
+      "symbolSize": 60,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《Reasonable Doubt》",
+      "des": "一九九六年首专：以黑帮电影的镜头语言写毒贩经济学，首周仅四万张却被追认为经典，独立厂牌自产自销的路线图，Roc 帝国的第一块砖。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "Eminem",
+      "des": "底特律白人快递员出身的韵脚机器：在地狱塞大战成名，被 Dre 签入 Aftermath，《The Slim Shady LP》起连击，以技术密度与自我厌恶的黑色喜剧成为销量之王，种族与阶级议题的永久磁石。",
+      "symbolSize": 60,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《The Slim Shady LP》",
+      "des": "一九九九年专辑：Dr. Dre 制度的第一份产品，滑稽角色的犯罪喜剧配洗衣板节拍，「我的名字是」令白人少年大规模入场，格莱美最佳说唱专辑。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "50 Cent",
+      "des": "皇后区中九枪不死的传奇：《Get Rich or Die Tryin'》以黑市履历与产业自律成为零三年现象，此后维生素水套现与电视帝国证明街头智慧的公司化。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "《Get Rich or Die Tryin'》",
+      "des": "二零零三年首专：Eminem 与 Dre 双背书的商业核爆，首周四天八十七万张，「In Da Club」成为世纪运动歌曲，匪帮叙事的最后一次全球总动员。",
+      "symbolSize": 40,
+      "category": "匪帮说唱与东西岸"
+    },
+    {
+      "name": "采样文化",
+      "des": "嘻哈的生产方式：从别人的唱片里剪出鼓点、贝斯与和声再重新命名，法律称之为侵权，街区称之为传承——整个流派的合法性与美学都建立在这条缝上。",
+      "symbolSize": 50,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "Akai MPC",
+      "des": "一九八八年 Roger Lynn 参与设计的采样鼓机：十六个橡皮垫成为嘻哈的钢琴键盘，采样的时间与力度在指尖重锤，Premier、Dilla 到如今的整个行业的生产车间。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "采样判例",
+      "des": "一九九一年 Grand Upright 诉华纳案：法官在判词里直接引用「不可偷盗」的十诫，Biz Markie 败诉，采样从此必须事先清算，黄金时代的自由采样宣告终结。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "DJ普里米尔",
+      "des": "Gang Starr 的半壁与纽约制作柱石：爵士切碎与鼓组除尘的签名手艺，Nas、Jay-Z 与 Biggie 的经典皆经其手，东岸声音的守门人三十年。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "皮特·洛克",
+      "des": "Pete Rock 与 CL Smooth 的双人组核心：《They Reminisce Over You》以萨克斯挽歌定义爵士嘻哈的深情一极，九十年代东岸采样的天鹅绒手套。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "J Dilla",
+      "des": "底特律的节拍圣徒：Slum Village 起家，为 Common、部落与 Roots 供弹，《Donuts》在病榻上完工、去世前三天发行，三十二岁，MPC 的手指后来自成流派——「Dilla 时间」。",
+      "symbolSize": 50,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "坎耶·维斯特",
+      "des": "Kanye West，芝加哥的灵魂采样建筑师：从 Roc 厂牌制作人转型 rapper，《The College Dropout》以泰迪熊与救赎主题重写主流审美，此后每张专辑都换一种音乐人格，流媒体时代前最后的专辑艺术家。",
+      "symbolSize": 60,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "《The College Dropout》",
+      "des": "二零零四年首专： Chicaga 灵魂乐的速度上移与粉红 polo 的中产叙事，说唱主题从街头生存扩展到自我怀疑与家庭，「Through the Wire」的下巴钢丝录音即宣言。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "法瑞尔与Neptunes",
+      "des": "Pharrell Williams 与 Chad Hugo 的弗吉尼亚制作二人组：千禧年初的流行乐隐形政府，从 Jay-Z 到布兰妮的连击命中，此后法瑞尔以《Happy》与 LV 联名成为跨界符号。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "蒂姆巴兰",
+      "des": "Timbaland，弗吉尼亚的节奏怪才：为 Missy Elliott 与 Aaliyah 打造的变形节拍——肚子拍与电子打嗝，九十年代末把 R&B 与说唱的制作想象力整体抬高一层。",
+      "symbolSize": 40,
+      "category": "制作人与采样文化"
+    },
+    {
+      "name": "南部嘻哈",
+      "des": "第三海岸的崛起：亚特兰大、休斯顿、新奥尔良与孟菲斯各持方言，从 Geto Boys 的地方出口到二十一世纪接管全国榜单，「南部有话要说」的宣言最终成为事实。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "OutKast",
+      "des": "亚特兰大的双色实验体：André 3000 的戏剧行为艺术与 Big Boi 的放克正统，从南部说唱标签一路进化到《Hey Ya!》的流行临界点，二零零三年格莱美年度专辑为嘻哈正名。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "《Speakerboxxx/The Love Below》",
+      "des": "二零零三年双 solo 合辑：Big Boi 的说话箱放克与 André 的爵士情歌各占一碟，格莱美年度专辑加冕，嘻哈专辑第一次拿到流行乐的最高奖章。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "南部双厂牌",
+      "des": "No Limit 与 Cash Money，新奥尔良的独立帝国：Master P 与 Birdman 各以坦克与钞票美学批量出货，证明南部可以不经纽约自建工业，Mannie Fresh 的弹跳制作是后者引擎。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "亚特兰大",
+      "des": "二十一世纪嘻哈的首都：从 OutKast 的自我命名到 trap 的全球出口，混音带经济、strip club 试听与独立厂牌网络构成完整生态，每个十年都向全国输出新方言。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "Trap",
+      "des": "以交易屋命名的流派：808 底鼓、三连音踩镲与阴沉合成器的标准配方，从亚特兰大街头走向全球流行乐的通用语法，电子乐与 K-pop 都改说它的口音。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "T.I.与《Trap Muzik》",
+      "des": "亚特兰大的「说唱之王」自封者：二零零三年以专辑名正式为 trap 立碑，此后与 Jeezy、Gucci Mane 三足鼎立，把交易屋美学做成全国名牌。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "古奇马内与Jeezy",
+      "des": "亚特兰大 trap 双雄：Jeezy 的雪铲叙事与 Gucci 的混音带工业化（狱中也不停发），两人从合作到 Beef 的路线即 trap 编年史，Delantic 之后的英雄辈出皆踩他们的脚印。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "小韦恩",
+      "des": "Lil Wayne，新奥尔良神童的成年进化：从 Cash Money 童星到《Tha Carter》系列的王朝，零七至零八年的混音带洪流与《Tha Carter III》令其登顶，Young Money 由此孵化。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "Auto-Tune",
+      "des": "一九九七年安塔里斯发布的音高校正器：石油地震学工程师的副产品，Cher《Believe》首次「滥用」，T-Pain 把它变成乐器，坎耶《808s & Heartbreak》与 Future 把它变成哭泣——技术缺陷即是风格。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "德雷克",
+      "des": "Drake，多伦多演员出身的情绪说唱帝国：《So Far Gone》混音带起步，说唱与 R&B 的边界自此模糊，流媒体时代的榜单规则几乎为其定制——诗歌、舞厅与陷阱的混血霸主。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "妮琪·米娜",
+      "des": "Nicki Minaj，Young Money 的第一夫人：以戏剧化的人格切换与快嘴技术重写女性说唱的商业上限，Pink Friday 起连击十年，其后所有女 rapper 的榜单天花板都由她抬升。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "肯德里克·拉马尔",
+      "des": "Kendrick Lamar，康普顿的继承人与革命者：《good kid, m.A.A.d city》的电影叙事、《To Pimp a Butterfly》的爵士黑怒到《DAMN.》的普利策音乐奖——非古典爵士第一人，说唱作为文学的最高认证。",
+      "symbolSize": 50,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "《DAMN.》",
+      "des": "二零一七年专辑：「 wickedness or weakness」的双向叙事配流行制造，二零一八年获普利策音乐奖——史上第一次颁给非古典非爵士作品，学院体系对说唱的最终承认。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "特拉维斯·斯科特",
+      "des": "Travis Scott，休斯顿的噪音建筑师：Auto-Tune 人声淹没在失真低音里的「rager」美学，《Astroworld》与《SICKO MODE》的分段式金曲令其成为流媒体时代的体育场祭司。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "SoundCloud说唱",
+      "des": "二零一五年前后的平台原生代：卧室即录音棚、平台即厂牌，Lil Peep 的 emo 与 XXXTentacion 的原生痛苦配 distortion beat，mumble rap 的争议即旧审美对新媒体的抵抗。",
+      "symbolSize": 40,
+      "category": "南部与千禧时代"
+    },
+    {
+      "name": "Grime",
+      "des": "东伦敦的自创方言：一百四十 BPM 的锯齿电子与英腔快嘴，从 Wiley 的 Eskimo 舞步到 Stormzy 的格拉斯顿伯里登基，英国嘻哈拒绝美国口音的独立宣言。",
+      "symbolSize": 50,
+      "category": "全球化与流媒体"
+    },
+    {
+      "name": "Dizzee Rascal",
+      "des": "十九岁的东伦敦神童：《Boy in da Corner》以电子尖叫与牙买加血统的语速拿下水星奖，Grime 第一次被主流评论界加冕，「Fix Up, Look Sharp» 的鼓即宣言。",
+      "symbolSize": 40,
+      "category": "全球化与流媒体"
+    },
+    {
+      "name": "《Boy in da Corner》",
+      "des": "二零零三年专辑：游戏机音效与警报的厨房制作，密不透风的伦敦报报道，水星奖加冕 Grime 的开国文献。",
+      "symbolSize": 40,
+      "category": "全球化与流媒体"
+    },
+    {
+      "name": "MC Solaar",
+      "des": "法国说唱的门面：一九九零年《Bouge de là» 以香颂式流畅登上主流，此后法语嘻哈成长为全球第二大市场，巴黎与马赛的移民街区各有口音。",
+      "symbolSize": 40,
+      "category": "全球化与流媒体"
+    },
+    {
+      "name": "中国说唱",
+      "des": "从地下俱乐部到综艺爆款：二零一七年《中国有嘻哈》一夜引爆，GAI 等人从地下走上热搜，此后《说唱新世代》再证内容深度，成都集团 Higher Brothers 经 88rising 反向出海。",
+      "symbolSize": 40,
+      "category": "全球化与流媒体"
+    }
+  ],
+  "links": [
+    {
+      "source": "嘻哈",
+      "target": "布朗克斯",
+      "name": "出生地",
+      "des": "废墟上的第一声「DJ 扔上去」。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "鼓点间奏",
+      "name": "最小单元",
+      "des": "一切从延长的间奏开始。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "唱盘主义",
+      "name": "第一要素",
+      "des": "DJ 是嘻哈最初的心脏。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "街舞",
+      "name": "第二要素",
+      "des": "b-boy 在 break 上起舞。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "涂鸦",
+      "name": "第三要素",
+      "des": "地铁车厢的字体战争。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "采样文化",
+      "name": "生产方式",
+      "des": "剪下旧唱片再重新命名。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "东西岸之战",
+      "name": "最痛一章",
+      "des": "两位巨星的代价。"
+    },
+    {
+      "source": "嘻哈",
+      "target": "中国说唱",
+      "name": "全球方言",
+      "des": "四十年后抵达中文世界。"
+    },
+    {
+      "source": "被烧毁的布朗克斯",
+      "target": "布朗克斯",
+      "name": "底色",
+      "des": "大火腾出的文化空间。"
+    },
+    {
+      "source": "布朗克斯",
+      "target": "1520塞奇威克大道",
+      "name": "创世地址",
+      "des": "一九七三年八月的返校派对。"
+    },
+    {
+      "source": "1520塞奇威克大道",
+      "target": "DJ Kool Herc",
+      "name": "首演",
+      "des": "哥哥的唱盘，妹妹的派对。"
+    },
+    {
+      "source": "DJ Kool Herc",
+      "target": "鼓点间奏",
+      "name": "发明",
+      "des": "两台唱盘把 break 无限接长。"
+    },
+    {
+      "source": "鼓点间奏",
+      "target": "街舞",
+      "name": "跑道",
+      "des": "间奏加长的那段就是舞池。"
+    },
+    {
+      "source": "DJ Kool Herc",
+      "target": "Grandmaster Flash",
+      "name": "技术接力",
+      "des": "从 Herc 的双手到 Flash 的刻度。"
+    },
+    {
+      "source": "Grandmaster Flash",
+      "target": "《铁轮上的冒险》",
+      "name": "文献",
+      "des": "唱盘即兴首次成碟。"
+    },
+    {
+      "source": "《铁轮上的冒险》",
+      "target": "唱盘主义",
+      "name": "开山",
+      "des": "DJ 技术本身成为唱片。"
+    },
+    {
+      "source": "Technics SL-1200",
+      "target": "唱盘主义",
+      "name": "标准武器",
+      "des": "直驱钢炮四十年不换。"
+    },
+    {
+      "source": "Grand Wizzard Theodore",
+      "target": "唱盘主义",
+      "name": "搓碟",
+      "des": "被母亲斥责逼出的音效。"
+    },
+    {
+      "source": "Afrika Bambaataa",
+      "target": "祖鲁民族",
+      "name": "创立",
+      "des": "以非洲之名收编街头。"
+    },
+    {
+      "source": "Afrika Bambaataa",
+      "target": "《Planet Rock》",
+      "name": "出品",
+      "des": "电子乐与嘻哈的跨国授精。"
+    },
+    {
+      "source": "《Planet Rock》",
+      "target": "采样文化",
+      "name": "早期范本",
+      "des": "布朗克斯认领了杜塞尔多夫。"
+    },
+    {
+      "source": "Grandmaster Flash",
+      "target": "The Furious Five",
+      "name": "领衔",
+      "des": "技术宗师与叙事天团的合体。"
+    },
+    {
+      "source": "Melle Mel",
+      "target": "The Furious Five",
+      "name": "主音",
+      "des": "第一代笔杆与喉舌。"
+    },
+    {
+      "source": "The Furious Five",
+      "target": "《The Message》",
+      "name": "纪实转向",
+      "des": "「别逼我靠近疯人院」。"
+    },
+    {
+      "source": "《The Message》",
+      "target": "公敌",
+      "name": "政治血脉",
+      "des": "街头写实进化为新闻编辑部。"
+    },
+    {
+      "source": "TAKI 183",
+      "target": "涂鸦",
+      "name": "点火",
+      "des": "纽约时报的笔友报道。"
+    },
+    {
+      "source": "《地铁艺术》",
+      "target": "涂鸦",
+      "name": "档案",
+      "des": "整车涂装的黄金影集。"
+    },
+    {
+      "source": "哈林与巴斯奇亚",
+      "target": "涂鸦",
+      "name": "登堂入室",
+      "des": "从地铁车厢到画廊白墙。"
+    },
+    {
+      "source": "街舞",
+      "target": "洛克斯特迪集团",
+      "name": "国家队",
+      "des": "把 breaking 带向世界。"
+    },
+    {
+      "source": "《Rapper's Delight》",
+      "target": "Sugar Hill Gang",
+      "name": "演唱",
+      "des": "临时拼凑三人组的首张名片。"
+    },
+    {
+      "source": "西尔维娅·罗宾逊",
+      "target": "Sugar Hill Gang",
+      "name": "拼组",
+      "des": "教母嗅到的第一单生意。"
+    },
+    {
+      "source": "西尔维娅·罗宾逊",
+      "target": "Sugar Hill唱片",
+      "name": "创办",
+      "des": "嘻哈工业的第一座车间。"
+    },
+    {
+      "source": "Sugar Hill唱片",
+      "target": "《The Message》",
+      "name": "出品",
+      "des": "厂牌的社会派杰作。"
+    },
+    {
+      "source": "《Rapper's Delight》",
+      "target": "嘻哈",
+      "name": "商业破冰",
+      "des": "收音机第一次听见说唱。"
+    },
+    {
+      "source": "西蒙斯与鲁宾",
+      "target": "Def Jam唱片",
+      "name": "共创",
+      "des": "宿舍起家的跨国主干道。"
+    },
+    {
+      "source": "Def Jam唱片",
+      "target": "LL Cool J",
+      "name": "首发王牌",
+      "des": "《Radio》即厂牌第一号。"
+    },
+    {
+      "source": "Def Jam唱片",
+      "target": "Beastie Boys",
+      "name": "在册",
+      "des": "白人参与嘻哈的最早正解。"
+    },
+    {
+      "source": "Def Jam唱片",
+      "target": "公敌",
+      "name": "在册",
+      "des": "政治锋刃的商业后盾。"
+    },
+    {
+      "source": "Run-DMC",
+      "target": "Def Jam唱片",
+      "name": "头牌",
+      "des": "厂牌与艺人的相互成就。"
+    },
+    {
+      "source": "Run-DMC",
+      "target": "《Raising Hell》",
+      "name": "巅峰",
+      "des": "鲁宾操刀的白金奠基文件。"
+    },
+    {
+      "source": "《Raising Hell》",
+      "target": "《Walk This Way》",
+      "name": "收录",
+      "des": "说唱与摇滚的 MTV 握手。"
+    },
+    {
+      "source": "《Walk This Way》",
+      "target": "嘻哈",
+      "name": "跨界爆破",
+      "des": "白人郊区大规模入场。"
+    },
+    {
+      "source": "Beastie Boys",
+      "target": "《Licensed to Ill》",
+      "name": "首专",
+      "des": "首张冠军说唱专辑。"
+    },
+    {
+      "source": "公敌",
+      "target": "查克·D",
+      "name": "司令",
+      "des": "「说唱是黑人的 CNN」。"
+    },
+    {
+      "source": "公敌",
+      "target": "炸弹小队",
+      "name": "音墙",
+      "des": "几十层警报的噪音政治学。"
+    },
+    {
+      "source": "查克·D",
+      "target": "艾斯·库伯",
+      "name": "制作连线",
+      "des": "公敌班底为库伯单飞操刀。"
+    },
+    {
+      "source": "Eric B. & Rakim",
+      "target": "拉基姆",
+      "name": "喉舌",
+      "des": "词格革命的牛顿。"
+    },
+    {
+      "source": "Eric B. & Rakim",
+      "target": "《Paid in Full》",
+      "name": "界碑",
+      "des": "黄金时代的第一块界碑。"
+    },
+    {
+      "source": "拉基姆",
+      "target": "纳斯",
+      "name": "隔代传承",
+      "des": "自由节奏由两代纽约人接续。"
+    },
+    {
+      "source": "KRS-One与BDP",
+      "target": "《The Message》",
+      "name": "纪实传统",
+      "des": "街头学者的自我教育路线。"
+    },
+    {
+      "source": "大爹凯恩",
+      "target": "拉基姆",
+      "name": "同代双峰",
+      "des": "技术流的两种性格。"
+    },
+    {
+      "source": "Native Tongues",
+      "target": "A Tribe Called Quest",
+      "name": "旗舰",
+      "des": "爵士柔软的一极。"
+    },
+    {
+      "source": "Native Tongues",
+      "target": "De La Soul",
+      "name": "发起",
+      "des": "雏菊时代的玩笑家。"
+    },
+    {
+      "source": "Native Tongues",
+      "target": "皇后拉蒂法",
+      "name": "在册",
+      "des": "女性先驱的立碑者。"
+    },
+    {
+      "source": "A Tribe Called Quest",
+      "target": "《The Low End Theory》",
+      "name": "杰作",
+      "des": "直立贝斯与灰尘鼓机的联姻。"
+    },
+    {
+      "source": "De La Soul",
+      "target": "《3 Feet High and Rising》",
+      "name": "首专",
+      "des": "反英雄的乐观宣言。"
+    },
+    {
+      "source": "《The Low End Theory》",
+      "target": "J Dilla",
+      "name": "制作血统",
+      "des": "柔软一极的下一站是底特律。"
+    },
+    {
+      "source": "艾斯·T",
+      "target": "匪帮说唱",
+      "name": "先声",
+      "des": "《6 in the Mornin'》的冷笔法。"
+    },
+    {
+      "source": "N.W.A",
+      "target": "匪帮说唱",
+      "name": "定义者",
+      "des": "康普顿的全国议题化。"
+    },
+    {
+      "source": "N.W.A",
+      "target": "《Straight Outta Compton》",
+      "name": "开场炮",
+      "des": "FBI 警告信成最佳广告。"
+    },
+    {
+      "source": "艾斯·库伯",
+      "target": "N.W.A",
+      "name": "主笔",
+      "des": "出走后的单飞同样锋利。"
+    },
+    {
+      "source": "Eazy-E",
+      "target": "N.W.A",
+      "name": "出资人",
+      "des": "毒资起家的康普顿之神。"
+    },
+    {
+      "source": "德瑞博士",
+      "target": "N.W.A",
+      "name": "制作",
+      "des": "西岸音墙的锻造者。"
+    },
+    {
+      "source": "德瑞博士",
+      "target": "《The Chronic》",
+      "name": "立派",
+      "des": "G-Funk 圣经。"
+    },
+    {
+      "source": "《The Chronic》",
+      "target": "G-Funk",
+      "name": "命名配方",
+      "des": "放克放缓加锡塔琴滑音。"
+    },
+    {
+      "source": "《The Chronic》",
+      "target": "史努比狗狗",
+      "name": "推出",
+      "des": "慵懒声线在片中诞生。"
+    },
+    {
+      "source": "史努比狗狗",
+      "target": "《Doggystyle》",
+      "name": "首周登顶",
+      "des": "说唱专辑的第一次。"
+    },
+    {
+      "source": "德瑞博士",
+      "target": "死亡行唱片",
+      "name": "共创",
+      "des": "西岸帝国的双头开局。"
+    },
+    {
+      "source": "死亡行唱片",
+      "target": "2Pac",
+      "name": "签约",
+      "des": "帝国的最后王牌。"
+    },
+    {
+      "source": "2Pac",
+      "target": "《All Eyez on Me》",
+      "name": "巅峰",
+      "des": "首张登顶的说唱双碟。"
+    },
+    {
+      "source": "声名狼藉先生",
+      "target": "《Ready to Die》",
+      "name": "封神",
+      "des": "东岸复兴的引擎。"
+    },
+    {
+      "source": "吹牛老爹",
+      "target": "声名狼藉先生",
+      "name": "老板与主将",
+      "des": "Bad Boy 的闪亮双子星。"
+    },
+    {
+      "source": "东西岸之战",
+      "target": "死亡行唱片",
+      "name": "西岸阵营",
+      "des": "Suge 的强硬手腕。"
+    },
+    {
+      "source": "东西岸之战",
+      "target": "吹牛老爹",
+      "name": "东岸阵营",
+      "des": "Bad Boy 的舞池反击。"
+    },
+    {
+      "source": "东西岸之战",
+      "target": "2Pac",
+      "name": "伤亡",
+      "des": "九六年拉斯维加斯。"
+    },
+    {
+      "source": "东西岸之战",
+      "target": "声名狼藉先生",
+      "name": "伤亡",
+      "des": "九七年洛杉矶。"
+    },
+    {
+      "source": "武当派",
+      "target": "《进入武当36室》",
+      "name": "首专",
+      "des": "三万七美元的重写规则。"
+    },
+    {
+      "source": "RZA",
+      "target": "武当派",
+      "name": "建筑师",
+      "des": "脏鼓与功夫样本的哲学。"
+    },
+    {
+      "source": "纳斯",
+      "target": "《Illmatic》",
+      "name": "二十岁封神",
+      "des": "项目区百科的十曲接力。"
+    },
+    {
+      "source": "Jay-Z",
+      "target": "《Reasonable Doubt》",
+      "name": "起步",
+      "des": "Roc 帝国的第一块砖。"
+    },
+    {
+      "source": "Jay-Z",
+      "target": "吹牛老爹",
+      "name": "东岸同盟",
+      "des": "九零年代纽约的商业双轴。"
+    },
+    {
+      "source": "德瑞博士",
+      "target": "Eminem",
+      "name": "发掘",
+      "des": "Aftermath 的白人王牌。"
+    },
+    {
+      "source": "Eminem",
+      "target": "《The Slim Shady LP》",
+      "name": "破局",
+      "des": "黑色喜剧的销量之王。"
+    },
+    {
+      "source": "Eminem",
+      "target": "50 Cent",
+      "name": "提携",
+      "des": "Shady 厂牌的商业核爆。"
+    },
+    {
+      "source": "50 Cent",
+      "target": "《Get Rich or Die Tryin'》",
+      "name": "现象",
+      "des": "四天八十七万张。"
+    },
+    {
+      "source": "采样文化",
+      "target": "Akai MPC",
+      "name": "车间",
+      "des": "十六块橡皮垫的钢琴键盘。"
+    },
+    {
+      "source": "采样判例",
+      "target": "采样文化",
+      "name": "法律断崖",
+      "des": "十诫入判词，自由时代终结。"
+    },
+    {
+      "source": "DJ普里米尔",
+      "target": "采样文化",
+      "name": "守门人",
+      "des": "爵士切碎的东岸正统。"
+    },
+    {
+      "source": "皮特·洛克",
+      "target": "采样文化",
+      "name": "天鹅绒一极",
+      "des": "萨克斯挽歌的深情采样。"
+    },
+    {
+      "source": "J Dilla",
+      "target": "Akai MPC",
+      "name": "手指圣徒",
+      "des": "时间与力度的指尖重锤。"
+    },
+    {
+      "source": "坎耶·维斯特",
+      "target": "J Dilla",
+      "name": "精神近亲",
+      "des": "灵魂采样的两种速度。"
+    },
+    {
+      "source": "坎耶·维斯特",
+      "target": "《The College Dropout》",
+      "name": "转型宣言",
+      "des": "泰迪熊与救赎主题。"
+    },
+    {
+      "source": "法瑞尔与Neptunes",
+      "target": "蒂姆巴兰",
+      "name": "弗吉尼亚双雄",
+      "des": "千禧初的隐形流行政府。"
+    },
+    {
+      "source": "蒂姆巴兰",
+      "target": "坎耶·维斯特",
+      "name": "制作三杰",
+      "des": "千禧初制作席位的三足鼎立。"
+    },
+    {
+      "source": "OutKast",
+      "target": "南部嘻哈",
+      "name": "旗舰",
+      "des": "「南部有话要说」。"
+    },
+    {
+      "source": "OutKast",
+      "target": "《Speakerboxxx/The Love Below》",
+      "name": "加冕",
+      "des": "格莱美年度专辑。"
+    },
+    {
+      "source": "南部双厂牌",
+      "target": "南部嘻哈",
+      "name": "独立帝国",
+      "des": "新奥尔良的自建工业。"
+    },
+    {
+      "source": "南部双厂牌",
+      "target": "小韦恩",
+      "name": "出品",
+      "des": "Cash Money 童星的进化。"
+    },
+    {
+      "source": "亚特兰大",
+      "target": "OutKast",
+      "name": "长子",
+      "des": "双色实验体的自我命名。"
+    },
+    {
+      "source": "亚特兰大",
+      "target": "Trap",
+      "name": "出口",
+      "des": "交易屋美学成为全球语法。"
+    },
+    {
+      "source": "T.I.与《Trap Muzik》",
+      "target": "Trap",
+      "name": "立碑",
+      "des": "专辑名正式命名流派。"
+    },
+    {
+      "source": "古奇马内与Jeezy",
+      "target": "Trap",
+      "name": "双雄",
+      "des": "雪铲叙事与混音带工业化。"
+    },
+    {
+      "source": "小韦恩",
+      "target": "德雷克",
+      "name": "Young Money",
+      "des": "王朝孵化的情绪霸主。"
+    },
+    {
+      "source": "小韦恩",
+      "target": "妮琪·米娜",
+      "name": "Young Money",
+      "des": "第一夫人的商业上限。"
+    },
+    {
+      "source": "Auto-Tune",
+      "target": "特拉维斯·斯科特",
+      "name": "哭泣美学",
+      "des": "人声淹没于失真低音。"
+    },
+    {
+      "source": "Trap",
+      "target": "Auto-Tune",
+      "name": "化学反应",
+      "des": "Future 们的缺陷即风格。"
+    },
+    {
+      "source": "德雷克",
+      "target": "嘻哈",
+      "name": "流媒体形态",
+      "des": "榜单规则为混血霸主定制。"
+    },
+    {
+      "source": "肯德里克·拉马尔",
+      "target": "《DAMN.》",
+      "name": "普利策",
+      "des": "非古典爵士的第一人。"
+    },
+    {
+      "source": "肯德里克·拉马尔",
+      "target": "2Pac",
+      "name": "继承",
+      "des": "康普顿的下一封信。"
+    },
+    {
+      "source": "特拉维斯·斯科特",
+      "target": "SoundCloud说唱",
+      "name": "同代光谱",
+      "des": "体育场祭司与卧室原生代。"
+    },
+    {
+      "source": "Grime",
+      "target": "嘻哈",
+      "name": "英伦变体",
+      "des": "拒绝美国口音的独立宣言。"
+    },
+    {
+      "source": "Dizzee Rascal",
+      "target": "Grime",
+      "name": "开国",
+      "des": "十九岁水星奖加冕。"
+    },
+    {
+      "source": "Dizzee Rascal",
+      "target": "《Boy in da Corner》",
+      "name": "文献",
+      "des": "游戏机音效的伦敦报道。"
+    },
+    {
+      "source": "MC Solaar",
+      "target": "嘻哈",
+      "name": "法语分支",
+      "des": "全球第二大市场的门面。"
+    },
+    {
+      "source": "中国说唱",
+      "target": "嘻哈",
+      "name": "中文分支",
+      "des": "综艺引爆与反向出海。"
+    },
+    {
+      "source": "采样文化",
+      "target": "《Planet Rock》",
+      "name": "早期范本",
+      "des": "跨国采样的第一课。"
+    },
+    {
+      "source": "鼓点间奏",
+      "target": "采样文化",
+      "name": "扩展",
+      "des": "从接长间奏到剪贴全曲。"
+    },
+    {
+      "source": "《The Message》",
+      "target": "纳斯",
+      "name": "叙事血统",
+      "des": "街区写实主义的电影化继承。"
+    },
+    {
+      "source": "Run-DMC",
+      "target": "街舞",
+      "name": "街头装",
+      "des": "贝壳头与黑帽的极简制服。"
+    }
+  ]
+}

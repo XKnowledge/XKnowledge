@@ -1,0 +1,1437 @@
+{
+  "version": 2,
+  "title": "电子音乐",
+  "description": "从特雷门琴的挥手与磁带的剪贴，到 Kraftwerk 的机器诗、芝加哥浩室与底特律 Techno 的舞池革命、英伦狂欢的碎拍裂变，直至伊比萨、柏林与 EDM 体育场——一部由合成器、鼓机与 DJ 写成的百年谱系。",
+  "nodes": [
+    {
+      "name": "电子音乐",
+      "des": "二十世纪的新乐器运动：振荡器、磁带、鼓机与电脑相继成为乐器，声音第一次可以凭空合成而非由物体振动产生，从学院实验室一路长成覆盖全球舞池与耳机的庞大谱系。",
+      "symbolSize": 70,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "特雷门琴",
+      "des": "一九二零年列宁格勒诞生的幽灵乐器：两手悬空挥动，一控制音高一控制音量，无需触碰便能演奏，取出《辅助警报》式的滑音成为科幻配角的百年标配。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "列夫·特雷明",
+      "des": "特雷门琴发明者，列宁亲自聆听后的巡美明星，回国后被捕入古拉格，在实验室里为克格勃做窃听器，大起大落的一生即电子乐早期的寓言。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "具体音乐",
+      "des": "一九四八年皮埃尔·谢弗在巴黎电台发起：火车声、锅碗、人声录进唱盘，剪接拼贴倒放循环，「具体」的声音素材取代乐谱与音符，采样思想的直系祖先。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "皮埃尔·谢弗",
+      "des": "电台工程师出身的具体音乐之父，《火车练习曲》以六个唱盘与混音台现场拼贴，晚年却宣布与「噪音的杂耍」决裂，转身研究通信理论。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "磁带音乐",
+      "des": "磁带让声音第一次可以被切开、倒转、变速与叠录：科隆西德广播电台的工作室把这项技术变成严肃乐器，与巴黎的具体音乐分庭的德国路线。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "卡尔海因茨·斯托克豪森",
+      "des": "科隆工作室的旗手，《青年之歌》把童声与正弦波熔成电子圣咏，毕生构建电子音乐的学院体系，披头士把他的脸印上《帕伯军士》封面以示敬意。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "RCA合成器二号",
+      "des": "一九五七年占满一整墙的合成器巨兽：数百根线缆手工插拔，明码标价每秒千美元的租金，只有学院与电影厂用得起，电子音乐的恐龙时代。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "穆格合成器",
+      "des": "一九六四年罗伯特·穆格把模块合成器做成商品：电压控制振荡器与那枚传奇滤波器，键盘版让乐手而不仅是工程师可以演奏，电子音乐从此走出实验室。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "罗伯特·穆格",
+      "des": "从特雷门琴套件邮购生意起家的工程师，把合成器从广播机构的机房搬到乐队的舞台上，名字本身成为合成器的代名词。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "《Switched-On Bach》",
+      "des": "一九六八年温迪·卡洛斯用穆格合成器重演巴赫，古典曲目的电子翻译意外狂销百万张、拿下格莱美三奖，说服全世界合成器是一件正经乐器。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "温迪·卡洛斯",
+      "des": "哥伦比亚大学的录音才女，《Switched-On Bach》的操盘手，此后为《发条橙》配乐，跨性别者的公开身份亦是电子乐史上的先行者。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "氛围音乐",
+      "des": "一九七八年伊诺以《机场音乐》命名的新品类：音乐要能忽略、能浸入、如环境光线一般的听觉家具，电子乐脱离节拍的另一条大河。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "布莱恩·伊诺",
+      "des": "华丽摇滚出身的思想家，车祸卧床听雨声混唱片的顿悟催生氛围系列，此后以「扑克牌策略」与制人身份改写流行与电子两界的方法论。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "乔治奥·莫罗德尔",
+      "des": "意大利制作人，把合成器与鼓机塞进迪斯科的先知，《I Feel Love》之后又以《午夜快车》拿下奥斯卡，Disco 之王的电子野心贯穿一生。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "唐娜·萨默",
+      "des": "「迪斯科女王」，在慕尼黑唱诗班出身的女高音，与莫罗德尔合作的《I Feel Love》以全合成器伴奏登上榜单，人声与机器的对唱从此开场。",
+      "symbolSize": 40,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "《I Feel Love》",
+      "des": "一九七七年的单曲：穆格低音的十六分音符永动泵与萨慕层层堆叠的呓语，伊诺拿着唱片冲进录音室宣布「我听到了流行音乐的未来」，一切舞曲的胎动时刻。",
+      "symbolSize": 50,
+      "category": "先锋与磁带"
+    },
+    {
+      "name": "德国摇滚",
+      "des": "六七十年代西德的青年运动：战后一代拒绝英美布鲁斯与摇滚的语法，用即兴、电子与机械律动寻找德语身份，俗称 Krautrock，几乎所有后世电子乐的地基。",
+      "symbolSize": 50,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "Neu!",
+      "des": "杜塞尔多夫二人组，吉他手罗特与鼓手丁格拆出摇滚的最小骨架：《Neu!》同名专辑的公路长曲以单和弦与匀速鼓点驶向地平线。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "机动节奏",
+      "des": "Neu! 与 Kraftwerk 共同锤炼的律动美学：四四拍平直到底、不加速不减速，像高速公路的白线，四十年后仍是 Techno 与 Trance 的心跳模型。",
+      "symbolSize": 50,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "Kraftwerk",
+      "des": "「发电站」，杜塞尔多夫的人机乐队：穿西装打领带站在合成器后，宣称「我们是机器音乐的工人」，从公路、铁路、计算机到自行车，把现代生活写成电子诗，影响超过披头士的后续电路。",
+      "symbolSize": 60,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "拉尔夫·胡特尔与弗洛里安·施奈德",
+      "des": "发电站的双核：胡特尔的节奏构造与施奈德的音色炼金，从音乐学院同窗到四十年搭档，长音笛与自制声码器皆出自施奈德之手。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "《Autobahn》",
+      "des": "一九七四年专辑与单曲：二十二分钟的公路电子长诗剪成三分钟打进美国榜前二十，「fahren fahren fahren」的哼唱令电台无处可躲，乐队一夜从学院跃入流行。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "《Trans-Europe Express》",
+      "des": "一九七七年的欧洲铁路颂歌：典雅弦乐机与金属打击的矩阵，十年后被布朗克斯的 Bambaataa 采样进《Planet Rock》，白发欧洲送入黑人街区再回销全球。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "橙梦乐园",
+      "des": "Tangerine Dream，柏林的宇宙电子长跑者：《Phaedra》以穆格序列器制造脉动星云，成为维珍厂牌起家的功臣，太空音景与节拍研究的双向母体。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "让-米歇尔·雅尔",
+      "des": "法国电子乐的国民明星，斯托克豪森的学生，《氧气》在家里八轨机上一手完成，此后以数百万人的露天激光音乐会改写演出的规模上限。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "《氧气》",
+      "des": "一九七六年专辑：一台家庭录音机与六台合成器做成的旋律星云，法国销量几何级爆炸，证明纯电子唱片也能是大众抒情诗。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "Yellow Magic Orchestra",
+      "des": "YMO，一九七八年东京成立的黄色魔术乐队：细野晴臣、坂本龙一与高桥幸宏以采样器与合成器预先演练了整个八十年代，世界巡演反输西方，「Technopolis」等技术想象比时代快了十年。",
+      "symbolSize": 60,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "坂本龙一",
+      "des": "YMO 的学院派大脑，古典与现代音乐的混血才子，乐队解散后以《末代皇帝》配乐拿下奥斯卡，电子、古典与世界音乐在他的硬盘里从来不分家。",
+      "symbolSize": 50,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "细野晴臣",
+      "des": "YMO 的发起人与概念舵手，从民谣摇滚到电子的转译者，「电子音乐是新的民乐」的信念推动乐队成形，晚年仍在实验与制作一线漫游。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "高桥幸宏",
+      "des": "YMO 的鼓手与主唱，把电子鼓与时尚偶像气质带上舞台，都市感的人声与潇洒律动是乐队流行外壳的重要作者。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "New Order",
+      "des": "Joy Division 主唱陨落后曼彻斯特四人的重生：把后朋的阴郁接入舞池，《Blue Monday》与.factory 厂牌的 Haçienda 俱乐部共同铺下英伦舞曲文化的地基。",
+      "symbolSize": 50,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "《Blue Monday》",
+      "des": "一九八三年的十二寸：序列器低音与鼓机的冰冷华尔兹，史上最畅销的十二寸单曲，封面做成软盘的包装设计同入史册。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "Depeche Mode",
+      "des": "巴西尔登四个工人小镇青年，从合成器流行的轻快起步长成体育馆暗黑巨兽，把电子乐做成了带罪与救赎的宗教体验。",
+      "symbolSize": 40,
+      "category": "电机节奏与合成器浪潮"
+    },
+    {
+      "name": "迪斯科",
+      "des": "七十年代的舞池主流：纽约同性恋与黑人俱乐部长出的四四拍美学，《周末夜狂热》将其推向白人郊区顶点，DJ、混音与十二寸单曲的行业范式皆由它确立。",
+      "symbolSize": 50,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "迪斯科灭绝夜",
+      "des": "一九七九年七月十二日芝加哥白袜主场：「迪斯科很烂之夜」观众带来唱片在中场被炸飞，人群冲进场地，种族与恐同的怒火借摇滚之名清场，迪斯科死去，浩室在它的灰烬里发芽。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "芝加哥",
+      "des": "浩室之城：南部黑人与非裔拉丁裔社区在灭绝夜之后接管了舞曲，仓库俱乐城的地下网络把周末变成发明车间。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "浩室",
+      "des": "House，以 Warehouse 俱乐部命名的流派：迪斯科的骨架加鼓机的脉搏，每分钟一百二十上下，四四拍的低音鼓永远踩在正拍，「浩室是一种信仰」。",
+      "symbolSize": 50,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "Warehouse俱乐部",
+      "des": "一九七七年开业的芝加哥南城仓库，弗兰基·纳克尔斯的驻场令它成为圣地，「去 Warehouse 听的那种音乐」被唱片店缩写为 House Music，地名变流派名的稀有案例。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "弗兰基·纳克尔斯",
+      "des": "「浩室教父」，纽约出身的天才 DJ，在 Warehouse 与 Power Plant 以唱盘与鼓机补丁重迪斯科为新品种，城市随后把出生的那条街改名为「浩室大道」。",
+      "symbolSize": 50,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "朗·哈迪",
+      "des": "Music Box 的疯狂祭司：纳克尔斯的对极，把唱机开到失速、用磁带循环堆叠极端能量，那双旋钮拧到底的手塑造了浩室的迷幻面，四十二岁早逝。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "罗兰TR-808",
+      "des": "一九八零年上市的鼓机：鼓声「假」得销量惨淡沦为地摊价，却被资金匮乏的黑人音乐家捡起，其低音鼓的胸腔共鸣成为浩室、Techno 与嘻哈共同的底火。",
+      "symbolSize": 50,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "罗兰TB-303",
+      "des": "一九八一年失败的贝斯合成器：本想模拟真贝斯，拧出来的却是怪诞的滑音尖叫，被弃的库存机器在芝加哥青年手里变成 Acid 的声音本体。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "酸浩室",
+      "des": "Acid House：303 的滑音在四四拍里融化的声音流派，八八年跨过大西洋与 MDMA 相遇，掀起英国的第二次爱之夏，笑脸徽章成为一代人的图腾。",
+      "symbolSize": 50,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "《Acid Tracks》",
+      "des": "一九八七年 Phuture 三人组（DJ Pierre、Spanky 与 Herb J）的作品：303 被拧到呻吟的十分钟，据说朗·哈迪首播时连放四遍，Acid 的命名时刻。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "马歇尔·杰弗逊",
+      "des": "芝加哥邮政职员出身的制作人，《Move Your Body》被尊为浩室国歌，此后把钢琴、弦乐与灵魂唱腔带进流派，浩室的旋律良心。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "《Your Love》",
+      "des": "杰米·普林斯普在卧室里录制的情书，被纳克尔斯在 Warehouse 反复播红，从自制磁带到浩室圣曲的路径，即早期芝加哥的标准发行流程。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "Trax唱片",
+      "des": "芝加哥浩室的主场厂牌：老板拉里·谢尔曼以印制粗糙著称，唱片常一放就哑，却在数年间把浩室卖向全世界，版权与版税的争议同样巨大。",
+      "symbolSize": 40,
+      "category": "芝加哥浩室"
+    },
+    {
+      "name": "底特律",
+      "des": "Techno 之城：福特流水线的机器节拍与 Motown 的音乐遗产同在一个躯壳里，城市破产的废墟感为音乐赋予了未来的乡愁。",
+      "symbolSize": 40,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "Techno",
+      "des": "以底特律为故乡的流派名：浩室的血统加欧洲电子乐的血统，面向未来而非过去的想象，机械、太空与自动化是它的神话主题，后来被用来称呼几乎所有电子舞曲。",
+      "symbolSize": 50,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "贝尔维尔三杰",
+      "des": "底特律郊外贝尔维尔高中的三位同窗：阿特金斯、梅与桑德森，分头探索又互相点燃，被后世合称为 Techno 的三位一体创始人。",
+      "symbolSize": 50,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "胡安·阿特金斯",
+      "des": "「Techno 教父」：中学时代即组 Cybotron 提出「Techno」一词，后以 Model 500 之名推出《No UFO's》，德里克·梅那句名言——底特律 Techno 是「Kraftwerk 与乔治·克林顿被困在同一部电梯里」。",
+      "symbolSize": 50,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "德里克·梅",
+      "des": "三杰中最炽热的一位，以 Rhythim Is Rhythim 名义发表《Strings of Life》，把钢琴的戏剧性与机器的精确焊在一起， Techno 浪漫主义的化身。",
+      "symbolSize": 50,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "《Strings of Life》",
+      "des": "一九八七年的弦乐机器诗：一段钢琴 riff 与加速军鼓的对冲，发行时无人预料它成为跨越四十年的舞池国歌，底特律给世界的最著名名片。",
+      "symbolSize": 40,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "凯文·桑德森",
+      "des": "三杰中的旋律出口，Inner City 项目与 Paris Grey 合作，《Big Fun》《Good Life》把 Techno 送进英国流行榜前列，证明机器音乐也能歌唱。",
+      "symbolSize": 50,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "《Techno!底特律新舞曲之声》",
+      "des": "一九八八年维珍发行的合辑，把底特律青年的作品冠以 Techno 之名推向英国，流派的命名时刻，也是欧洲全面接收的开始。",
+      "symbolSize": 40,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "地下抵抗",
+      "des": "Underground Resistance，一九九零年迈克·班克斯与杰夫·米尔斯组建的底特律军团：统一着装、匿名立场与战斗檄文，把 Techno 变成对抗主流收编的政治运动，「没有灵魂就没有 Techno」。",
+      "symbolSize": 40,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "杰夫·米尔斯",
+      "des": "「巫师」，底特律电台出身的唱盘极限运动员，九十年代赴柏林架起底特律与欧洲的桥梁，三台唱机同时作业的套装与技术美学令其成为 Techno 界的高僧。",
+      "symbolSize": 40,
+      "category": "底特律Techno"
+    },
+    {
+      "name": "伊比萨",
+      "des": "地中海的白色岛屿：嬉皮士的中途站、欧洲富人的游乐场与 DJ 文化的麦加，八十年代起全岛化为一张夜店地图，舞曲工业的精神原乡与年度朝觐地。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "阿尔弗雷多与Amnesia",
+      "des": "阿根廷裔 DJ 阿尔弗雷多在 Amnesia 夜店的传奇之夜：流行、独立、舞曲与噪音不分彼此地混在一起，巴利亚利美学的现场源头，一九八七年被一群英国 DJ 听见后改变了英国。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "巴利亚利节拍",
+      "des": "Balearic Beat，以伊比萨命名的混音流派：日落、敞怀与无门派的选曲哲学，不追求速度而追求心景，此后每一次「氛围回归」都从这座岛重新出发。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Shoom俱乐部",
+      "des": "一九八七年冬伦敦健身房的周日派对：从伊比萨朝圣归来的兰普林夫妇创办，笑脸标志与酸性浩室的第一块英伦阵地，第二次爱之夏的起点站。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "丹尼·兰普林",
+      "des": "伊比萨之行的英国 DJ 之一，回伦敦开出 Shoom，把岛上的迷惘与迷醉翻译成 Acid House 的伦敦方言，电台事业延续三十年。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "第二次爱之夏",
+      "des": "一九八八年的英国：Acid House、笑脸 T 恤与 MDMA 相遇，撒切尔时代的灰色周末被一万场非法派对点燃，二十年后被追认的「第二次爱之夏」。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Haçienda俱乐部",
+      "des": "曼彻斯特的仓库教堂：Factory 厂牌与新秩序共同出资，一九八二年开业，八八年随 Acid 之潮爆红，Madchester 与英伦舞曲文化的震中，九七年因亏损与暴力谢幕。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "M25野外狂欢",
+      "des": "一九八九年起环伦敦 M25 高速的非法派对潮：免费热线与临时电话亭召集数千人占领仓库与田野，Castlemorton 一九九二年的十万人狂欢逼出议会立法。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "刑事司法与公共秩序法案",
+      "des": "一九九四年英国针对狂欢派对的立法，第六十三条直指「发出重复节拍的音乐」，把 DJ 与派对推向更深的地堡，也逼出 Dj 与舞客的十年地下化与全球化。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "The KLF",
+      "des": "Bill Drummond 与 Jimmy Cauty 的概念艺术双簧：以「体育场浩室」连拿金曲，一九九二年全英音乐奖上台表演剁猪、罢演，随后退出乐坛并直播烧掉一百万英镑，商业与艺术的最烈玩笑。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "碎拍硬核",
+      "des": "一九九一年前后的英国加速现场：Acid House 提速、嘻哈碎拍与雷鬼低音对撞，短暂而滚烫的过渡物种，随即裂变为 Jungle 与快乐硬核两支。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Jungle",
+      "des": "一九九三至九四年伦敦的裂变：碎拍绞成每分钟一百六十下的神经末梢，低音沉到雷鬼的深度，加勒比移民二代把锐舞文化改写成了自己的语言。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Drum and Bass",
+      "des": "Jungle 的成年体：制作更精密、结构更交响，碎拍与低音的双柱美学在九五年后定型为英伦出口的招牌流派，至今仍是低音音乐的心脏起搏器。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Goldie",
+      "des": "涂鸦出身的中西部长跑者，金属牙套的形象招牌，《Timeless》以弦乐与碎拍构造的组曲把 Drum and Bass 推上艺术殿堂，也从伯明翰带来街头与优雅的双面人格。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "LTJ布凯姆",
+      "des": "Jungle 阵营中的爵士绅士：Good Looking 厂牌主理人，以《Logical Progression》系列定义「智能舞曲」的柔化路线，丛林里的印象派。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Roni Size与Reprazent",
+      "des": "布里斯托集合体的团队作品《New Forms》拿下全英水星奖，让 Drum and Bass 首次被主流评论界加冕，乐队的现场配置打破了 DJ 文化的单人神话。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Trip hop",
+      "des": "布里斯托制造的慢速碎拍流派：嘻哈的速度、 dub 的厚度与冷爵士的和声，九十年代的影视配乐与都市夜色从此有了统一滤镜。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Massive Attack",
+      "des": "布里斯托的母体乐队：《Blue Lines》被追认为 Trip hop 开山，缓慢庄严的贝斯线条与轮换主唱的制度影响了整个九十年代的氛围美学。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Portishead",
+      "des": "布里斯托的幽暗双璧：Geoff Barrow 的灰尘采样与 Beth Gibbons 的爵士哭腔，《Dummy》横扫欧洲并拿下水星奖，Trip hop 最著名的世界名片。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Tricky",
+      "des": "Massive Attack 出走的低语者：《Maxinquaye》把 Trip hop 拧到最暗处，砂纸般的爱侣对唱与眩晕制作令其成为流派最私人的分支。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Big Beat",
+      "des": "九十年代中期的英国回潮：把碎拍做成摇滚音量的体育场舞曲，化学兄弟、肥仔斯林与 Prodigy 三驾马车令摇滚青年成建制地转向舞池。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "化学兄弟",
+      "des": "曼彻斯特大学的博士生二人组：以浩室骨架与摇滚巨响筑起 Big Beat 的标准像，《Dig Your Own Hole》令舞曲首次在英美同时登顶。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "肥仔斯林",
+      "des": "Norman Cook 的独角戏项目：浩室DJ 出身的前贝斯手，以《The Rockafeller Skank》等单曲把 Big Beat 做成全球派对口令，布赖顿海滩的二十五万人海滩狂欢是其巅峰注脚。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "The Prodigy",
+      "des": "埃塞克斯的烈火战车：主唱 Keith Flint 的朋克形体加 Liam Howlett 的锐舞制作，《The Fat of the Land》在英美双榜登顶，把地下狂欢的电流送进体育场与格莱美。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Warp唱片",
+      "des": "一九八九年谢菲尔德创立的厂牌：从 bleep techno 起家，九二年以《Artificial Intelligence》合辑开辟「电子聆听音乐」赛道，此后三十年是电子前卫的永动招牌。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "《人工智能》合辑",
+      "des": "一九九二年 Warp 的宣言合辑：封面沙发里听机的机器人宣言「电子音乐也可以坐着听」，IDM（智能舞曲）由此发端，Aphex Twin、Autechre 齐聚旗下。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Aphex Twin",
+      "des": "Richard D. James，康沃尔出走的电子顽童：从《Selected Ambient Works》的少年雾气到 Come to Daddy 的狞笑面具，技术与恶作剧的双重极限，电子乐最不可预测的天才。",
+      "symbolSize": 50,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "Boards of Canada",
+      "des": "苏格兰隐士二人组（实为兄弟档 Marcus 与 Michael）：磁带的暖噪与童年的褪色记忆，《Music Has the Right to Children》是电子乐对乡愁的最完整一次定义。",
+      "symbolSize": 40,
+      "category": "英伦狂欢与碎拍"
+    },
+    {
+      "name": "柏林墙倒塌",
+      "des": "一九八九年十一月九日：冷战裂缝在一夜之间贯通东柏林的空厂房与废弃地铁，廉价的场地与饥饿的青年在废墟上长出 Techno 的麦加，历史事件对音乐地图最直接的一次重绘。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Tresor俱乐部",
+      "des": "一九九一年三月在 Wertheim 百货旧址金库开业的地堡：底特律与柏林的电路在此焊接，UR 与 Mills 的常驻令其成为两大 Techno 之城的共同领事馆。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "爱的大游行",
+      "des": "Love Parade，一九八九年七月 Dr. Motte 在库达姆大街发起的一百五十人和平游行，长成世纪之交的百万人 Techno 沟通仪式，二零一零年杜伊斯堡的踩踏悲剧令其永久谢幕。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Berghain",
+      "des": "二零零四年在东柏林发电厂旧址开业的教堂级夜店：铁皮幕墙、无镜无拍摄的门规与周日马拉松 set，Techno 文化的至圣所与都市传说发生器。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Dub",
+      "des": "七十年代金斯敦的混音革命：King Tubby 与同侪把人声唱片的伴奏抽出来再灌进回声与低频，B 靴上的版本艺术，此后所有重低音音乐的总源头。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Basic Channel",
+      "des": "柏林二人 Moritz von Oswald 与 Mark Ernestus 的厂牌与化名：把底特律 Techno 与牙买加 Dub 的血脉接通，嘶嘶作响的低频雾气定义了 Dub Techno 这一流派。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Sven Väth",
+      "des": "法兰克福的常青教父：从八零年代合成器流行歌手转身为 Techno 领袖，Omen 俱乐部与 Cocoon 帝国的缔造者，伊比萨岛上二十年周一之夜的驻场祭司。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Trance",
+      "des": "九十年代从法兰克福与柏林升空的飞翔流派：长琶音的螺旋上升与高潮的集体释放，每分钟一百三十八上下的心跳，欧洲大陆写给舞池的浪漫主义。",
+      "symbolSize": 50,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Tiësto",
+      "des": "荷兰 Trance 王朝的第一位全球大使：二零零四年雅典奥运会开幕式的九十分钟 set 令 DJ 首次站上奥运舞台，从地下英雄转身为超级明星的样板。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "阿明·范·布伦",
+      "des": "荷兰 Trance 的持久旗舰：电台节目《A State of Trance》每周通达数十国，连续多年位列 DJ 榜首，把流派做成了全球航班时刻表式的仪式。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "French Touch",
+      "des": "九十年代末的法国浩室浪潮：过滤相位的人声切片与迪斯科的黄金律令，Cassius、Modjo 与 Bob Sinclar 共同把法国口音写进全球舞池。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Daft Punk",
+      "des": "巴黎机器人二人组 Thomas Bangalter 与 Guy-Manuel：头盔下的匿名明星制度，《Homework》宣布 French Touch 到来，《Discovery》把迪斯科与动画写成流行史诗，电子乐最成功的流行转译器。",
+      "symbolSize": 60,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "《Discovery》",
+      "des": "二零零一年专辑：《One More Time》的 Autotune 狂喜与全碟采样炼金，配以松本零士的整片动画《Interstella 5555》，电子专辑作为完整艺术品的高光样本。",
+      "symbolSize": 40,
+      "category": "欧陆与伊比萨"
+    },
+    {
+      "name": "Dubstep",
+      "des": "二十一世纪初南伦敦克羅伊登的裂缝：半速低音与稀疏军鼓的空间力学，DMZ 夜店与 Big Apple 唱片店是其孵化器，两年内即被大西洋对岸改造成另一个物种。",
+      "symbolSize": 50,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "Burial",
+      "des": "匿名的伦敦夜行人 Will Bevan：《Untrue》以雨声、黑胶噪与断裂人声唱出千禧伦敦的孤独，水星奖提名后身份揭晓，Dubstep 阵营最文学的暗面。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "Skrillex",
+      "des": "前摇滚主唱 Sonny Moore 的转型：《Scary Monsters and Nice Sprites》把 Dubstep 的低音改造成美式重金属语法，「brostep」浪潮与三座格莱美的争议双生子。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "EDM时代",
+      "des": "Electronic Dance Machine 的美国缩写在二零一零年前后变成产业名词：DJ 从幕后走向舞台中央成为摇滚巨星级别的头牌，赌城驻场与电音节的巨型经济圈同时落成。",
+      "symbolSize": 50,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "大卫·库塔",
+      "des": "法国制作人与 EDM 时代的敲门人：《When Love Takes Over》把 House 的合规版本送进美国流行电台，此后与流行巨星的连发合作重塑了榜单的声音配方。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "Avicii",
+      "des": "瑞典少年 Tim Bergling：《Levels》采样 Etta James 的老灵魂登上全球榜首，乡村与民谣入舞曲的冒险令其成为 EDM 时代的旋律象征，二零一八年的离世震动全行业。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "Swedish House Mafia",
+      "des": "三位瑞典超级 DJ 的组合体：把浩室做成巡演体育场的摇滚编制，「One Last Tour」的告别与重聚把 EDM 时代的营销剧本演到极致。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "电音节帝国",
+      "des": "Ultra、Tomorrowland 与 EDC 三大支柱的巨型节庆体系：数十万人、数百万瓦与全年环球复制的嘉年华，DJ 文化的宗教改革完成形态。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    },
+    {
+      "name": "Beatport",
+      "des": "二零零四年丹佛创立的电子乐数字唱片行：以 DJ 为客户、以波形试听为店面的下载帝国，流媒体时代的曲库与榜单基础设施，电子乐产业的数字心脏。",
+      "symbolSize": 40,
+      "category": "低音与EDM时代"
+    }
+  ],
+  "links": [
+    {
+      "source": "电子音乐",
+      "target": "具体音乐",
+      "name": "学院起点",
+      "des": "巴黎电台的剪贴革命。"
+    },
+    {
+      "source": "电子音乐",
+      "target": "穆格合成器",
+      "name": "乐器革命",
+      "des": "合成器从机构走进乐手。"
+    },
+    {
+      "source": "电子音乐",
+      "target": "Kraftwerk",
+      "name": "范式确立",
+      "des": "机器美学的模板由发电站铸造。"
+    },
+    {
+      "source": "电子音乐",
+      "target": "浩室",
+      "name": "舞池主干",
+      "des": "俱乐部文化的第一大流派。"
+    },
+    {
+      "source": "电子音乐",
+      "target": "Techno",
+      "name": "未来分支",
+      "des": "机器想象的底特律路线。"
+    },
+    {
+      "source": "电子音乐",
+      "target": "氛围音乐",
+      "name": "静态分支",
+      "des": "脱离节拍的听觉家具。"
+    },
+    {
+      "source": "电子音乐",
+      "target": "EDM时代",
+      "name": "产业形态",
+      "des": "体育场化的当代终点（暂时）。"
+    },
+    {
+      "source": "列夫·特雷明",
+      "target": "特雷门琴",
+      "name": "发明",
+      "des": "一九二零年列宁格勒的挥手乐器。"
+    },
+    {
+      "source": "皮埃尔·谢弗",
+      "target": "具体音乐",
+      "name": "发起",
+      "des": "一九四八年巴黎电台的唱盘拼贴。"
+    },
+    {
+      "source": "具体音乐",
+      "target": "磁带音乐",
+      "name": "技术升级",
+      "des": "唱盘拼贴进化为磁带剪接。"
+    },
+    {
+      "source": "卡尔海因茨·斯托克豪森",
+      "target": "磁带音乐",
+      "name": "科隆路线",
+      "des": "正弦波与童声的电子圣咏。"
+    },
+    {
+      "source": "卡尔海因茨·斯托克豪森",
+      "target": "让-米歇尔·雅尔",
+      "name": "师承",
+      "des": "雅尔是科隆大师的法国学生。"
+    },
+    {
+      "source": "RCA合成器二号",
+      "target": "穆格合成器",
+      "name": "小型化前史",
+      "des": "占满一墙的巨兽等待被搬上舞台。"
+    },
+    {
+      "source": "罗伯特·穆格",
+      "target": "穆格合成器",
+      "name": "发明",
+      "des": "电压控制与键盘的商品化。"
+    },
+    {
+      "source": "穆格合成器",
+      "target": "《Switched-On Bach》",
+      "name": "登堂入室",
+      "des": "巴赫的电子翻译狂销百万。"
+    },
+    {
+      "source": "温迪·卡洛斯",
+      "target": "《Switched-On Bach》",
+      "name": "演奏",
+      "des": "录音才女的格莱美三连。"
+    },
+    {
+      "source": "布莱恩·伊诺",
+      "target": "氛围音乐",
+      "name": "命名",
+      "des": "《机场音乐》开启的品类。"
+    },
+    {
+      "source": "乔治奥·莫罗德尔",
+      "target": "《I Feel Love》",
+      "name": "制作",
+      "des": "全合成器伴奏的迪斯科革命。"
+    },
+    {
+      "source": "唐娜·萨默",
+      "target": "《I Feel Love》",
+      "name": "演唱",
+      "des": "人声与机器的对唱开场。"
+    },
+    {
+      "source": "《I Feel Love》",
+      "target": "迪斯科",
+      "name": "变种",
+      "des": "迪斯科内部的未来派。"
+    },
+    {
+      "source": "《I Feel Love》",
+      "target": "浩室",
+      "name": "直系祖先",
+      "des": "伊诺听到的舞曲未来在此兑现。"
+    },
+    {
+      "source": "德国摇滚",
+      "target": "Neu!",
+      "name": "极简支线",
+      "des": "单和弦驶向地平线。"
+    },
+    {
+      "source": "Neu!",
+      "target": "机动节奏",
+      "name": "铸造",
+      "des": "匀速鼓点的高速公路美学。"
+    },
+    {
+      "source": "德国摇滚",
+      "target": "Kraftwerk",
+      "name": "集大成",
+      "des": "即兴德国摇流长出精密机器。"
+    },
+    {
+      "source": "Kraftwerk",
+      "target": "拉尔夫·胡特尔与弗洛里安·施奈德",
+      "name": "双核",
+      "des": "四十年的构造与炼金搭档。"
+    },
+    {
+      "source": "Kraftwerk",
+      "target": "《Autobahn》",
+      "name": "突破",
+      "des": "公路长诗剪进美国榜。"
+    },
+    {
+      "source": "机动节奏",
+      "target": "《Autobahn》",
+      "name": "律动模板",
+      "des": "白线般的匀速行驶。"
+    },
+    {
+      "source": "Kraftwerk",
+      "target": "《Trans-Europe Express》",
+      "name": "欧洲颂歌",
+      "des": "铁路矩阵的典雅版本。"
+    },
+    {
+      "source": "《Trans-Europe Express》",
+      "target": "Techno",
+      "name": "跨洋播种",
+      "des": "底特律少年反复研习的教材。"
+    },
+    {
+      "source": "德国摇滚",
+      "target": "橙梦乐园",
+      "name": "太空支线",
+      "des": "序列器脉动的星云美学。"
+    },
+    {
+      "source": "橙梦乐园",
+      "target": "Trance",
+      "name": "远祖",
+      "des": "序列上升的飞翔语法先于流派四十年。"
+    },
+    {
+      "source": "让-米歇尔·雅尔",
+      "target": "《氧气》",
+      "name": "成名作",
+      "des": "家庭录音机里的旋律星云。"
+    },
+    {
+      "source": "Kraftwerk",
+      "target": "Yellow Magic Orchestra",
+      "name": "东方回声",
+      "des": "东京三人组预先演练了八十年代。"
+    },
+    {
+      "source": "细野晴臣",
+      "target": "Yellow Magic Orchestra",
+      "name": "发起",
+      "des": "「电子音乐是新的民乐」。"
+    },
+    {
+      "source": "坂本龙一",
+      "target": "Yellow Magic Orchestra",
+      "name": "学院大脑",
+      "des": "古典与流行的混血才子。"
+    },
+    {
+      "source": "高桥幸宏",
+      "target": "Yellow Magic Orchestra",
+      "name": "都市节拍",
+      "des": "电子鼓与偶像气质的门面。"
+    },
+    {
+      "source": "Yellow Magic Orchestra",
+      "target": "Techno",
+      "name": "技术预言",
+      "des": "「Technopolis」的想象被底特律认领。"
+    },
+    {
+      "source": "Yellow Magic Orchestra",
+      "target": "《Blue Monday》",
+      "name": "影响",
+      "des": "合成器舞曲的跨国示范。"
+    },
+    {
+      "source": "New Order",
+      "target": "《Blue Monday》",
+      "name": "出品",
+      "des": "史上最畅销十二寸。"
+    },
+    {
+      "source": "New Order",
+      "target": "Haçienda俱乐部",
+      "name": "出资",
+      "des": "Factory 与新秩序共同建仓。"
+    },
+    {
+      "source": "《Blue Monday》",
+      "target": "浩室",
+      "name": "桥接",
+      "des": "后朋与舞池的正式通婚。"
+    },
+    {
+      "source": "Depeche Mode",
+      "target": "电子音乐",
+      "name": "流行分支",
+      "des": "小镇青年把合成器唱成宗教。"
+    },
+    {
+      "source": "迪斯科",
+      "target": "迪斯科灭绝夜",
+      "name": "葬礼",
+      "des": "炸唱片之夜终结主流时代。"
+    },
+    {
+      "source": "迪斯科灭绝夜",
+      "target": "芝加哥",
+      "name": "火种转移",
+      "des": "白人电台退场，黑人社区接管。"
+    },
+    {
+      "source": "迪斯科",
+      "target": "浩室",
+      "name": "母体",
+      "des": "迪斯科的骨架加鼓机的心跳。"
+    },
+    {
+      "source": "芝加哥",
+      "target": "Warehouse俱乐部",
+      "name": "圣地",
+      "des": "南城仓库的周末实验场。"
+    },
+    {
+      "source": "Warehouse俱乐部",
+      "target": "浩室",
+      "name": "命名来源",
+      "des": "「仓库里放的那种音乐」。"
+    },
+    {
+      "source": "弗兰基·纳克尔斯",
+      "target": "Warehouse俱乐部",
+      "name": "驻场",
+      "des": "一九七七至八二的祭司岁月。"
+    },
+    {
+      "source": "弗兰基·纳克尔斯",
+      "target": "《Your Love》",
+      "name": "播红",
+      "des": "把卧室磁带播成浩室圣曲。"
+    },
+    {
+      "source": "朗·哈迪",
+      "target": "酸浩室",
+      "name": "助产",
+      "des": "Music Box 连播四遍的传说。"
+    },
+    {
+      "source": "罗兰TR-808",
+      "target": "浩室",
+      "name": "底火",
+      "des": "地摊价鼓机的胸腔共鸣。"
+    },
+    {
+      "source": "罗兰TB-303",
+      "target": "《Acid Tracks》",
+      "name": "声音本体",
+      "des": "失败贝斯机的酸味尖叫。"
+    },
+    {
+      "source": "《Acid Tracks》",
+      "target": "酸浩室",
+      "name": "命名时刻",
+      "des": "Phuture 十分钟的呻吟宣言。"
+    },
+    {
+      "source": "酸浩室",
+      "target": "浩室",
+      "name": "变种",
+      "des": "303 滑音溶进四四拍。"
+    },
+    {
+      "source": "马歇尔·杰弗逊",
+      "target": "浩室",
+      "name": "旋律良心",
+      "des": "钢琴与弦乐进入流派。"
+    },
+    {
+      "source": "Trax唱片",
+      "target": "浩室",
+      "name": "主场厂牌",
+      "des": "印制粗糙却卖向全世界。"
+    },
+    {
+      "source": "浩室",
+      "target": "Techno",
+      "name": "姊妹城",
+      "des": "芝加哥与底特律的平行发明。"
+    },
+    {
+      "source": "底特律",
+      "target": "贝尔维尔三杰",
+      "name": "出品",
+      "des": "郊外高中的三位一体。"
+    },
+    {
+      "source": "胡安·阿特金斯",
+      "target": "贝尔维尔三杰",
+      "name": "成员",
+      "des": "教父率先提出 Techno 一词。"
+    },
+    {
+      "source": "德里克·梅",
+      "target": "贝尔维尔三杰",
+      "name": "成员",
+      "des": "浪漫主义的炽热一极。"
+    },
+    {
+      "source": "凯文·桑德森",
+      "target": "贝尔维尔三杰",
+      "name": "成员",
+      "des": "旋律出口的流行译本。"
+    },
+    {
+      "source": "贝尔维尔三杰",
+      "target": "Techno",
+      "name": "创立",
+      "des": "Kraftwerk 与克林顿的那部电梯。"
+    },
+    {
+      "source": "德里克·梅",
+      "target": "《Strings of Life》",
+      "name": "创作",
+      "des": "钢琴 riff 与军鼓的四十年国歌。"
+    },
+    {
+      "source": "《Strings of Life》",
+      "target": "Techno",
+      "name": "名片",
+      "des": "底特律给世界的第一张脸。"
+    },
+    {
+      "source": "胡安·阿特金斯",
+      "target": "《Techno!底特律新舞曲之声》",
+      "name": "冠名",
+      "des": "维珍合辑的命名时刻。"
+    },
+    {
+      "source": "凯文·桑德森",
+      "target": "浩室",
+      "name": "合流",
+      "des": "Inner City 的旋律译本双向畅销。"
+    },
+    {
+      "source": "《Techno!底特律新舞曲之声》",
+      "target": "柏林墙倒塌",
+      "name": "时机",
+      "des": "发行次年欧洲的墙应声而倒。"
+    },
+    {
+      "source": "地下抵抗",
+      "target": "Techno",
+      "name": "政治化",
+      "des": "统一着装的军团立场。"
+    },
+    {
+      "source": "杰夫·米尔斯",
+      "target": "地下抵抗",
+      "name": "共创",
+      "des": "巫师与班克斯的军事编制。"
+    },
+    {
+      "source": "杰夫·米尔斯",
+      "target": "Tresor俱乐部",
+      "name": "驻场",
+      "des": "底特律与柏林的电路焊接。"
+    },
+    {
+      "source": "伊比萨",
+      "target": "阿尔弗雷多与Amnesia",
+      "name": "圣地之夜",
+      "des": "无流派混音的现场源头。"
+    },
+    {
+      "source": "阿尔弗雷多与Amnesia",
+      "target": "巴利亚利节拍",
+      "name": "定义者",
+      "des": "日落心景的选曲哲学。"
+    },
+    {
+      "source": "巴利亚利节拍",
+      "target": "Shoom俱乐部",
+      "name": "输出伦敦",
+      "des": "英国 DJ 的朝圣带回的火种。"
+    },
+    {
+      "source": "丹尼·兰普林",
+      "target": "Shoom俱乐部",
+      "name": "创办",
+      "des": "八七年冬的周日派对。"
+    },
+    {
+      "source": "Shoom俱乐部",
+      "target": "第二次爱之夏",
+      "name": "起点站",
+      "des": "笑脸与 Acid 的第一块阵地。"
+    },
+    {
+      "source": "酸浩室",
+      "target": "第二次爱之夏",
+      "name": "燃料",
+      "des": "跨越大西洋的酸性火种。"
+    },
+    {
+      "source": "第二次爱之夏",
+      "target": "Haçienda俱乐部",
+      "name": "震中",
+      "des": "曼彻斯特仓库的八八年爆红。"
+    },
+    {
+      "source": "第二次爱之夏",
+      "target": "M25野外狂欢",
+      "name": "郊区化",
+      "des": "热线召集的田野占领。"
+    },
+    {
+      "source": "M25野外狂欢",
+      "target": "刑事司法与公共秩序法案",
+      "name": "反制",
+      "des": "「重复节拍」条款直接立法。"
+    },
+    {
+      "source": "刑事司法与公共秩序法案",
+      "target": "碎拍硬核",
+      "name": "地下加速",
+      "des": "派对被赶入地堡后节奏裂变。"
+    },
+    {
+      "source": "The KLF",
+      "target": "第二次爱之夏",
+      "name": "恶搞孪生",
+      "des": "用体育场浩室戏仿整个时代。"
+    },
+    {
+      "source": "碎拍硬核",
+      "target": "Jungle",
+      "name": "裂变",
+      "des": "碎拍绞到一百六十下。"
+    },
+    {
+      "source": "Jungle",
+      "target": "Drum and Bass",
+      "name": "成年体",
+      "des": "制作精密化的定型。"
+    },
+    {
+      "source": "Goldie",
+      "target": "Drum and Bass",
+      "name": "加冕",
+      "des": "《Timeless》推上艺术殿堂。"
+    },
+    {
+      "source": "LTJ布凯姆",
+      "target": "Jungle",
+      "name": "柔化路线",
+      "des": "丛林里的爵士绅士。"
+    },
+    {
+      "source": "Roni Size与Reprazent",
+      "target": "Drum and Bass",
+      "name": "主流认证",
+      "des": "水星奖的第一次加冕。"
+    },
+    {
+      "source": "Jungle",
+      "target": "Trip hop",
+      "name": "减速表亲",
+      "des": "布里斯托把碎拍降到心跳速度。"
+    },
+    {
+      "source": "Massive Attack",
+      "target": "Trip hop",
+      "name": "开山",
+      "des": "《Blue Lines》的追认起点。"
+    },
+    {
+      "source": "Portishead",
+      "target": "Trip hop",
+      "name": "世界名片",
+      "des": "《Dummy》与水星奖的幽暗双璧。"
+    },
+    {
+      "source": "Tricky",
+      "target": "Massive Attack",
+      "name": "出走",
+      "des": "从母体乐队拧到最暗处。"
+    },
+    {
+      "source": "Big Beat",
+      "target": "碎拍硬核",
+      "name": "回潮",
+      "des": "碎拍以摇滚音量重返。"
+    },
+    {
+      "source": "化学兄弟",
+      "target": "Big Beat",
+      "name": "标准像",
+      "des": "浩室骨架与摇滚巨响。"
+    },
+    {
+      "source": "肥仔斯林",
+      "target": "Big Beat",
+      "name": "派对口令",
+      "des": "全球海滩的二十五万人。"
+    },
+    {
+      "source": "The Prodigy",
+      "target": "Big Beat",
+      "name": "烈火战车",
+      "des": "英美双榜登顶的锐舞朋克。"
+    },
+    {
+      "source": "Haçienda俱乐部",
+      "target": "化学兄弟",
+      "name": "场地谱系",
+      "des": "曼彻斯特的舞池香火延续。"
+    },
+    {
+      "source": "Warp唱片",
+      "target": "《人工智能》合辑",
+      "name": "宣言",
+      "des": "「电子音乐也可以坐着听」。"
+    },
+    {
+      "source": "《人工智能》合辑",
+      "target": "Aphex Twin",
+      "name": "头牌",
+      "des": "康沃尔顽童的首发阵地。"
+    },
+    {
+      "source": "Warp唱片",
+      "target": "Boards of Canada",
+      "name": "乡愁支线",
+      "des": "磁带暖噪的褪色记忆。"
+    },
+    {
+      "source": "Aphex Twin",
+      "target": "氛围音乐",
+      "name": "暗面延续",
+      "des": "氛围乐最不可预测的天才。"
+    },
+    {
+      "source": "柏林墙倒塌",
+      "target": "Tresor俱乐部",
+      "name": "空间红利",
+      "des": "空厂房与金库变圣殿。"
+    },
+    {
+      "source": "Tresor俱乐部",
+      "target": "Techno",
+      "name": "欧洲领事馆",
+      "des": "两大 Techno 之城的焊接点。"
+    },
+    {
+      "source": "柏林墙倒塌",
+      "target": "爱的大游行",
+      "name": "街头庆典",
+      "des": "一百五十人长成百万人。"
+    },
+    {
+      "source": "柏林墙倒塌",
+      "target": "Berghain",
+      "name": "终极形态",
+      "des": "发电厂教堂的至圣所。"
+    },
+    {
+      "source": "Dub",
+      "target": "Basic Channel",
+      "name": "柏林转译",
+      "des": "金斯敦低频接通底特律。"
+    },
+    {
+      "source": "Basic Channel",
+      "target": "Tresor俱乐部",
+      "name": "同城共生",
+      "des": "柏林双声部：地堡与雾气。"
+    },
+    {
+      "source": "Dub",
+      "target": "Dubstep",
+      "name": "隔代血统",
+      "des": "版本艺术在伦敦南部的重生。"
+    },
+    {
+      "source": "Sven Väth",
+      "target": "Tresor俱乐部",
+      "name": "同代战友",
+      "des": "法兰克福与柏林的常青连线。"
+    },
+    {
+      "source": "Sven Väth",
+      "target": "伊比萨",
+      "name": "驻场祭司",
+      "des": "Cocoon 二十年周一之夜。"
+    },
+    {
+      "source": "Trance",
+      "target": "Techno",
+      "name": "同源分流",
+      "des": "从同一批俱乐部升空的两极。"
+    },
+    {
+      "source": "Tiësto",
+      "target": "Trance",
+      "name": "全球大使",
+      "des": "雅典奥运的九十分种。"
+    },
+    {
+      "source": "阿明·范·布伦",
+      "target": "Trance",
+      "name": "持久旗舰",
+      "des": "每周通达数十国的电台仪式。"
+    },
+    {
+      "source": "伊比萨",
+      "target": "Trance",
+      "name": "度假地共鸣",
+      "des": "飞翔美学与岛屿日落的化学反应。"
+    },
+    {
+      "source": "浩室",
+      "target": "French Touch",
+      "name": "法国口音",
+      "des": "过滤相位与迪斯科律令。"
+    },
+    {
+      "source": "French Touch",
+      "target": "Daft Punk",
+      "name": "旗手",
+      "des": "头盔下的巴黎机器人。"
+    },
+    {
+      "source": "Daft Punk",
+      "target": "《Discovery》",
+      "name": "巅峰",
+      "des": "采样炼金与整片动画。"
+    },
+    {
+      "source": "《Discovery》",
+      "target": "EDM时代",
+      "name": "预演",
+      "des": "电子专辑作为大众艺术品的样板。"
+    },
+    {
+      "source": "Dubstep",
+      "target": "Jungle",
+      "name": "低音血统",
+      "des": "英伦低音谱系的再出发。"
+    },
+    {
+      "source": "Burial",
+      "target": "Dubstep",
+      "name": "文学暗面",
+      "des": "雨夜伦敦的孤独唱本。"
+    },
+    {
+      "source": "Skrillex",
+      "target": "Dubstep",
+      "name": "美国变体",
+      "des": "低音改造成重金属语法。"
+    },
+    {
+      "source": "Skrillex",
+      "target": "EDM时代",
+      "name": "引爆点",
+      "des": "三座格莱美的争议双生子。"
+    },
+    {
+      "source": "大卫·库塔",
+      "target": "EDM时代",
+      "name": "敲门人",
+      "des": "浩室的合规版本进榜。"
+    },
+    {
+      "source": "大卫·库塔",
+      "target": "French Touch",
+      "name": "同乡前浪",
+      "des": "法国浩室的流行化终点。"
+    },
+    {
+      "source": "Avicii",
+      "target": "EDM时代",
+      "name": "旋律象征",
+      "des": "《Levels》与老灵魂的合体。"
+    },
+    {
+      "source": "Swedish House Mafia",
+      "target": "EDM时代",
+      "name": "组合体",
+      "des": "浩室做成体育场摇滚编制。"
+    },
+    {
+      "source": "电音节帝国",
+      "target": "EDM时代",
+      "name": "空间形态",
+      "des": "Ultra、Tomorrowland 与 EDC。"
+    },
+    {
+      "source": "Trance",
+      "target": "Tiësto",
+      "name": "王朝序章",
+      "des": "荷兰体系的第一位全球明星。"
+    },
+    {
+      "source": "EDM时代",
+      "target": "Beatport",
+      "name": "数字心脏",
+      "des": "DJ 经济的下载与榜单基建。"
+    },
+    {
+      "source": "浩室",
+      "target": "第二次爱之夏",
+      "name": "英伦登陆",
+      "des": "芝加哥之声点燃英国周末。"
+    },
+    {
+      "source": "氛围音乐",
+      "target": "Trip hop",
+      "name": "氛围近亲",
+      "des": "环境美学在节拍上的投影。"
+    },
+    {
+      "source": "Techno",
+      "target": "EDM时代",
+      "name": "通俗化终点",
+      "des": "地堡美学走向体育场的漫长旅途。"
+    }
+  ]
+}
