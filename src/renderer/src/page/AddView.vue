@@ -1,15 +1,30 @@
 <template>
   <div class="inner-div">
     <div class="content">
-      <a-typography-title :level="2">示例图库</a-typography-title>
+      <div class="gallery-header">
+        <a-typography-title :level="2">示例图库</a-typography-title>
+        <a-input
+          v-model:value="keyword"
+          class="gallery-search"
+          placeholder="搜索示例：标题 / 描述 / 分类"
+          allow-clear
+        >
+          <template #prefix><SearchOutlined /></template>
+        </a-input>
+      </div>
       <a-space :size="[8, 16]" wrap>
-        <!-- 首卡：空框，单击新建空白文件 -->
-        <div class="new-blank-card" title="新建空白文件" @click="createBlankFile">
+        <!-- 首卡：空框，单击新建空白文件；搜索过滤时隐藏（此时意图是找示例） -->
+        <div
+          v-if="!keyword.trim()"
+          class="new-blank-card"
+          title="新建空白文件"
+          @click="createBlankFile"
+        >
           <PlusOutlined class="new-blank-icon" />
           <div>新建空白文件</div>
         </div>
         <XkExampleCard
-          v-for="ex in examples"
+          v-for="ex in filteredExamples"
           :key="ex.fileName"
           :example="ex"
           :selected="ex.fileName === selected"
@@ -17,25 +32,33 @@
           @open="openExampleChart(ex)"
         />
       </a-space>
-      <a-empty v-if="!loading && examples.length === 0" description="暂无示例" />
+      <a-empty
+        v-if="!loading && filteredExamples.length === 0"
+        :description="keyword.trim() ? '无匹配的示例' : '暂无示例'"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { PlusOutlined } from '@ant-design/icons-vue'
-import { onMounted, ref } from 'vue'
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 
 import XkExampleCard from '../components/XkExampleCard.vue'
 import { setPendingChart } from '../store/chartStore'
+import { filterExamples } from '../utils/filterExamples'
 
 const router = useRouter()
 
 const examples = ref([])
 const loading = ref(true)
 const selected = ref('')
+const keyword = ref('')
+
+/** 搜索过滤：标题/描述/分类子串匹配，空关键字即全量 */
+const filteredExamples = computed(() => filterExamples(examples.value, keyword.value))
 
 onMounted(async () => {
   try {
@@ -77,6 +100,19 @@ const openExampleChart = async (ex) => {
 <style scoped>
 /* 首卡空框：尺寸对齐 XkExampleCard（200×150），
    line-height 重置理由同其注释——顶掉 BasicLayout 的 120px 行高 */
+/* 标题行：标题在左，搜索框靠右同行；窄窗口放不下时换行不挤压 */
+.gallery-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.gallery-search {
+  margin-left: auto;
+  width: 240px;
+}
+
 .new-blank-card {
   width: 200px;
   height: 150px;
