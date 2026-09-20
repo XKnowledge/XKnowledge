@@ -6,14 +6,23 @@
   >
     <div class="name" :title="example.title">{{ example.title }}</div>
     <div class="dots">
-      <!-- 色点按本图谱类型集合顺延分配：卡片配色与打开后一致 -->
+      <!-- 色点按本图谱类型集合顺延分配：卡片配色与打开后一致。
+           封顶 MAX_DOTS 个防挤爆卡片（合并大图分类可达 75 个），
+           超出部分收进末尾 +N 点，悬停 title 可看全部剩余分类名 -->
       <span
-        v-for="c in example.categories"
+        v-for="c in shownCategories"
         :key="c"
         class="dot"
         :style="{ background: catColor(c) }"
         :title="c"
       />
+      <span
+        v-if="example.categories.length > MAX_DOTS"
+        class="dot dot-more"
+        :title="example.categories.slice(MAX_DOTS).join('、')"
+      >
+        +{{ example.categories.length - MAX_DOTS }}
+      </span>
     </div>
     <div class="stats">{{ example.nodeCount }} 节点 · {{ example.linkCount }} 边</div>
     <div class="desc" :title="example.description">{{ example.description }}</div>
@@ -36,6 +45,10 @@ const props = defineProps({
 })
 
 defineEmits(['select', 'open'])
+
+/** 色点封顶：卡片宽 200px 每行约 11 点，18 个恰两行不挤 stats/desc */
+const MAX_DOTS = 18
+const shownCategories = computed(() => props.example.categories.slice(0, MAX_DOTS))
 
 /** 色点按本图谱类型集合顺延分配：卡片配色与打开后的图内一致 */
 const categoryColors = computed(() => assignCategoryColors(props.example.categories))
@@ -94,6 +107,20 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* +N 溢出提示点：小胶囊样式，与色点同行同高 */
+.dot-more {
+  width: auto;
+  min-width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  padding: 0 4px;
+  background: #d9d9d9;
+  color: #595959;
+  font-size: 9px;
+  line-height: 10px;
+  text-align: center;
 }
 
 .stats {

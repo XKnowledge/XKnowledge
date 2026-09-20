@@ -73,6 +73,17 @@ const sameRow =
 expectTrue('搜索框与标题同行', sameRow, `title y=${titleBox?.y?.toFixed(0)} search y=${searchBox?.y?.toFixed(0)}`)
 await shot('01-home')
 
+// 1.5 色点封顶：极端卡「计算机与芯片」（75 分类）只渲 18 点 + 1 个「+N」，
+//     描述行仍在（未被色点挤没）；普通卡无 +N 点
+const chipCard = page.locator('.xk-example-card', { hasText: '计算机与芯片' }).first()
+await chipCard.scrollIntoViewIfNeeded()
+expectEq('极端卡色点总数（18+1）', await chipCard.locator('.dot').count(), 19)
+expectEq('+N 点文本', (await chipCard.locator('.dot-more').innerText()).trim(), '+57')
+expectTrue('极端卡描述行未被挤没', await chipCard.locator('.desc').isVisible())
+const normalCard = page.locator('.xk-example-card', { hasText: '玩具与桌游' }).first()
+expectTrue('普通卡无 +N 点', (await normalCard.locator('.dot-more').count()) === 0)
+await shot('01b-dots-capped')
+
 // 2. 部分子串搜索：「具与」命中「玩具与桌游」（跨标题/描述/分类共 6 张，断言用包含式防图库演进脆断）
 const input = page.locator('.gallery-search input')
 await input.fill('具与')
