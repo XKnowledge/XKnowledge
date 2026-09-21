@@ -39,6 +39,7 @@
             :highlight-link="highlightEdgeObj"
             :show-link-name="showLinkName"
             :show-small-labels="showSmallLabels"
+            :focus-node-names="focusNodeNames"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
           />
@@ -55,6 +56,30 @@
               <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
               <a-checkbox value="showSmallLabels"> 显示小节点名称 </a-checkbox>
             </a-checkbox-group>
+            <!-- 聚焦模式：独立 checkbox 不走 checkedValues/onChangeAttr——那条管道
+                 会置脏且被 initAttr 连带重置，与「跨图保持/不写盘」冲突。
+                 data-focus-node 是冒烟断言锚点 -->
+            <a-row align="middle" class="focus-row" :data-focus-node="focusNodeId">
+              <a-col flex="auto" style="text-align: left">
+                <a-checkbox v-model:checked="focusEnabled" @change="onFocusToggle">
+                  聚焦模式
+                </a-checkbox>
+              </a-col>
+              <a-col>
+                <span class="focus-hops-label">跳数</span>
+                <a-select
+                  v-model:value="focusHops"
+                  :disabled="!focusEnabled"
+                  :options="[
+                    { value: 1, label: '1' },
+                    { value: 2, label: '2' },
+                    { value: 3, label: '3' }
+                  ]"
+                  size="small"
+                  style="width: 64px"
+                />
+              </a-col>
+            </a-row>
             <a-divider orientation="left">排斥力大小</a-divider>
             <!-- align="middle"：滑块轨道高 12px、数字框高 32px，
                  默认顶部对齐会让滑块明显偏上 -->
@@ -137,6 +162,7 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
 import { applyUndo, applyRedo } from '../utils/historyActions'
+import { defaultFocusNode, focusNeighborhood } from '../utils/graphData.js'
 import { takePendingChart } from '../store/chartStore'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
@@ -212,6 +238,24 @@ const categoryName = ref()
 const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
 const showSmallLabels = ref(true) // 会话级渲染设置：是否常显小节点名称（默认开，全显）
+// 聚焦模式（会话级，不写盘、不置脏、不进 initAttr——用户开着探照灯换图，
+// 灯不应被默默关掉，否则「打开新图自动聚焦」永远不触发）
+const focusEnabled = ref(false)
+const focusHops = ref(2)
+const focusNodeId = ref('')
+// 邻域集合：依赖 chartData/focusNodeId/focusHops，图被增删编辑后自动重算
+const focusNodeNames = computed(() => {
+  if (!focusEnabled.value || !focusNodeId.value) return []
+  const chart = xkContext.value.chartData
+  return [
+    ...focusNeighborhood(
+      chart?.nodes ?? [],
+      chart?.links ?? [],
+      focusNodeId.value,
+      focusHops.value
+    )
+  ]
+})
 const highlightNodeList = ref([]) // 高亮节点 index 记录（最多 2 个，逻辑照旧）
 const highlightNodeNames = computed(() =>
   highlightNodeList.value.map((i) => xkContext.value.chartData?.nodes?.[i]?.name).filter(Boolean)
@@ -225,6 +269,45 @@ const highlightEdgeObj = computed(() => {
     ? { source: links[i].source, target: links[i].target, name: links[i].name }
     : null
 })
+
+/** 按名同步选中态（默认焦点/焦点删除回退时用）：index 与 currentNode 对齐 */
+const syncCurrentNodeByName = (name) => {
+  const nodes = xkContext.value.chartData?.nodes ?? []
+  const i = nodes.findIndex((n) => n.name === name)
+  if (i === -1) return
+  currentNodeDataIndex.value = i
+  currentNode.value = jsonReactive({ ...nodes[i] })
+}
+
+const onFocusToggle = () => {
+  if (!focusEnabled.value) {
+    // 关闭：去色立即消失、相机恢复（XkGraph3D 的 focusNodeNames watch 处理）
+    focusNodeId.value = ''
+    return
+  }
+  // 开启：优先当前选中节点，否则默认焦点（度数最高 → symbolSize → 先出现）
+  const nodes = xkContext.value.chartData?.nodes ?? []
+  const selected =
+    currentNodeDataIndex.value > -1 && nodes[currentNodeDataIndex.value]
+      ? nodes[currentNodeDataIndex.value].name
+      : currentNode.value?.name || ''
+  focusNodeId.value = selected || defaultFocusNode(nodes, xkContext.value.chartData?.links ?? [])
+  // 焦点同步选中（仅数据，不强制弹侧栏/切面板——不打扰当前面板状态）
+  if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
+}
+
+// 焦点节点被删：回退默认焦点；全图删空 → '' → 邻域空 = 全图恢复正常色
+watch(
+  () => xkContext.value.chartData?.nodes,
+  (nodes) => {
+    if (!focusEnabled.value || !focusNodeId.value) return
+    if (!nodes?.some((n) => n.name === focusNodeId.value)) {
+      const next = defaultFocusNode(nodes ?? [], xkContext.value.chartData?.links ?? [])
+      focusNodeId.value = next
+      if (next) syncCurrentNodeByName(next)
+    }
+  }
+)
 
 let filePath = ''
 const shortcutActive = ref('')
@@ -340,6 +423,10 @@ const loadChartData = (data) => {
   })
 
   initAttr()
+  // 聚焦模式跨图保持：开着时装载即聚焦默认焦点（第一眼是子图不是纹理）；
+  // 没开则置空，防旧图 name 泄漏进新图邻域计算
+  focusNodeId.value = focusEnabled.value ? defaultFocusNode(chart.nodes, chart.links) : ''
+  if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
   xkContext.value.updateChart = !xkContext.value.updateChart
   nextTick(() => {
     saveNodeVisible.value = false
@@ -517,6 +604,8 @@ const onGraphNodeClick = (nodeData, index) => {
   currentNode.value = jsonReactive(nodeData)
   newNode.value.symbolSize = currentNode.value.symbolSize
   currentNodeDataIndex.value = index
+  // 聚焦模式开着时单击即换焦点（与「选中看属性」一次点击两个语义，不冲突）
+  if (focusEnabled.value && nodeData?.name) focusNodeId.value = nodeData.name
 
   const currentIndex = highlightNodeList.value.indexOf(index)
   if (currentIndex !== -1) {
@@ -916,6 +1005,17 @@ const contentStyle = {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* 聚焦模式行：checkbox 左、跳数下拉右，与上方复选框纵列衔接 */
+.focus-row {
+  margin-top: 8px;
+}
+
+.focus-hops-label {
+  margin-right: 4px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.88);
 }
 
 .sider-style {

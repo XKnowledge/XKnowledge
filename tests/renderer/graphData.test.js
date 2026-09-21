@@ -4,8 +4,11 @@ import {
   linkEnd,
   planHighlightRepaint,
   labelThreshold,
+  defaultFocusNode,
+  focusNeighborhood,
   HL_COLOR,
-  LINK_BASE_COLOR
+  LINK_BASE_COLOR,
+  FOCUS_DIM_COLOR
 } from '../../src/renderer/src/utils/graphData'
 
 describe('mergeGraphNodes：编辑刷新时合并旧坐标', () => {
@@ -216,5 +219,183 @@ describe('planHighlightRepaint：高亮变化的增量重着色计划', () => {
       nextLink: null
     })
     expect(plan).toEqual({ nodeRepaints: [], linkRepaints: [] })
+  })
+})
+
+describe('defaultFocusNode：默认焦点三级规则', () => {
+  const nodes = [
+    { name: 'A', symbolSize: 50 },
+    { name: 'B', symbolSize: 70 },
+    { name: 'C', symbolSize: 40 },
+    { name: 'D', symbolSize: 40 }
+  ]
+  it('度数最高者优先（A 3 条边胜出）', () => {
+    const links = [
+      { source: 'A', target: 'B' },
+      { source: 'A', target: 'C' },
+      { source: 'A', target: 'D' },
+      { source: 'B', target: 'C' }
+    ]
+    expect(defaultFocusNode(nodes, links)).toBe('A')
+  })
+  it('度数并列取 symbolSize 大的（B、C 各 1 条边，B 70 > C 40）', () => {
+    expect(defaultFocusNode(nodes, [{ source: 'B', target: 'C' }])).toBe('B')
+  })
+  it('再并列取先出现者（C、D 同度数同尺寸，C 在前）', () => {
+    expect(defaultFocusNode(nodes, [{ source: 'C', target: 'D' }])).toBe('C')
+  })
+  it('全孤点图取第一个（度数全 0、尺寸并列时顺序兜底）', () => {
+    expect(defaultFocusNode([{ name: 'X' }, { name: 'Y' }], [])).toBe('X')
+  })
+  it('自环计入度数', () => {
+    expect(defaultFocusNode(nodes, [{ source: 'A', target: 'A' }, { source: 'B', target: 'C' }])).toBe('A')
+  })
+  it('空图返回空串', () => {
+    expect(defaultFocusNode([], [])).toBe('')
+  })
+})
+
+describe('focusNeighborhood：N 跳邻域 BFS', () => {
+  // 链形 A-B-C-D（含环 A-B-C-A）+ 孤岛 E-F
+  const nodes = ['A', 'B', 'C', 'D', 'E', 'F'].map((n) => ({ name: n }))
+  const links = [
+    { source: 'A', target: 'B' },
+    { source: 'B', target: 'C' },
+    { source: 'C', target: 'D' },
+    { source: 'E', target: 'F' },
+    { source: 'A', target: 'C' }
+  ]
+  it('2 跳：环（A-C 直连）缩短直径，D 经 A→C→D 也在 2 跳内', () => {
+    expect(focusNeighborhood(nodes, links, 'A', 2)).toEqual(new Set(['A', 'B', 'C', 'D']))
+  })
+  it('1 跳只含直接邻居', () => {
+    expect(focusNeighborhood(nodes, links, 'B', 1)).toEqual(new Set(['A', 'B', 'C']))
+  })
+  it('3 跳沿链走满，孤岛 E/F 永不进', () => {
+    expect(focusNeighborhood(nodes, links, 'A', 3)).toEqual(new Set(['A', 'B', 'C', 'D']))
+  })
+  it('环不导致重复计数或死循环', () => {
+    expect(focusNeighborhood(nodes, links, 'C', 2)).toEqual(new Set(['A', 'B', 'C', 'D']))
+  })
+  it('自环边不重复入队', () => {
+    expect(focusNeighborhood([{ name: 'A' }], [{ source: 'A', target: 'A' }], 'A', 2)).toEqual(
+      new Set(['A'])
+    )
+  })
+  it('d3 反解对象形态的端点也能走（linkEnd 归一）', () => {
+    expect(
+      focusNeighborhood(nodes, [{ source: { name: 'A' }, target: { name: 'B' } }], 'A', 1)
+    ).toEqual(new Set(['A', 'B']))
+  })
+  it('焦点不在图中返回空集合（调用方以空集表达「无聚焦」）', () => {
+    expect(focusNeighborhood(nodes, links, 'NOPE', 2)).toEqual(new Set())
+  })
+  it('hops 超出图直径时返回整个连通分量', () => {
+    expect(focusNeighborhood(nodes, links, 'A', 99)).toEqual(new Set(['A', 'B', 'C', 'D']))
+  })
+})
+
+describe('planHighlightRepaint：聚焦灰化的组合色增量计划', () => {
+  const nodes = [
+    { name: 'A', category: 'x' },
+    { name: 'B', category: 'y' },
+    { name: 'C', category: 'x' }
+  ]
+  it('开启聚焦：邻域外节点进计划、着灰', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: null,
+      nextDimNodes: new Set(['A', 'B'])
+    })
+    expect(nodeRepaints).toEqual([[nodes[2], FOCUS_DIM_COLOR]])
+  })
+  it('关闭聚焦：灰化节点还原类目色', async () => {
+    const { assignCategoryColors } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const categoryColors = assignCategoryColors(['x', 'y'])
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: new Set(['A']),
+      nextDimNodes: null,
+      categoryColors
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[1], categoryColors.get('y')],
+      [nodes[2], categoryColors.get('x')]
+    ])
+  })
+  it('高亮优先于灰化：邻域外但被选中的节点仍着高亮色', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: ['C'],
+      nextLink: null,
+      prevDimNodes: null,
+      nextDimNodes: new Set(['A'])
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[1], FOCUS_DIM_COLOR],
+      [nodes[2], HL_COLOR]
+    ])
+  })
+  it('换焦点：A 退出邻域（类目色→灰）、C 进入邻域（灰→类目色）', async () => {
+    const { assignCategoryColors } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const categoryColors = assignCategoryColors(['x', 'y'])
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: new Set(['A', 'B']),
+      nextDimNodes: new Set(['B', 'C']),
+      categoryColors
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], FOCUS_DIM_COLOR],
+      [nodes[2], categoryColors.get('x')]
+    ])
+  })
+  it('状态完全不变时无重着色', () => {
+    const plan = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: new Set(['A']),
+      nextDimNodes: new Set(['A'])
+    })
+    expect(plan.nodeRepaints).toEqual([])
+  })
+  it('边灰化：任一端不在邻域即着灰，邻域内边保持底色', () => {
+    const links = [
+      { source: 'A', target: 'B', name: 'e1' }, // 两端都在邻域
+      { source: 'B', target: 'C', name: 'e2' } // C 不在
+    ]
+    const { linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: null,
+      nextDimNodes: new Set(['A', 'B'])
+    })
+    expect(linkRepaints).toEqual([[links[1], FOCUS_DIM_COLOR]])
   })
 })

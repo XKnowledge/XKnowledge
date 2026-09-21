@@ -2,6 +2,8 @@
 export const HL_COLOR = '#1f1f1f'
 /** 边底色 */
 export const LINK_BASE_COLOR = '#4b565b'
+/** 聚焦模式：邻域外节点/边的去色（白底上退为浅灰背景，不消失） */
+export const FOCUS_DIM_COLOR = '#c4c9cc'
 
 /**
  * 编辑刷新时用旧图节点坐标合并新节点数据（已布局的图不跳）。
@@ -79,12 +81,81 @@ const isSameLink = (l, hl) =>
   !!hl && linkEnd(l.source) === hl.source && linkEnd(l.target) === hl.target && hl.name === l.name
 
 /**
- * 计算高亮状态变化后需要重着色的节点/边（增量更新，避免全场景 refresh：
+ * 默认焦点三级规则：度数（边数）最高 → 并列取 symbolSize 大 → 再并列取第一个。
+ * 全孤点图所有度数为 0，自然落到「先出现者」。空图返回 ''。
+ * @param {Array} nodes chartData 的节点（纯数据）
+ * @param {Array} links chartData 的边
+ * @returns {string} 焦点节点名；空图为 ''
+ */
+export const defaultFocusNode = (nodes, links) => {
+  if (!nodes?.length) return ''
+  const degree = new Map()
+  const bump = (name) => degree.set(name, (degree.get(name) ?? 0) + 1)
+  for (const l of links ?? []) {
+    bump(linkEnd(l.source))
+    bump(linkEnd(l.target))
+  }
+  let best = nodes[0]
+  let bestDeg = degree.get(best.name) ?? 0
+  for (let i = 1; i < nodes.length; i++) {
+    const d = degree.get(nodes[i].name) ?? 0
+    if (d > bestDeg || (d === bestDeg && (nodes[i].symbolSize ?? 0) > (best.symbolSize ?? 0))) {
+      best = nodes[i]
+      bestDeg = d
+    }
+  }
+  return best.name
+}
+
+/**
+ * 聚焦邻域：从 focusName 出发 BFS hops 跳的节点名集合（含焦点自身）。
+ * 环/自环/重边由 visited 去重天然容忍；不连通区域不会越界混入。
+ * 焦点不在 nodes 中时返回空集合（调用方以空集表达「无聚焦，全图正常」）。
+ * @param {Array} nodes chartData 的节点（纯数据）
+ * @param {Array} links chartData 的边
+ * @param {string} focusName 焦点节点名
+ * @param {number} hops 跳数（1~3）
+ * @returns {Set<string>}
+ */
+export const focusNeighborhood = (nodes, links, focusName, hops) => {
+  if (!nodes?.some((n) => n?.name === focusName)) return new Set()
+  const adj = new Map()
+  const addEdge = (s, t) => {
+    if (!adj.has(s)) adj.set(s, [])
+    adj.get(s).push(t)
+  }
+  for (const l of links ?? []) {
+    const s = linkEnd(l.source)
+    const t = linkEnd(l.target)
+    addEdge(s, t)
+    if (s !== t) addEdge(t, s)
+  }
+  const visited = new Set([focusName])
+  let frontier = [focusName]
+  for (let d = 0; d < (hops ?? 0) && frontier.length; d++) {
+    const next = []
+    for (const name of frontier) {
+      for (const nb of adj.get(name) ?? []) {
+        if (!visited.has(nb)) {
+          visited.add(nb)
+          next.push(nb)
+        }
+      }
+    }
+    frontier = next
+  }
+  return visited
+}
+
+/**
+ * 计算高亮/聚焦状态变化后需要重着色的节点/边（增量更新，避免全场景 refresh：
  * refresh 会对每个节点重新执行 nodeThreeObject，重建全部 SpriteText 标签，
  * 大图下逐个点选持续掉帧）。
- * 只返回高亮翻转（进入/退出）的对象，颜色由调用方写入其 threeObj 材质。
+ * 只返回组合色（高亮 > 聚焦外灰 > 类目/底色）翻转的对象，颜色由调用方写入其 threeObj 材质。
+ * @param {Set<string>|null} prevDimNodes/nextDimNodes 上一次/本次的聚焦邻域集合；
+ *   null 表示聚焦未开启（不传等同 null，向后兼容）
  * @param {Map<string,string>} categoryColors 本图类型集合的色映射（assignCategoryColors 产物），
- *   退出高亮的还原色从这里查；查询统一 get(String(category ?? ''))
+ *   退出高亮/聚焦的还原色从这里查；查询统一 get(String(category ?? ''))
  * @returns {{ nodeRepaints: Array<[datum, color]>, linkRepaints: Array<[datum, color]> }}
  */
 export const planHighlightRepaint = ({
@@ -94,22 +165,37 @@ export const planHighlightRepaint = ({
   prevLink,
   nextNodes,
   nextLink,
+  prevDimNodes,
+  nextDimNodes,
   categoryColors
 }) => {
   const prevSet = new Set(prevNodes ?? [])
   const nextSet = new Set(nextNodes ?? [])
+  // 节点组合色：高亮 > 聚焦外灰 > 类目色
+  const nodeColorOf = (n, hlSet, dim) =>
+    hlSet.has(n.name)
+      ? HL_COLOR
+      : dim && !dim.has(n.name)
+        ? FOCUS_DIM_COLOR
+        : categoryColors?.get(String(n.category ?? ''))
+  // 边组合色：高亮 > 任一端不在邻域的灰 > 底色
+  const linkColorOf = (l, hl, dim) =>
+    hl
+      ? HL_COLOR
+      : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
+        ? FOCUS_DIM_COLOR
+        : LINK_BASE_COLOR
   const nodeRepaints = []
   for (const n of nodes ?? []) {
-    const was = prevSet.has(n.name)
-    const is = nextSet.has(n.name)
-    if (was !== is)
-      nodeRepaints.push([n, is ? HL_COLOR : categoryColors.get(String(n.category ?? ''))])
+    const was = nodeColorOf(n, prevSet, prevDimNodes)
+    const is = nodeColorOf(n, nextSet, nextDimNodes)
+    if (was !== is) nodeRepaints.push([n, is])
   }
   const linkRepaints = []
   for (const l of links ?? []) {
-    const was = isSameLink(l, prevLink)
-    const is = isSameLink(l, nextLink)
-    if (was !== is) linkRepaints.push([l, is ? HL_COLOR : LINK_BASE_COLOR])
+    const was = linkColorOf(l, isSameLink(l, prevLink), prevDimNodes)
+    const is = linkColorOf(l, isSameLink(l, nextLink), nextDimNodes)
+    if (was !== is) linkRepaints.push([l, is])
   }
   return { nodeRepaints, linkRepaints }
 }

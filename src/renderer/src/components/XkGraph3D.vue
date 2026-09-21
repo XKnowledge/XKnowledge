@@ -35,7 +35,8 @@ import {
   linkEnd,
   labelThreshold,
   HL_COLOR,
-  LINK_BASE_COLOR
+  LINK_BASE_COLOR,
+  FOCUS_DIM_COLOR
 } from '../utils/graphData.js'
 
 const props = defineProps({
@@ -44,7 +45,9 @@ const props = defineProps({
   highlightNodes: { type: Array, default: () => [] },
   highlightLink: { type: Object, default: null },
   showLinkName: { type: Boolean, default: false },
-  showSmallLabels: { type: Boolean, default: false }
+  showSmallLabels: { type: Boolean, default: false },
+  // 聚焦模式邻域节点名（空数组 = 聚焦未开启；邻域为空同样以空数组表达）
+  focusNodeNames: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['node-click', 'link-click', 'init-failed'])
@@ -105,24 +108,35 @@ const applyVisibility = () => {
     })
 }
 
-/** 上一次应用的高亮状态：增量重着色只处理翻转（进入/退出高亮）的对象 */
+/** 上一次应用的高亮/聚焦状态：增量重着色只处理组合色翻转的对象 */
 let prevHlNodes = new Set()
 let prevHlLink = null
+let prevHlDim = null // Set<string>|null：上一次应用的聚焦邻域
 
 const applyHighlight = () => {
   if (!graph) return
   const hl = new Set(props.highlightNodes)
   const le = props.highlightLink
-  // accessor 描述"正确颜色"：graphData 重灌或 refresh 时库按它重建材质
+  const dim = props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
+  // accessor 描述"正确颜色"（高亮 > 聚焦外灰 > 类目/底色）：
+  // graphData 重灌或 refresh 时库按它重建材质
   graph
-    .nodeColor((n) => (hl.has(n.name) ? HL_COLOR : catColor(n.category)))
+    .nodeColor((n) =>
+      hl.has(n.name)
+        ? HL_COLOR
+        : dim && !dim.has(n.name)
+          ? FOCUS_DIM_COLOR
+          : catColor(n.category)
+    )
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
         ? HL_COLOR
-        : LINK_BASE_COLOR
+        : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
+          ? FOCUS_DIM_COLOR
+          : LINK_BASE_COLOR
     )
-  // 高亮变化走增量：只改翻转对象的材质颜色。不调 refresh()——它会对每个节点
-  // 重新执行 nodeThreeObject，重建全部 SpriteText 标签，大图逐个点选持续掉帧。
+  // 高亮/聚焦变化走增量：只改翻转对象的材质颜色。不调 refresh()——它会对每个
+  // 节点重新执行 nodeThreeObject，重建全部 SpriteText 标签，大图逐个点选持续掉帧。
   // __threeObj 是 three-forcegraph 挂在 datum 上的内部引用，缺失（库升级破坏）
   // 时回退全量 refresh，保证高亮功能仍生效
   const { nodeRepaints, linkRepaints } = planHighlightRepaint({
@@ -132,6 +146,8 @@ const applyHighlight = () => {
     prevLink: prevHlLink,
     nextNodes: hl,
     nextLink: le,
+    prevDimNodes: prevHlDim,
+    nextDimNodes: dim,
     categoryColors: categoryColors.value
   })
   const repaints = [...nodeRepaints, ...linkRepaints]
@@ -142,10 +158,19 @@ const applyHighlight = () => {
       colorizable.set(color)
       painted++
     }
+    // 节点标签（SpriteText 挂在节点 mesh 的 children 上）：球灰则标签一并退
+    // 浅灰——黑字挂在灰球上会成为主要视觉噪音，破坏背景感；边对象无
+    // sprite 子级，循环空转无害
+    for (const child of datum.__threeObj?.children ?? []) {
+      if (child.isSprite && child.material?.color?.set) {
+        child.material.color.set(color === FOCUS_DIM_COLOR ? FOCUS_DIM_COLOR : '#333')
+      }
+    }
   }
   if (repaints.length > 0 && painted === 0) graph.refresh()
   prevHlNodes = hl
   prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
+  prevHlDim = dim
 }
 
 /** 标签显隐：最小的 60% 节点算小节点，按 showSmallLabels 开关决定其名称显隐；
@@ -153,13 +178,15 @@ const applyHighlight = () => {
 const applyLabels = () => {
   if (!graph) return
   const threshold = labelThreshold(props.nodes, props.showSmallLabels)
+  // 标签重建（开关/数据重灌）时遵守聚焦灰化：灰球不配黑字
+  const dim = props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
   graph
     .nodeThreeObjectExtend(true) // 库默认 false，不开会整个替换球体
     .nodeThreeObject((n) => {
       if ((n.symbolSize ?? 0) < threshold || !n.name) return null
       const sprite = new SpriteText(n.name)
       sprite.textHeight = 5
-      sprite.color = '#333'
+      sprite.color = dim && !dim.has(n.name) ? FOCUS_DIM_COLOR : '#333'
       sprite.position.set(0, 7, 0)
       return sprite
     })
@@ -263,8 +290,74 @@ watch(
 
 watch(() => props.highlightNodes, applyHighlight, { deep: true })
 watch(() => props.highlightLink, applyHighlight, { deep: true })
+// 聚焦邻域变化同样要走重着色：灰化/还原是增量材质色更新，只挂相机会
+// 出现「状态对、视觉没变」（冒烟截图已踩过）
+watch(() => props.focusNodeNames, applyHighlight, { deep: true })
 watch(() => props.showLinkName, applyInteraction)
 watch(() => props.showSmallLabels, applyLabels)
+
+/** 聚焦开启前的相机快照：退出聚焦时恢复（不抢用户开启前的视角） */
+let preFocusCamera = null // { x, y, z, lookAt: { x, y, z } }
+
+/** 聚焦取景：保持当前视线方向推拉到邻域包围盒。
+ *  力模拟尚未给出坐标（无有限 x/y/z 的邻域点）时跳过本次取景，
+ *  由库的数据装载粗取景兜底 */
+const focusCamera = (names) => {
+  if (!graph) return
+  const pts = graph
+    .graphData()
+    .nodes.filter((n) => names.has(n.name) && Number.isFinite(n.x))
+  if (!pts.length) return
+  const c = { x: 0, y: 0, z: 0 }
+  for (const p of pts) {
+    c.x += p.x
+    c.y += p.y
+    c.z += p.z
+  }
+  c.x /= pts.length
+  c.y /= pts.length
+  c.z /= pts.length
+  let r = 0
+  for (const p of pts) r = Math.max(r, Math.hypot(p.x - c.x, p.y - c.y, p.z - c.z))
+  const cam = graph.cameraPosition() // getter：{ x, y, z, lookAt? }
+  const look = cam.lookAt ?? { x: 0, y: 0, z: 0 }
+  const dir = { x: cam.x - look.x, y: cam.y - look.y, z: cam.z - look.z }
+  const len = Math.hypot(dir.x, dir.y, dir.z) || 1
+  const dist = Math.max(r * 2.2, 60) // fov 45° 经验系数；下限防贴脸
+  graph.cameraPosition(
+    { x: c.x + (dir.x / len) * dist, y: c.y + (dir.y / len) * dist, z: c.z + (dir.z / len) * dist },
+    c,
+    600
+  )
+}
+
+const restoreFocusCamera = () => {
+  if (!graph || !preFocusCamera) return
+  const { x, y, z, lookAt } = preFocusCamera
+  graph.cameraPosition({ x, y, z }, lookAt ?? { x: 0, y: 0, z: 0 }, 400)
+  preFocusCamera = null
+}
+
+// 聚焦邻域变化 → 取景/恢复。首次开启快照相机；换焦点/改跳数只取景（退出仍回
+// 开启前位）；关闭恢复快照
+watch(
+  () => props.focusNodeNames,
+  (next, prev) => {
+    if (!graph) return
+    const had = prev?.length > 0
+    const has = next.length > 0
+    if (!had && has) {
+      const cam = graph.cameraPosition()
+      preFocusCamera = { x: cam.x, y: cam.y, z: cam.z, lookAt: cam.lookAt ?? { x: 0, y: 0, z: 0 } }
+      focusCamera(new Set(next))
+    } else if (had && has) {
+      focusCamera(new Set(next))
+    } else if (had && !has) {
+      restoreFocusCamera()
+    }
+  },
+  { deep: true }
+)
 
 /** 排斥力滑杆映射：d3 charge 强度 = -repulsion/10（滑杆 1~500 → -0.1~-50） */
 const setRepulsion = (value) => {
@@ -303,7 +396,7 @@ const resetView = () => {
   graph.zoomToFit(600, 80)
 }
 
-defineExpose({ setRepulsion, exportPng, resetView })
+defineExpose({ setRepulsion, exportPng, resetView, focusCamera })
 </script>
 
 <style scoped>
