@@ -76,6 +76,14 @@
                 />
               </a-col>
             </a-row>
+            <a-divider orientation="left">图谱简介</a-divider>
+            <!-- 图表级元数据：即时写入 chartData.description 并置脏（同复选框/
+                 滑块），不进 undo/redo；绑定经 computed 兜底，见脚本区注释 -->
+            <a-textarea
+              v-model:value="chartDescription"
+              :rows="4"
+              @change="onDescriptionChange"
+            />
             <a-divider orientation="left">视图</a-divider>
             <a-row :gutter="8">
               <a-col :flex="1">
@@ -367,6 +375,21 @@ watch(saveNodeVisible, (v) => {
 const onChangeAttr = () => {
   showLinkName.value = checkedValues.value.includes('showEdgeName')
   showSmallLabels.value = checkedValues.value.includes('showSmallLabels')
+  saveNodeVisible.value = true
+}
+
+// 图谱简介：双向包装 chartData.description——装载失败时 chartData 为 null，
+// 而属性面板仅被 v-show 隐藏仍会渲染，裸绑 description 会在渲染期抛
+// TypeError；get 兜底空串，set 顺带覆盖「新建文件无该字段」的首次创建
+const chartDescription = computed({
+  get: () => xkContext.value.chartData?.description ?? '',
+  set: (v) => {
+    if (!xkContext.value.chartData) return
+    xkContext.value.chartData.description = v
+  }
+})
+
+const onDescriptionChange = () => {
   saveNodeVisible.value = true
 }
 
@@ -796,7 +819,7 @@ const buttonList = ref([
   { src: DeleteNodeIcon, name: '删除节点', click: deleteNode },
   { src: CreateEdgeIcon, name: '创建连接', click: createEdge },
   { src: DeleteEdgeIcon, name: '删除连接', click: deleteEdge },
-  { src: EditIcon, name: '编辑框', click: toggleSider }
+  { src: EditIcon, name: '编辑栏', click: toggleSider }
 ])
 
 // 图表区宽度不在此设定：由 antd flex 布局撑开；3D 图组件经
