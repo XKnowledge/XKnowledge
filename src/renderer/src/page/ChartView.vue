@@ -1031,10 +1031,14 @@ const contentStyle = {
 }
 
 /* 侧边栏表单同样顶掉 .sider-style 继承的 center/50px：
-   否则 input-number 这类 inline-block 控件被居中、表单行高异常 */
+   否则 input-number 这类 inline-block 控件被居中、表单行高异常。
+   左右留白对称：右边被常驻滚动条（overflow-y: scroll，自定义 5px，
+   125% DPI 下实际占位 5.6px）顶出间隙，右 padding 相应减 6px 补偿，
+   内容左 12 / 右 ≈11.6，视觉等宽（100% DPI 下右 11，差 1px 不可见） */
 .sider-style .ant-form {
   text-align: left;
   line-height: 1.5715;
+  padding: 0 6px 0 12px;
 }
 
 /* 四个表单的最后一项都是提交按钮，保持居中 */
