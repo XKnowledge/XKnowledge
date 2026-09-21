@@ -1,6 +1,7 @@
 // 冒烟驱动：首页图库搜索——验证搜索框与「示例图库」标题同行、部分子串过滤
 // （搜「具与」命中「玩具与桌游」）、搜索时隐藏新建空白首卡、无匹配空态、
-// 清空后恢复全量。覆盖 filterExamples 纯函数在真实渲染链路上的行为。
+// 清空后恢复全量、全量卡片按标题拼音 A→Z 排列。覆盖 filterExamples /
+// sortExamples 纯函数在真实渲染链路上的行为。
 // 用法：node scripts/smoke-search.mjs   （需先 npm run build）
 import { _electron as electron } from 'playwright-core'
 import * as fs from 'node:fs'
@@ -88,6 +89,30 @@ expectTrue('最大卡描述行未被挤没', await bigCard.locator('.desc').isVi
 const normalCard = page.locator('.xk-example-card', { hasText: '玩具与桌游' }).first()
 expectTrue('普通卡无 +N 点', (await normalCard.locator('.dot-more').count()) === 0)
 await shot('01b-dots-capped')
+
+// 1.6 拼音排序：全量卡片标题按 localeCompare('zh-CN') 单调不降
+//     （sortExamples 载入即排序在真实渲染链路上的兑现；断言单调性而非
+//      逐对硬编码，图库增删示例不致脆断）
+const allTitles = await cardTitles()
+let monotonic = true
+for (let i = 1; i < allTitles.length; i++) {
+  if (allTitles[i - 1].localeCompare(allTitles[i], 'zh-CN') > 0) {
+    monotonic = false
+    break
+  }
+}
+expectTrue(
+  '卡片按标题拼音 A→Z 排列',
+  monotonic,
+  `共 ${allTitles.length} 张，首三：${allTitles.slice(0, 3).join('、')}`
+)
+// 截图前回顶：1.5 的 scrollIntoViewIfNeeded 把视口留在图库中段，
+// 不回顶则 01c 拍不到首行（新建空白卡 + 拼音首三张），截图无法佐证断言
+await page.evaluate(() => {
+  const el = document.querySelector('.inner-div')
+  if (el) el.scrollTop = 0
+})
+await shot('01c-sorted')
 
 // 2. 部分子串搜索：「具与」命中「玩具与桌游」（跨标题/描述/分类共 6 张，断言用包含式防图库演进脆断）
 const input = page.locator('.gallery-search input')

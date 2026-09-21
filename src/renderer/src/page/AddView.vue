@@ -49,6 +49,7 @@ import { message } from 'ant-design-vue'
 import XkExampleCard from '../components/XkExampleCard.vue'
 import { setPendingChart } from '../store/chartStore'
 import { filterExamples } from '../utils/filterExamples'
+import { sortExamples } from '../utils/sortExamples'
 
 const router = useRouter()
 
@@ -63,7 +64,8 @@ const filteredExamples = computed(() => filterExamples(examples.value, keyword.v
 onMounted(async () => {
   try {
     const res = await window.electronAPI.listExamples()
-    examples.value = res.examples ?? []
+    // 载入即拼音序（展示层职责）：filterExamples 保序，搜索结果自动同序
+    examples.value = sortExamples(res.examples ?? [])
   } catch (err) {
     // 列表失败按空态处理，不弹错误框打扰首页浏览
     console.error('加载示例列表失败', err)
