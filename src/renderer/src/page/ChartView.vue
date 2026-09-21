@@ -513,8 +513,11 @@ const shortcut = (event) => {
       action: () => triggerShortcut('create_node')
     },
     delete: {
+      // Delete 删「最后一个点击的对象」：最后点过边（且未再点节点）删边，
+      // 否则删节点；两边 index 在对方被点击时对称清空，无选中时各自
+      // 函数的 <0 守卫兜底，按键无动作
       match: () => !isTypingContext && key === 'delete',
-      action: () => triggerShortcut('delete_node')
+      action: () => triggerShortcut(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
     },
     'ctrl+z': {
       match: () => !isTypingContext && event.ctrlKey && key === 'z',
@@ -605,6 +608,9 @@ const onGraphNodeClick = (nodeData, index) => {
   currentNode.value = jsonReactive(nodeData)
   newNode.value.symbolSize = currentNode.value.symbolSize
   currentNodeDataIndex.value = index
+  // 对称清对方的选中态：Delete 删「最后一个点击的对象」，选中节点后
+  // 旧边选中态作废（防菜单「删除连接」误删旧边）
+  currentEdgeDataIndex.value = -1
   // 聚焦模式开着时单击即换焦点（与「选中看属性」一次点击两个语义，不冲突）
   if (focusEnabled.value && nodeData?.name) focusNodeId.value = nodeData.name
 
@@ -626,6 +632,9 @@ const onGraphLinkClick = (linkData, index) => {
   currentEdgeVisible.value = true
   currentEdge.value = jsonReactive(linkData)
   currentEdgeDataIndex.value = index
+  // 对称清节点选中态：点边后按 Delete 删的是这条边，而非之前点的节点
+  // （否则「点节点 A → 点边 → Delete」会把 A 及其相连边全部误删）
+  currentNodeDataIndex.value = -1
   highlightEdgeIndex.value = highlightEdgeIndex.value === index ? -1 : index
 
   if (!siderVisible.value) switchSider()

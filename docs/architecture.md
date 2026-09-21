@@ -274,7 +274,9 @@ webContents.id 登记簿）：
 `watch(shortcutWatch)` 按 `actionMap` 分发到 `saveFile / createNode / undo / ...`。
 
 快捷键（`window.keydown`）：Ctrl+S 保存、Ctrl+Z 撤销、Ctrl+Y 重做、Insert 创建节点、
-Delete 删除节点、Ctrl+R 阻止刷新；Insert/Delete/Ctrl+Z/Ctrl+Y 在焦点位于
+Delete 删除**最后点击**的对象（点击节点/边时对称清对方的选中 index，据此分发
+`delete_node`/`delete_edge`，无选中时 `<0` 守卫兜底无动作）、Ctrl+R 阻止刷新；
+Insert/Delete/Ctrl+Z/Ctrl+Y 在焦点位于
 INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载时移除监听，防止同窗口反复
 挂载导致快捷键跑两遍。
 
