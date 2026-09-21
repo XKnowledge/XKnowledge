@@ -342,10 +342,11 @@ onMounted(async () => {
   })
 
   autoSaveTimer = setInterval(() => {
-    // 1分钟保存一次
+    // 1分钟保存一次：走 persistFile 纯保存，不重置侧边栏——后台保存
+    // 必须隐形，清表单/跳属性页会打断正在编辑的用户（也不借用
+    // shortcutActive 分发，避免占用菜单按钮的 v-model 状态）
     if (!autoSaveSuspended && saveNodeVisible.value && filePath !== '') {
-      shortcutActive.value = 'save_file'
-      shortcutWatch.value = !shortcutWatch.value
+      persistFile()
     }
   }, 60000)
 
@@ -718,10 +719,12 @@ const closeFile = async () => {
   router.push('/')
 }
 
-const saveFile = async () => {
+const persistFile = async () => {
   /**
-   * 实现文件保存：有路径直接写，无路径由主进程弹另存对话框。
-   * 返回是否保存成功（供退出流程使用）。
+   * 保存核心层：写盘 + 路径/登记/脏标记维护与错误处理，无任何 UI 重置
+   * 副作用。60 秒自动保存与手动保存共用——后台保存必须隐形，清表单/
+   * 跳属性页会打断正在编辑的用户。
+   * 返回是否保存成功。
    */
   if (!xkContext.value.chartData) {
     // 装载失败的窗口没有可保存内容，禁止把字面量 "null" 写成损坏文件
@@ -739,8 +742,6 @@ const saveFile = async () => {
     // 首次保存（原 path 为空）后文件有了路径，更新登记
     window.electronAPI.fileOpened({ path: filePath }).catch(() => {})
     saveNodeVisible.value = false
-    resetSider()
-    resetRefData()
     return true
   } catch (err) {
     console.error('保存失败', err)
@@ -758,6 +759,20 @@ const saveFile = async () => {
     saveNodeVisible.value = true
     return false
   }
+}
+
+const saveFile = async () => {
+  /**
+   * 手动保存（Ctrl+S/菜单/关闭前保存）：在 persistFile 之上叠加 UI 重置
+   * ——保存成功后回到干净的属性面板，这是用户主动动作的预期反馈。
+   * 返回是否保存成功（供退出流程使用）。
+   */
+  const ok = await persistFile()
+  if (ok) {
+    resetSider()
+    resetRefData()
+  }
+  return ok
 }
 
 const saveAs = async () => {
