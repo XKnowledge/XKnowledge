@@ -295,7 +295,7 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 
 ```
 路径 A（同窗口，首页发起）：
-  AddView/BasicLayout 打开文件或双击模板
+  AddView/BasicLayout 打开文件、双击示例或单击新建空白卡
     → 主进程 readChartFile 校验
     → setPendingChart({ value, path })   # 渲染层 store/chartStore.js
     → router.push('chart')
@@ -322,7 +322,7 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 
 ### 7.3 保存 / 自动保存 / 冲突
 
-- 保存：`saveFile` 有路径直接 `file:save` 写回；无路径（模板新建）由主进程弹另存为。
+- 保存：`saveFile` 有路径直接 `file:save` 写回；无路径（新建空白/示例副本）由主进程弹另存为。
 - 自动保存：每 60 秒，若有未保存修改且有文件路径，触发一次 `save_file` 动作。
 - 冲突：`saveFile` 捕获含 `[FILE_CONFLICT]` 的错误后 `autoSaveSuspended = true`
   暂停自动保存（避免每分钟重复报错），提示用户「另存为」；另存成功后恢复。
