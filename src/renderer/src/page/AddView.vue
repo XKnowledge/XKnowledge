@@ -24,7 +24,7 @@
           <div>新建空白文件</div>
         </div>
         <XkExampleCard
-          v-for="ex in filteredExamples"
+          v-for="ex in visibleExamples"
           :key="ex.fileName"
           :example="ex"
           :selected="ex.fileName === selected"
@@ -42,7 +42,7 @@
 
 <script setup>
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 
@@ -61,11 +61,43 @@ const keyword = ref('')
 /** 搜索过滤：标题/描述/分类子串匹配，空关键字即全量 */
 const filteredExamples = computed(() => filterExamples(examples.value, keyword.value))
 
+/* 分帧渲染：207 张卡片一次性挂载的 paint 是 200~350ms 的主线程长帧
+   （页面无响应、掉帧——「新建空白卡先出、卡一下、卡片齐现」的观感来源，
+   dev 模式更甚）。改为数据到手后首批 40 张（覆盖任意窗口的首屏视口：
+   大屏 2560 宽每行 ~12 张 × 2 行视口 = 24 张，40 含余量；与虚线框几乎
+   同帧可见），剩余每帧一批铺完，单帧稳定 ~100ms 内（64/帧实测会
+   100~127ms 贴着可感线晃）。只服务初始装载；搜索结果必须即时全量
+   （反馈不能等分帧）。 */
+const BATCH = 40
+const renderedCount = ref(Infinity)
+let renderChainStopped = false
+
+/** 实际进 DOM 的卡片：装载期分帧截断，其余阶段全量 */
+const visibleExamples = computed(() => filteredExamples.value.slice(0, renderedCount.value))
+
+watch(keyword, () => {
+  // 搜索即时全量：结果集本就小，且反馈延迟比掉帧更伤
+  renderChainStopped = true
+  renderedCount.value = Infinity
+})
+onUnmounted(() => {
+  renderChainStopped = true
+})
+
 onMounted(async () => {
   try {
     const res = await window.electronAPI.listExamples()
     // 载入即拼音序（展示层职责）：filterExamples 保序，搜索结果自动同序
     examples.value = sortExamples(res.examples ?? [])
+    // 分帧启动：首批同帧可见，剩余逐帧铺完
+    renderedCount.value = Math.min(BATCH, examples.value.length)
+    renderChainStopped = false
+    const renderNextBatch = () => {
+      if (renderChainStopped || renderedCount.value >= examples.value.length) return
+      renderedCount.value = Math.min(renderedCount.value + BATCH, examples.value.length)
+      requestAnimationFrame(renderNextBatch)
+    }
+    requestAnimationFrame(renderNextBatch)
   } catch (err) {
     // 列表失败按空态处理，不弹错误框打扰首页浏览
     console.error('加载示例列表失败', err)

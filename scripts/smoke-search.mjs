@@ -60,12 +60,27 @@ const expectTrue = (label, cond, detail = '') => {
   if (!cond) failures++
 }
 const cardCount = () => page.locator('.xk-example-card').count()
+// 标题读取用 textContent：卡片有 content-visibility:auto（视口外跳过渲染），
+// innerText 走布局树会为视口外卡片返回空串，textContent 不依赖渲染、稳定
 const cardTitles = async () =>
-  (await page.locator('.xk-example-card .name').allInnerTexts()).map((s) => s.trim())
+  (
+    await page.$$eval('.xk-example-card .name', (els) => els.map((e) => e.textContent))
+  ).map((s) => s.trim())
+// 分帧渲染下卡片逐帧铺开（AddView 每 +64）：读数连续两次一致视为铺完
+const stableCount = async () => {
+  let prev = -1
+  let cur = await cardCount()
+  while (cur !== prev) {
+    prev = cur
+    await page.waitForTimeout(300)
+    cur = await cardCount()
+  }
+  return cur
+}
 
 // 1. 首页加载：搜索框与标题在同一行（垂直中心距离 < 行高一半）
 await page.waitForSelector('.xk-example-card', { timeout: 15_000 })
-const total = await cardCount()
+const total = await stableCount()
 expectTrue('示例卡加载', total > 100, `共 ${total} 张`)
 const titleBox = await page.locator('.gallery-header h2').boundingBox()
 const searchBox = await page.locator('.gallery-search').boundingBox()

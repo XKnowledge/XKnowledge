@@ -11,6 +11,8 @@
     "typecheck": "vue-tsc --noEmit",
     "build:dev": "npm run build && electron-vite dev --watch",
     "build": "electron-vite build",
+    "generate:examples": "node scripts/generate-example-manifest.mjs",
+    "prebuild": "node scripts/generate-example-manifest.mjs",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",

@@ -72,6 +72,11 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
   /* BasicLayout 的 contentStyle 行内 lineHeight:120px 会继承进来，
      不重置时 stats 撑 120px 高、name/desc 被 flex 压到 0 高而不可见 */
   line-height: 1.4;
+  /* 图库 207 张卡片时视口外的整卡渲染（布局+绘制）是大头：卡片固定
+     200×150，用 content-visibility 让浏览器跳过视口外渲染、以
+     intrinsic 尺寸占位，配合 AddView 的分帧挂载消除长帧 */
+  content-visibility: auto;
+  contain-intrinsic-size: 200px 150px;
 }
 
 .xk-example-card:hover {

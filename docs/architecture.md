@@ -68,6 +68,9 @@ XKnowledge/
 │  │  ├─ windowManager.js       # createWindow / createChartWindow / enter|exitChartMode
 │  │  ├─ ipc.js                 # registerIpc：全部 ipcMain.handle 与 openedFiles 登记
 │  │  ├─ fileService.js         # .xk 读 / 写 / 校验 / 对话框 / 原子写入
+│  │  ├─ chartValidation.mjs    # validateChartStructure 纯函数（无 electron 依赖，.mjs 供纯 node 脚本直 import）
+│  │  ├─ exampleService.js      # 示例图库对外门面：定位 examples/ 目录并转发
+│  │  ├─ exampleManifest.mjs    # 示例元数据清单：快慢两层（§5.6），零 electron 依赖
 │  │  └─ fileGuard.js           # createPathGuard：路径授权与 mtime 冲突检测
 │  ├─ preload/
 │  │  └─ index.js               # contextBridge 暴露 window.electronAPI
@@ -233,6 +236,41 @@ webContents.id 登记簿）：
 - **冲突检测**：授权时记录磁盘 mtime，写入前 stat 对比；不一致（其他窗口/外部程序
   改过）throw `FILE_CONFLICT`（message 含 `[FILE_CONFLICT]` token），不做静默覆盖，
   由上层提示用户改用另存为。
+
+### 5.6 exampleService.js + exampleManifest.mjs（示例图库清单）
+
+首页卡片所需元数据（fileName/title/description/nodeCount/linkCount/categories）
+预收集进 `examples/examples.manifest.json`（随仓库提交、随打包进 asar），`listExamples`
+快慢两层：
+
+- **快路径**：目录 `.xk` 文件名集合与清单一致 → 直接信任清单（~1ms），不再逐文件
+  读取（207 个串行约 85ms——首页「新建空白卡先出、停顿、卡片齐现」两段式的根源，
+  实测停顿 103ms → 21ms）。「图库看得见的打得开」在清单**生成时**成立；此后文件被
+  换坏的极端情形由 `openExample` 复用的 `readChartFile` 损坏拦截兜底（点击时提示
+  打开失败而非白屏）。
+- **慢路径**：清单缺失/损坏/不一致（开发态增删示例）→ 退回逐文件读取并重写清单，
+  下次回到快路径；打包态 asar 只读、重写静默失败（包内清单构建时已保证一致，快路径
+  恒命中）。
+
+配套机制：`scripts/generate-example-manifest.mjs`（`yarn generate:examples`，prebuild
+自动跑，内容相同不重写）；同步守护测试对清单与目录现扫结果逐字节对比，改示例忘重新
+生成时测试红。清单按 fileName 码点序存储（与 readdir 序无关，跨平台字节稳定）；
+categories 的 `undefined` 归一为空串保证序列化往返等值（渲染端 filterExamples /
+catColor 均已 `?? ''` 防御，展示零影响）。
+
+清单消除了数据等待（~85ms → ~15ms），剩余可感停顿来自渲染侧：207 张卡片一次性
+挂载的 paint 是 200~350ms 的主线程长帧（掉帧、页面无响应，dev 模式更甚）。渲染端
+两层配合消除：AddView 分帧挂载（数据到手首批 40 张与虚线框同帧可见——40 覆盖任意
+首屏视口，剩余 requestAnimationFrame 每帧 +40 铺完；搜索结果即时全量、不受分帧
+延迟）；卡片固定
+200×150，配 `content-visibility: auto` + `contain-intrinsic-size` 让浏览器跳过
+视口外整卡渲染。冒烟 `scripts/smoke-gallery-frame.mjs` 守护三项：首批可见 ≤150ms、
+装载期无 >120ms 长帧、搜索即时全量（注意：content-visibility 下测试读卡片文本须
+用 textContent——视口外卡片的 innerText 为空串）。
+
+两个 `.mjs` 模块（chartValidation / exampleManifest）保持零 electron 依赖，主进程、
+vitest、生成脚本三方直接 import 同一份逻辑；`exampleService.js` 只负责经
+`examplesDir()` 定位目录并转发（文件名防穿越校验仍在 `openExample`）。
 
 ## 6. 渲染层
 
@@ -436,7 +474,9 @@ name 定位目标。历史为内存态，不落盘。
 | `tests/main/ipc.test.js` | 同文件聚焦、文件-窗口登记与清理、新窗口 pending 透传、窗口标题联动、file:dirty 上报与重置 |
 | `tests/main/titleService.test.js` | 标题计算：唯一名、同名补 1/2 级目录链、混合深度互不相同、未保存圆点双位置 |
 | `tests/main/windowManager.test.js` | exitChartMode 对称恢复、图表模式进入/退出设置窗口标题、setWindowTitle 双位置标题 |
-| `tests/main/exampleService.test.js` | 示例列表元数据提取与缺省回退 |
+| `tests/main/exampleService.test.js` | 示例列表元数据提取与缺省回退（走清单层慢路径） |
+| `tests/main/exampleManifest.test.js` | 清单序列化/解析/匹配、快路径信任清单、慢路径重建、只读目录静默 |
+| `tests/main/example-manifest-sync.test.js` | 同步守护：仓库清单与 examples/ 现扫结果逐字节一致 |
 | `tests/main/examplePaths.test.js` | `isExamplePath` 示例目录判定 |
 | `tests/renderer/categoryColor.test.js` | 调色板稳定性（同名同色、循环取模） |
 | `tests/renderer/graphData.test.js` | 节点合并、连接归一化、标签阈值、增量重着色计划 |
@@ -450,7 +490,9 @@ name 定位目标。历史为内存态，不落盘。
 - **类型检查**：`yarn typecheck`（vue-tsc --noEmit）。
 - **打包**：`yarn build`（electron-vite build → `out/`）后 `electron-builder` 出包到
   `release/`；分平台脚本 `yarn build:win / build:mac / build:linux`，`yarn build:unpack`
-  只出目录不出安装包。asar 开启，`files` 只带 `out/` 与 `resources/`。
+  只出目录不出安装包。asar 开启，`files` 只带 `out/`、`resources/` 与 `examples/`
+  （含示例清单，§5.6）。prebuild 自动重新生成示例清单；改/增/删 `examples/` 内
+  `.xk` 后也可手动 `yarn generate:examples`。
 - **包管理器用 yarn**：请勿混用 npm（会静默丢依赖）；国内网络下 Electron 二进制下载
   失败时，手动执行 install.js 需显式携带 `ELECTRON_MIRROR` 环境变量（`.npmrc` 对该
   路径不生效）。
