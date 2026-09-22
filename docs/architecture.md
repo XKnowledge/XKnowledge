@@ -491,7 +491,10 @@ name 定位目标。历史为内存态，不落盘。
 - **打包**：`yarn build`（electron-vite build → `out/`）后 `electron-builder` 出包到
   `release/`；分平台脚本 `yarn build:win / build:mac / build:linux`，`yarn build:unpack`
   只出目录不出安装包。asar 开启，`files` 只带 `out/`、`resources/` 与 `examples/`
-  （含示例清单，§5.6）。prebuild 自动重新生成示例清单；改/增/删 `examples/` 内
+  （含示例清单，§5.6）。Windows 出 NSIS 向导式安装器（`build.nsis`：oneClick 关闭、
+  许可协议页取根目录 `LICENSE`、可选安装目录与安装范围；`build/installer.nsh`
+  提供协议「勾选接受」形态与快捷方式勾选页，静默 `/S` 安装默认全建快捷方式）。
+prebuild 自动重新生成示例清单；改/增/删 `examples/` 内
   `.xk` 后也可手动 `yarn generate:examples`。
 - **包管理器用 yarn**：请勿混用 npm（会静默丢依赖）；国内网络下 Electron 二进制下载
   失败时，手动执行 install.js 需显式携带 `ELECTRON_MIRROR` 环境变量（`.npmrc` 对该

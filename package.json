@@ -27,6 +27,12 @@
     "directories": {
       "output": "release"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "LICENSE",
+      "include": "build/installer.nsh"
+    },
     "asar": true,
     "files": [
       "out/**/*",

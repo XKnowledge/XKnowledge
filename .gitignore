@@ -1,6 +1,9 @@
 dist
 out
-build
+build/*
+# build/ 是 electron-builder 构建资源目录，installer.nsh 是安装器源码、必须入库
+# （package.json → nsis.include 指向它；缺失时 electron-builder 静默跳过、出包悄悄退化）
+!build/installer.nsh
 release
 xk_main
 
