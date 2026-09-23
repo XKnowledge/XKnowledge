@@ -127,13 +127,10 @@
               @change="onDescriptionChange"
             />
             <a-divider orientation="left">视图</a-divider>
-            <a-row :gutter="8">
-              <a-col :flex="1">
-                <a-button size="small" @click="graph3dRef?.exportPng()">导出图片</a-button>
-              </a-col>
-              <a-col :flex="1">
-                <a-button size="small" @click="graph3dRef?.resetView()">复位视图</a-button>
-              </a-col>
+            <!-- space-evenly：2 个 flex 项产生 3 段等宽空隙（左边缘/按钮间/右边缘） -->
+            <a-row justify="space-evenly">
+              <a-button size="small" @click="graph3dRef?.exportPng()">导出图片</a-button>
+              <a-button size="small" @click="graph3dRef?.resetView()">复位视图</a-button>
             </a-row>
           </div>
 
