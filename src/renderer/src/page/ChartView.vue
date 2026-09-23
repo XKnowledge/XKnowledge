@@ -39,7 +39,8 @@
             :highlight-link="highlightEdgeObj"
             :show-link-name="showLinkName"
             :show-small-labels="showSmallLabels"
-            :focus-node-names="focusNodeNames"
+             :focus-node-names="focusNodeNames"
+             :focus-deep="focusMode === 'deep'"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
           />
@@ -56,20 +57,36 @@
               <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
               <a-checkbox value="showSmallLabels"> 显示小节点名称 </a-checkbox>
             </a-checkbox-group>
-            <!-- 聚焦模式：独立 checkbox 不走 checkedValues/onChangeAttr——那条管道
-                 会置脏且被 initAttr 连带重置，与「跨图保持/不写盘」冲突。
-                 data-focus-node 是冒烟断言锚点 -->
-            <a-row align="middle" class="focus-row" :data-focus-node="focusNodeId">
+            <!-- 聚焦模式：三态选择（关闭/灰化/隐藏）不走 checkedValues/onChangeAttr
+                 ——那条管道会置脏且被 initAttr 连带重置，与「跨图保持/不写盘」冲突。
+                  data-focus-node/data-focus-mode 是冒烟断言锚点 -->
+            <a-row
+              align="middle"
+              class="focus-row"
+              :data-focus-node="focusNodeId"
+              :data-focus-mode="focusMode"
+            >
               <a-col flex="auto" style="text-align: left">
-                <a-checkbox v-model:checked="focusEnabled" @change="onFocusToggle">
-                  聚焦模式
-                </a-checkbox>
+                <span class="focus-mode-label">聚焦模式</span>
+                <a-select
+                  v-model:value="focusMode"
+                  class="focus-mode-select"
+                  :options="[
+                    { value: 'off', label: '关闭' },
+                    { value: 'focus', label: '灰化' },
+                    { value: 'deep', label: '隐藏' }
+                  ]"
+                  size="small"
+                  style="width: 68px"
+                  @change="onFocusModeChange"
+                />
               </a-col>
               <a-col>
                 <span class="focus-hops-label">跳数</span>
                 <a-select
                   v-model:value="focusHops"
-                  :disabled="!focusEnabled"
+                  class="focus-hops-select"
+                  :disabled="focusMode === 'off'"
                   :options="[
                     { value: 1, label: '1' },
                     { value: 2, label: '2' },
@@ -242,13 +259,14 @@ const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「�
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
 const showSmallLabels = ref(true) // 会话级渲染设置：是否常显小节点名称（默认开，全显）
 // 聚焦模式（会话级，不写盘、不置脏、不进 initAttr——用户开着探照灯换图，
-// 灯不应被默默关掉，否则「打开新图自动聚焦」永远不触发）
-const focusEnabled = ref(false)
+// 灯不应被默默关掉，否则「打开新图自动聚焦」永远不触发）：
+// off 关闭 / focus 灰化（邻域外退灰）/ deep 隐藏（邻域外直接隐藏）
+const focusMode = ref('off')
 const focusHops = ref(2)
 const focusNodeId = ref('')
 // 邻域集合：依赖 chartData/focusNodeId/focusHops，图被增删编辑后自动重算
 const focusNodeNames = computed(() => {
-  if (!focusEnabled.value || !focusNodeId.value) return []
+  if (focusMode.value === 'off' || !focusNodeId.value) return []
   const chart = xkContext.value.chartData
   return [
     ...focusNeighborhood(
@@ -282,8 +300,10 @@ const syncCurrentNodeByName = (name) => {
   currentNode.value = jsonReactive({ ...nodes[i] })
 }
 
-const onFocusToggle = () => {
-  if (!focusEnabled.value) {
+/** 模式切换（取 change 的新值而非 ref：antdv select 的 update:value 与 change
+ *  的触发顺序无契约，参数值永远可靠）。聚焦/深度聚焦开启路径完全一致 */
+const onFocusModeChange = (mode) => {
+  if (mode === 'off') {
     // 关闭：去色立即消失、相机恢复（XkGraph3D 的 focusNodeNames watch 处理）
     focusNodeId.value = ''
     return
@@ -303,7 +323,7 @@ const onFocusToggle = () => {
 watch(
   () => xkContext.value.chartData?.nodes,
   (nodes) => {
-    if (!focusEnabled.value || !focusNodeId.value) return
+    if (focusMode.value === 'off' || !focusNodeId.value) return
     if (!nodes?.some((n) => n.name === focusNodeId.value)) {
       const next = defaultFocusNode(nodes ?? [], xkContext.value.chartData?.links ?? [])
       focusNodeId.value = next
@@ -431,7 +451,8 @@ const loadChartData = (data) => {
   graph3dRef.value?.closeSearch()
   // 聚焦模式跨图保持：开着时装载即聚焦默认焦点（第一眼是子图不是纹理）；
   // 没开则置空，防旧图 name 泄漏进新图邻域计算
-  focusNodeId.value = focusEnabled.value ? defaultFocusNode(chart.nodes, chart.links) : ''
+  focusNodeId.value =
+    focusMode.value !== 'off' ? defaultFocusNode(chart.nodes, chart.links) : ''
   if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
   xkContext.value.updateChart = !xkContext.value.updateChart
   nextTick(() => {
@@ -626,8 +647,8 @@ const onGraphNodeClick = (nodeData, index) => {
   // 对称清对方的选中态：Delete 删「最后一个点击的对象」，选中节点后
   // 旧边选中态作废（防菜单「删除连接」误删旧边）
   currentEdgeDataIndex.value = -1
-  // 聚焦模式开着时单击即换焦点（与「选中看属性」一次点击两个语义，不冲突）
-  if (focusEnabled.value && nodeData?.name) focusNodeId.value = nodeData.name
+  // 聚焦/深度聚焦开着时单击即换焦点（与「选中看属性」一次点击两个语义，不冲突）
+  if (focusMode.value !== 'off' && nodeData?.name) focusNodeId.value = nodeData.name
 
   const currentIndex = highlightNodeList.value.indexOf(index)
   if (currentIndex !== -1) {
@@ -1040,14 +1061,23 @@ const buttonList = ref([
   align-items: flex-start;
 }
 
-/* 聚焦模式行：checkbox 左、跳数下拉右，与上方复选框纵列衔接 */
+/* 聚焦模式行：模式下拉与跳数下拉同行（左模式右跳数）；空间意外不足时
+   a-row 默认 flex-wrap 换行，row-gap 兜底防两行贴死 */
 .focus-row {
   margin-top: 8px;
+  row-gap: 8px;
+}
+
+/* 标签字号与上方 a-checkbox 标签一致（antd 默认 14px） */
+.focus-mode-label {
+  margin-right: 4px;
+  font-size: 14px;
+  color: var(--xk-text);
 }
 
 .focus-hops-label {
   margin-right: 4px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--xk-text);
 }
 

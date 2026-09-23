@@ -63,7 +63,9 @@ const props = defineProps({
   showLinkName: { type: Boolean, default: false },
   showSmallLabels: { type: Boolean, default: false },
   // 聚焦模式邻域节点名（空数组 = 聚焦未开启；邻域为空同样以空数组表达）
-  focusNodeNames: { type: Array, default: () => [] }
+  focusNodeNames: { type: Array, default: () => [] },
+  // 深度聚焦：邻域外节点/边由灰化改为直接隐藏（走可见性管道，颜色管道不变）
+  focusDeep: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['node-click', 'link-click', 'init-failed'])
@@ -111,6 +113,8 @@ const recomputeSearch = (prevActiveName = null) => {
     : -1
   searchActiveIdx.value = idx > -1 ? idx : 0
   applyHighlight()
+  // 深度聚焦：命中豁免的可见性实时跟随搜索结果（命中集变化→邻域外节点显隐翻转）
+  applyVisibility()
 }
 
 const onSearchKeyword = (v) => {
@@ -168,19 +172,27 @@ const pureLink = (l) => ({
 const applyVisibility = () => {
   if (!graph) return
   const hidden = hiddenCategories.value
+  // 深度聚焦：邻域外节点直接隐藏；图内搜索命中的豁免（找到了就该看见，
+  // 否则跳转命中项时相机飞到空处）
+  const deepDim =
+    props.focusDeep && props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
+  const searchNames =
+    searchOpen.value || searchKeyword.value
+      ? new Set(searchHitNodes.value.map((n) => n.name))
+      : null
   // 端点类目按名索引：库对每条边调用 linkVisibility，find 是 O(n²)——
   // 万级节点图（世界树 23k 边 × 16k 节点）同步跑数亿次比较，直接卡死
   const categoryByName = new Map(props.nodes.map((n) => [n.name, n.category]))
+  const nodeVisible = (name) => {
+    const cat = categoryByName.get(name)
+    if (cat !== undefined && hidden.has(cat)) return false
+    if (deepDim && !(deepDim.has(name) || searchNames?.has(name))) return false
+    return true
+  }
   graph
-    .nodeVisibility((n) => !hidden.has(n.category))
-    // 两端任一隐藏，边随之隐藏
-    .linkVisibility((l) => {
-      const endVisible = (name) => {
-        const cat = categoryByName.get(name)
-        return cat === undefined ? true : !hidden.has(cat)
-      }
-      return endVisible(linkEnd(l.source)) && endVisible(linkEnd(l.target))
-    })
+    .nodeVisibility((n) => nodeVisible(n.name))
+    // 两端任一不可见（类目隐藏/深度聚焦），边随之隐藏
+    .linkVisibility((l) => nodeVisible(linkEnd(l.source)) && nodeVisible(linkEnd(l.target)))
 }
 
 /** 上一次应用的高亮/聚焦状态：增量重着色只处理组合色翻转的对象 */
@@ -391,8 +403,19 @@ watch(
 watch(() => props.highlightNodes, applyHighlight, { deep: true })
 watch(() => props.highlightLink, applyHighlight, { deep: true })
 // 聚焦邻域变化同样要走重着色：灰化/还原是增量材质色更新，只挂相机会
-// 出现「状态对、视觉没变」（冒烟截图已踩过）
-watch(() => props.focusNodeNames, applyHighlight, { deep: true })
+// 出现「状态对、视觉没变」（冒烟截图已踩过）；深度聚焦开着时邻域还
+// 决定可见性，须一并刷新
+watch(
+  () => props.focusNodeNames,
+  () => {
+    applyHighlight()
+    if (props.focusDeep) applyVisibility()
+  },
+  { deep: true }
+)
+// 深度聚焦开/关：纯可见性翻转——颜色管道两态共用（隐藏节点底下仍按
+// 聚焦规则着色），切回聚焦时灰球原样重现，无需重着色
+watch(() => props.focusDeep, applyVisibility)
 watch(() => props.showLinkName, applyInteraction)
 watch(() => props.showSmallLabels, applyLabels)
 // 主题切换：先重设各 accessor 为新色套并换背景，再强制一次全量 refresh。
