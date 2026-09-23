@@ -150,7 +150,7 @@ const openExampleChart = async (ex) => {
 .new-blank-card {
   width: 200px;
   height: 150px;
-  border: 1px dashed #c0c4cc;
+  border: 1px dashed var(--xk-border-strong);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -159,15 +159,15 @@ const openExampleChart = async (ex) => {
   gap: 8px;
   cursor: pointer;
   user-select: none;
-  color: #8c8c8c;
-  background: #ffffff;
+  color: var(--xk-text-secondary);
+  background: var(--xk-bg);
   font-size: 13px;
   line-height: 1.4;
 }
 
 .new-blank-card:hover {
-  border-color: #2e64d6;
-  color: #2e64d6;
+  border-color: var(--xk-accent);
+  color: var(--xk-accent);
 }
 
 .new-blank-icon {
@@ -197,12 +197,12 @@ const openExampleChart = async (ex) => {
 }
 
 .inner-div::-webkit-scrollbar-track {
-  background: #ffffff;
+  background: var(--xk-bg);
   /* 设置滚动条轨道背景颜色 */
 }
 
 .inner-div::-webkit-scrollbar-thumb {
-  background: #e5e5e5;
+  background: var(--xk-card-border);
   /* 设置滚动条滑块颜色 */
 }
 
@@ -212,12 +212,12 @@ const openExampleChart = async (ex) => {
 }
 
 .inner-div::-webkit-scrollbar-thumb:hover {
-  background: #b2b2b2;
+  background: var(--xk-border-strong);
   /* 设置滚动条滑块鼠标悬停时的颜色 */
 }
 
 .inner-div::-webkit-scrollbar-corner {
-  background: #f1f1f1;
+  background: var(--xk-bg-layout);
   /* 设置滚动条角落背景颜色 */
 }
 </style>

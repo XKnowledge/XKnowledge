@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exitChartMode: () => ipcRenderer.invoke(IPC.APP_EXIT_CHART_MODE),
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
+  themeApplied: (payload) => ipcRenderer.invoke(IPC.APP_THEME_APPLIED, payload),
   onRequestClose: (callback) => {
     const listener = () => callback()
     ipcRenderer.on(IPC.APP_REQUEST_CLOSE, listener)

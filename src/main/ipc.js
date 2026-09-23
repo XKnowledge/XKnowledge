@@ -3,6 +3,7 @@ import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
 import { isExamplePath } from './examplePaths'
 import {
+  applyTheme,
   createChartWindow,
   enterChartMode,
   exitChartMode,
@@ -188,5 +189,10 @@ export const registerIpc = () => {
       cancelId: 2 // 直接关闭提示框视为"取消"
     })
     return ['save', 'discard', 'cancel'][response]
+  })
+
+  ipcMain.handle(IPC.APP_THEME_APPLIED, (event, payload) => {
+    applyTheme(payload)
+    return { ok: true }
   })
 }

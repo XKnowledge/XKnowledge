@@ -7,6 +7,7 @@ import {
   defaultFocusNode,
   focusNeighborhood,
   searchGraphNodes,
+  SCENE_COLORS,
   HL_COLOR,
   LINK_BASE_COLOR,
   FOCUS_DIM_COLOR,
@@ -607,5 +608,75 @@ describe('planHighlightRepaint：搜索高亮的组合色增量计划', () => {
       nextSearchNodes: new Set(['A', 'B'])
     })
     expect(linkRepaints).toEqual([])
+  })
+})
+
+describe('SCENE_COLORS：双色套场景色表', () => {
+  it('浅色套与既有具名常量一致（现状锁定）', () => {
+    expect(SCENE_COLORS.light.hl).toBe(HL_COLOR)
+    expect(SCENE_COLORS.light.link).toBe(LINK_BASE_COLOR)
+    expect(SCENE_COLORS.light.dim).toBe(FOCUS_DIM_COLOR)
+    expect(SCENE_COLORS.light.hit).toBe(SEARCH_HIT_COLOR)
+    expect(SCENE_COLORS.light.active).toBe(SEARCH_ACTIVE_COLOR)
+  })
+  it('两套色各自的高亮/边/标签色都不同于背景色（防黑高亮黑底退化）', () => {
+    for (const c of [SCENE_COLORS.light, SCENE_COLORS.dark]) {
+      expect(c.hl).not.toBe(c.bg)
+      expect(c.link).not.toBe(c.bg)
+      expect(c.label).not.toBe(c.bg)
+    }
+  })
+  it('深色套：antd 基准底 + 点灯白高亮（与浅色套熄灯黑对称）', () => {
+    expect(SCENE_COLORS.dark.bg).toBe('#141414')
+    expect(SCENE_COLORS.dark.hl).toBe('#f0f0f0')
+    expect(SCENE_COLORS.dark.label).toBe('#e0e0e0')
+    expect(SCENE_COLORS.dark.watermark).toBe('#ffffff')
+  })
+})
+
+describe('planHighlightRepaint：sceneColors 传参', () => {
+  it('传深色套时高亮节点/边用深色值', () => {
+    const nodes = [{ name: 'A', category: 'x' }]
+    const links = [{ source: 'A', target: 'A', name: 'e1' }]
+    const { nodeRepaints, linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: ['A'],
+      nextLink: { source: 'A', target: 'A', name: 'e1' },
+      sceneColors: SCENE_COLORS.dark
+    })
+    expect(nodeRepaints).toEqual([[nodes[0], SCENE_COLORS.dark.hl]])
+    expect(linkRepaints).toEqual([[links[0], SCENE_COLORS.dark.hl]])
+  })
+  it('传深色套时灰化/底色用深色值', () => {
+    const nodes = [{ name: 'A' }, { name: 'B' }]
+    const links = [{ source: 'A', target: 'B', name: 'e1' }]
+    const { nodeRepaints, linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: null,
+      nextDimNodes: new Set(['A']),
+      sceneColors: SCENE_COLORS.dark
+    })
+    expect(nodeRepaints).toEqual([[nodes[1], SCENE_COLORS.dark.dim]])
+    expect(linkRepaints).toEqual([[links[0], SCENE_COLORS.dark.dim]])
+  })
+  it('不传 sceneColors 时与旧行为一致（浅色套，向后兼容）', () => {
+    const nodes = [{ name: 'A' }]
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: ['A'],
+      nextLink: null
+    })
+    expect(nodeRepaints).toEqual([[nodes[0], HL_COLOR]])
   })
 })

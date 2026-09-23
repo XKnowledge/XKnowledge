@@ -153,6 +153,7 @@ XKnowledge/
 | `app:confirm-unsaved` | 渲染 → 主 | — | `'save'` \| `'discard'` \| `'cancel'`（模态于触发窗口） |
 | `app:request-close` | 主 → 渲染 | — | 用户点击窗口关闭按钮时推送，由图表页决定后续 |
 | `app:title-changed` | 主 → 渲染 | `title: string`（display 变体） | 窗口标题变化时推送（未命名/文件名/默认），BasicLayout 标题条纯展示；任务栏 `setTitle` 用 taskbar 变体（未保存圆点两处位置不同） |
+| `app:theme-applied` | 渲染 → 主 | `{ mode, effective }` | `{ ok }`；渲染层主题变化时上报，主进程统一联动（见 §5.2 `applyTheme`） |
 
 ### 4.3 错误跨 IPC 的约定
 
@@ -178,6 +179,7 @@ XKnowledge/
 | `createChartWindow({ content, path })` | 创建 `#/chart` 窗口并 `stashPendingChart`；path 使新窗口保存直接写回原文件 |
 | `takePendingChart(webContentsId)` | 渲染端取走暂存数据（取后即清） |
 | `setWindowTitle(win, display, taskbar = display)` | `setTitle(taskbar)`（任务栏/Alt-Tab）+ 推送 `app:title-changed(display)`（自绘标题栏），判销毁；enter/exit 图表模式与登记簿重算统一走它。双参拆分仅服务未保存圆点的两处位置差异，单参调用两值一致 |
+| `applyTheme({ mode, effective })` | 渲染层经 `app:theme-applied` 上报后的统一联动：设 `nativeTheme.themeSource`（auto→system、强制模式直译，使渲染层 `prefers-color-scheme` 与原生部件一致）、遍历全部窗口 `setTitleBarOverlay` 换原生标题栏配色（Linux 无此 API 静默跳过）、缓存生效主题供新窗口 `backgroundColor` 预铺深底防闪白（重启后主进程未知偏好，首窗口白底一帧为已接受取舍） |
 | `enterChartMode(window)` / `exitChartMode(window)` | 图表模式的进入/退出，见 §4.1 与 §7.4 |
 
 模块内两个按 `webContents.id` 键控的 Map：`pendingCharts`（待装载图表，取后即清）与
@@ -328,6 +330,30 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 - 创建连接校验：必须恰好选中 2 个高亮节点、两点间不允许重复连接（无向判定）；
 - 修改节点改名时，同步改写所有引用旧名的边的 source/target；
 - 提交成功统一走 `addHistory` 记录历史。
+
+### 6.5 主题（深色模式）
+
+状态集中在 `store/themeStore.js`（模块级单例，对齐 chartStore 模式）：
+
+- **三态** `mode`：`auto`（跟随系统）/ `light` / `dark`，持久化 localStorage
+  （`xk-theme-mode`，默认 `auto`）；`effective` 由 `resolveEffective(mode, systemDark)`
+  纯函数派生。
+- **三条触发链**汇到同一个 `apply()`：本窗口 `setMode`（写 localStorage + 应用 +
+  上报主进程）；`storage` 事件（其他窗口改偏好，同 session 跨窗口实时同步）；
+  `matchMedia('prefers-color-scheme')` change（系统切换，仅 auto 模式）。`initTheme()`
+  在 `main.ts` mount 前调用（幂等），首帧即正确。
+- **`apply()` 双动作**：设 `html[data-theme]`（`assets/theme.css` 的 CSS 变量钩子，
+  自定义布局/浮层配色全部变量化）+ 经 `app:theme-applied` 上报主进程（联动见
+  §5.2 `applyTheme`）。
+- **antd 接入**：`App.vue` 包 `<a-config-provider>`，深色切 `theme.darkAlgorithm`
+  （基准底 `#141414`，与 CSS 变量/3D 场景同值）；组件色随算法自动切换。
+- **3D 场景**：`utils/graphData.js` 的场景色组织为 `SCENE_COLORS` 双色套（浅=白底
+  熄灯黑、深=antd 底点灯白，语义对称），`XkGraph3D` 按 `effective` 取套；切主题时
+  重设 accessor 后强制一次全量 `refresh()`（增量管道按语义 diff，主题切换语义未变
+  不会产生重着色计划）。类目 20 色调色板不动——同一文件在任何主题下类目同色。
+- 切换入口统一为设置弹窗 `XkSettings.vue`（主题三选一 radio，即时生效）：首页
+  侧栏「设置」按钮与图表页菜单「设置」项（经 shortcut 管道 `open_settings` 动作）
+  两个入口各挂一份。
 
 ## 7. 核心数据流
 

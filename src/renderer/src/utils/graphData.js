@@ -1,13 +1,39 @@
+/** 场景色双色套：浅色=现状（白底熄灯黑），深色=antd 基准底+点灯白（语义对称）。
+ *  bg 背景 / hl 高亮 / link 边底色 / dim 聚焦去色 / hit 搜索命中 /
+ *  active 搜索当前项 / label 节点标签 / watermark 导出 PNG 水印 */
+export const SCENE_COLORS = {
+  light: {
+    bg: '#ffffff',
+    hl: '#1f1f1f',
+    link: '#4b565b',
+    dim: '#c4c9cc',
+    hit: '#faad14',
+    active: '#fa541c',
+    label: '#333333',
+    watermark: '#000000'
+  },
+  dark: {
+    bg: '#141414',
+    hl: '#f0f0f0',
+    link: '#8c979c',
+    dim: '#4a4f53',
+    hit: '#ffc53d',
+    active: '#ff7a45',
+    label: '#e0e0e0',
+    watermark: '#ffffff'
+  }
+}
+
 /** 高亮色（选中节点/边）：黑，白底上与彩虹 20 色全部拉开距离（熄灯语义） */
-export const HL_COLOR = '#1f1f1f'
+export const HL_COLOR = SCENE_COLORS.light.hl
 /** 边底色 */
-export const LINK_BASE_COLOR = '#4b565b'
+export const LINK_BASE_COLOR = SCENE_COLORS.light.link
 /** 聚焦模式：邻域外节点/边的去色（白底上退为浅灰背景，不消失） */
-export const FOCUS_DIM_COLOR = '#c4c9cc'
+export const FOCUS_DIM_COLOR = SCENE_COLORS.light.dim
 /** 图内搜索：命中节点色（金黄，白底上与类目 20 色/黑/灰拉开距离） */
-export const SEARCH_HIT_COLOR = '#faad14'
+export const SEARCH_HIT_COLOR = SCENE_COLORS.light.hit
 /** 图内搜索：当前项色（深橙红，比命中色深一档） */
-export const SEARCH_ACTIVE_COLOR = '#fa541c'
+export const SEARCH_ACTIVE_COLOR = SCENE_COLORS.light.active
 
 /**
  * 编辑刷新时用旧图节点坐标合并新节点数据（已布局的图不跳）。
@@ -163,6 +189,7 @@ export const focusNeighborhood = (nodes, links, focusName, hops) => {
  * @param {string|null} prevSearchActive/nextSearchActive 上一次/本次的搜索当前项名
  * @param {Map<string,string>} categoryColors 本图类型集合的色映射（assignCategoryColors 产物），
  *   退出高亮/聚焦的还原色从这里查；查询统一 get(String(category ?? ''))
+ * @param {object} sceneColors 场景色套（SCENE_COLORS.light/dark），缺省浅色（现状）
  * @returns {{ nodeRepaints: Array<[datum, color]>, linkRepaints: Array<[datum, color]> }}
  */
 export const planHighlightRepaint = ({
@@ -178,7 +205,8 @@ export const planHighlightRepaint = ({
   nextSearchNodes,
   prevSearchActive,
   nextSearchActive,
-  categoryColors
+  categoryColors,
+  sceneColors = SCENE_COLORS.light
 }) => {
   const prevSet = new Set(prevNodes ?? [])
   const nextSet = new Set(nextNodes ?? [])
@@ -187,21 +215,21 @@ export const planHighlightRepaint = ({
   // 节点组合色：高亮 > 搜索当前项 > 搜索命中 > 聚焦外灰 > 类目色
   const nodeColorOf = (n, hlSet, active, searchSet, dim) =>
     hlSet.has(n.name)
-      ? HL_COLOR
+      ? sceneColors.hl
       : active && n.name === active
-        ? SEARCH_ACTIVE_COLOR
+        ? sceneColors.active
         : searchSet.has(n.name)
-          ? SEARCH_HIT_COLOR
+          ? sceneColors.hit
           : dim && !dim.has(n.name)
-            ? FOCUS_DIM_COLOR
+            ? sceneColors.dim
             : categoryColors?.get(String(n.category ?? ''))
   // 边组合色：高亮 > 任一端不在邻域的灰 > 底色
   const linkColorOf = (l, hl, dim) =>
     hl
-      ? HL_COLOR
+      ? sceneColors.hl
       : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
-        ? FOCUS_DIM_COLOR
-        : LINK_BASE_COLOR
+        ? sceneColors.dim
+        : sceneColors.link
   const nodeRepaints = []
   for (const n of nodes ?? []) {
     const was = nodeColorOf(n, prevSet, prevSearchActive, prevSearch, prevDimNodes)

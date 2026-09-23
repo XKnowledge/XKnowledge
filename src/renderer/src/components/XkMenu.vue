@@ -44,6 +44,8 @@
           </a-row>
         </a-menu-item>
         <a-menu-item key="11" @click="saveAs"> 另存为... </a-menu-item>
+        <a-menu-divider />
+        <a-menu-item key="13" @click="openSettings"> 设置 </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>
@@ -107,6 +109,11 @@ const saveFile = () => {
 
 const saveAs = () => {
   shortcutActive.value = 'save_as'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const openSettings = () => {
+  shortcutActive.value = 'open_settings'
   shortcutWatch.value = !shortcutWatch.value
 }
 </script>

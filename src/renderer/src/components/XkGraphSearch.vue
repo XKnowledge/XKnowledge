@@ -92,8 +92,8 @@ const segments = (text) => {
   right: 12px;
   width: 360px;
   max-width: calc(100% - 32px);
-  background: #fff;
-  border: 1px solid #d9d9d9;
+  background: var(--xk-float-bg);
+  border: 1px solid var(--xk-border-strong);
   border-radius: 6px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
   font: 13px sans-serif;
@@ -115,7 +115,7 @@ const segments = (text) => {
 }
 
 .graph-search-count {
-  color: #888;
+  color: var(--xk-text-secondary);
   white-space: nowrap;
 }
 
@@ -123,18 +123,18 @@ const segments = (text) => {
   border: none;
   background: none;
   cursor: pointer;
-  color: #888;
+  color: var(--xk-text-secondary);
   padding: 2px 4px;
 }
 
 .graph-search-close:hover {
-  color: #333;
+  color: var(--xk-text);
 }
 
 .graph-search-list {
   max-height: 260px;
   overflow-y: auto;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--xk-card-border);
 }
 
 .graph-search-item {
@@ -146,11 +146,11 @@ const segments = (text) => {
 }
 
 .graph-search-item:hover {
-  background: #f5f5f5;
+  background: var(--xk-hover);
 }
 
 .graph-search-item-active {
-  background: #fff7e6; /* 命中色同系浅底 */
+  background: var(--xk-search-active-bg); /* 命中色同系浅底 */
 }
 
 .graph-search-dot {
@@ -166,7 +166,7 @@ const segments = (text) => {
 }
 
 .graph-search-des {
-  color: #888;
+  color: var(--xk-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis; /* 描述单行截断 */
@@ -174,7 +174,7 @@ const segments = (text) => {
 }
 
 .graph-search-mark {
-  color: #fa541c; /* 深橙红，与 SEARCH_ACTIVE_COLOR 同系 */
+  color: var(--xk-search-mark); /* 与搜索当前项色同系 */
   background: none;
   padding: 0;
 }
@@ -182,6 +182,6 @@ const segments = (text) => {
 .graph-search-more,
 .graph-search-empty {
   padding: 5px 10px;
-  color: #888;
+  color: var(--xk-text-secondary);
 }
 </style>

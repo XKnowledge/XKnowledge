@@ -29,7 +29,7 @@
         </a-layout>
       </a-layout-header>
       <a-layout>
-        <a-layout-content :style="contentStyle">
+        <a-layout-content class="xk-chart-content">
           <XkGraph3D
             ref="graph3dRef"
             class="echarts-style"
@@ -153,6 +153,7 @@
         </a-layout-sider>
       </a-layout>
     </a-layout>
+    <XkSettings ref="settingsRef" />
   </a-space>
 </template>
 
@@ -172,6 +173,7 @@ import XkCurrentEdge from '../components/XkCurrentEdge.vue'
 import XkMenu from '../components/XkMenu.vue'
 import XkGraph3D from '../components/XkGraph3D.vue'
 import XkTitleText from '../components/XkTitleText.vue'
+import XkSettings from '../components/XkSettings.vue'
 
 import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
@@ -236,6 +238,7 @@ const categoryItems = ref([])
 const categoryName = ref()
 
 const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
+const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「设置」入口
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
 const showSmallLabels = ref(true) // 会话级渲染设置：是否常显小节点名称（默认开，全显）
 // 聚焦模式（会话级，不写盘、不置脏、不进 initAttr——用户开着探照灯换图，
@@ -568,7 +571,8 @@ watch(shortcutWatch, () => {
     create_edge: createEdge,
     delete_edge: deleteEdge,
     undo: undo,
-    redo: redo
+    redo: redo,
+    open_settings: () => settingsRef.value?.open()
   }
 
   const actionName = shortcutActive.value
@@ -948,12 +952,6 @@ const buttonList = ref([
 
 // 图表区宽度不在此设定：由 antd flex 布局撑开；3D 图组件经
 // ResizeObserver 自适应容器尺寸，无需页面联动 resize
-const contentStyle = {
-  textAlign: 'center',
-  minHeight: 120,
-  lineHeight: '120px',
-  backgroundColor: '#ffffff'
-}
 </script>
 
 <style>
@@ -970,11 +968,11 @@ const contentStyle = {
   /* 水平居中 */
   -webkit-app-region: drag;
   /* 可拖动 */
-  background-color: #f5f5f5;
+  background-color: var(--xk-bg-layout);
   width: 100%;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid #0505050f;
+  border-bottom: 1px solid var(--xk-border);
   text-align: center;
   line-height: 64px;
   position: relative; /* 作为 .chart-title 绝对定位的上下文 */
@@ -998,11 +996,11 @@ const contentStyle = {
   /* 水平居中 */
   -webkit-app-region: drag;
   /* 可拖动 */
-  background-color: #f5f5f5;
+  background-color: var(--xk-bg-layout);
   width: 100%;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid #0505050f;
+  border-bottom: 1px solid var(--xk-border);
 }
 
 .no-move-button {
@@ -1020,7 +1018,7 @@ const contentStyle = {
   justify-content: center;
   align-items: center;
   /* 添加悬停背景色 */
-  background-color: #0000000d;
+  background-color: var(--xk-hover);
   /* 添加圆角 */
   border-radius: 4px;
 }
@@ -1050,7 +1048,7 @@ const contentStyle = {
 .focus-hops-label {
   margin-right: 4px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--xk-text);
 }
 
 .sider-style {
@@ -1059,7 +1057,7 @@ const contentStyle = {
   width: 270px !important;
   max-width: 270px !important;
   min-width: 270px !important;
-  background-color: #f5f5f5 !important;
+  background-color: var(--xk-bg-layout) !important;
   overflow-y: scroll; /* 添加垂直滚动条 */
   overflow-x: hidden; /* 隐藏水平滚动条 */
   box-sizing: border-box; /* 使宽度包括内容、内边距和边框 */
@@ -1093,7 +1091,7 @@ const contentStyle = {
 
 /* 滚动条滑块的样式 */
 .sider-style::-webkit-scrollbar-thumb {
-  background-color: #888; /* 滑块颜色，可以设置为你想要的颜色 */
+  background-color: var(--xk-scrollbar-thumb); /* 滑块颜色，可以设置为你想要的颜色 */
 }
 
 .sider-menu-style {
@@ -1101,14 +1099,14 @@ const contentStyle = {
   align-items: center;
   justify-content: center;
   -webkit-app-region: drag;
-  background-color: #f5f5f5 !important;
+  background-color: var(--xk-bg-layout) !important;
   text-align: center;
   width: 53px !important;
   max-width: 53px !important;
   min-width: 53px !important;
   height: 53px !important;
   font: 13px sans-serif;
-  border-bottom: 1px solid #0505050f;
+  border-bottom: 1px solid var(--xk-border);
   border-right: none;
 }
 

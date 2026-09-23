@@ -60,7 +60,7 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
   width: 200px;
   height: 150px;
   padding: 14px 12px 10px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--xk-card-border);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -68,7 +68,7 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
   text-align: center;
   cursor: pointer;
   user-select: none;
-  background: #ffffff;
+  background: var(--xk-bg);
   /* BasicLayout 的 contentStyle 行内 lineHeight:120px 会继承进来，
      不重置时 stats 撑 120px 高、name/desc 被 flex 压到 0 高而不可见 */
   line-height: 1.4;
@@ -80,18 +80,18 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
 }
 
 .xk-example-card:hover {
-  border-color: #b2b2b2;
+  border-color: var(--xk-border-strong);
 }
 
 .xk-example-card.selected {
-  border-color: #2e64d6;
-  box-shadow: 0 0 0 1px #2e64d6;
+  border-color: var(--xk-accent);
+  box-shadow: 0 0 0 1px var(--xk-accent);
 }
 
 .name {
   font-size: 15px;
   font-weight: 600;
-  color: #303133;
+  color: var(--xk-text);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -121,8 +121,8 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
   height: 10px;
   border-radius: 5px;
   padding: 0 4px;
-  background: #d9d9d9;
-  color: #595959;
+  background: var(--xk-border-strong);
+  color: var(--xk-text-secondary);
   font-size: 9px;
   line-height: 10px;
   text-align: center;
@@ -130,13 +130,13 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
 
 .stats {
   font-size: 12px;
-  color: #535353;
+  color: var(--xk-text-secondary);
 }
 
 .desc {
   margin-top: 6px;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--xk-text-secondary);
   max-width: 100%;
   overflow: hidden;
   display: -webkit-box;

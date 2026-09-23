@@ -44,6 +44,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import SpriteText from 'three-spritetext'
 import { assignCategoryColors } from '../utils/categoryColor.js'
+import { effective } from '../store/themeStore.js'
 import XkGraphSearch from './XkGraphSearch.vue'
 import {
   mergeGraphNodes,
@@ -51,11 +52,7 @@ import {
   linkEnd,
   labelThreshold,
   searchGraphNodes,
-  HL_COLOR,
-  LINK_BASE_COLOR,
-  FOCUS_DIM_COLOR,
-  SEARCH_HIT_COLOR,
-  SEARCH_ACTIVE_COLOR
+  SCENE_COLORS
 } from '../utils/graphData.js'
 
 const props = defineProps({
@@ -81,6 +78,8 @@ let resizeObserver = null
 const categories = computed(() => [...new Set(props.nodes.map((n) => n.category))])
 /** 类目 → 颜色：按本图类型集合顺延分配，nodeColor/图例/高亮还原共用同一份 */
 const categoryColors = computed(() => assignCategoryColors(categories.value))
+/** 当前生效主题的场景色套（深/浅） */
+const sceneColors = computed(() => SCENE_COLORS[effective.value])
 const catColor = (cat) => categoryColors.value.get(String(cat ?? ''))
 const hiddenCategories = ref(new Set())
 const toggleCategory = (cat) => {
@@ -207,21 +206,21 @@ const applyHighlight = () => {
   graph
     .nodeColor((n) =>
       hl.has(n.name)
-        ? HL_COLOR
+        ? sceneColors.value.hl
         : active && n.name === active
-          ? SEARCH_ACTIVE_COLOR
+          ? sceneColors.value.active
           : search.has(n.name)
-            ? SEARCH_HIT_COLOR
+            ? sceneColors.value.hit
             : dim && !dim.has(n.name)
-              ? FOCUS_DIM_COLOR
+              ? sceneColors.value.dim
               : catColor(n.category)
     )
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
-        ? HL_COLOR
+        ? sceneColors.value.hl
         : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
-          ? FOCUS_DIM_COLOR
-          : LINK_BASE_COLOR
+          ? sceneColors.value.dim
+          : sceneColors.value.link
     )
   // 高亮/聚焦变化走增量：只改翻转对象的材质颜色。不调 refresh()——它会对每个
   // 节点重新执行 nodeThreeObject，重建全部 SpriteText 标签，大图逐个点选持续掉帧。
@@ -240,7 +239,8 @@ const applyHighlight = () => {
     nextSearchNodes: search,
     prevSearchActive: prevHlSearchActive,
     nextSearchActive: active,
-    categoryColors: categoryColors.value
+    categoryColors: categoryColors.value,
+    sceneColors: sceneColors.value
   })
   const repaints = [...nodeRepaints, ...linkRepaints]
   let painted = 0
@@ -251,11 +251,13 @@ const applyHighlight = () => {
       painted++
     }
     // 节点标签（SpriteText 挂在节点 mesh 的 children 上）：球灰则标签一并退
-    // 浅灰——黑字挂在灰球上会成为主要视觉噪音，破坏背景感；边对象无
+    // 灰——深字挂在灰球上会成为主要视觉噪音，破坏背景感；边对象无
     // sprite 子级，循环空转无害
     for (const child of datum.__threeObj?.children ?? []) {
       if (child.isSprite && child.material?.color?.set) {
-        child.material.color.set(color === FOCUS_DIM_COLOR ? FOCUS_DIM_COLOR : '#333')
+        child.material.color.set(
+          color === sceneColors.value.dim ? sceneColors.value.dim : sceneColors.value.label
+        )
       }
     }
   }
@@ -280,7 +282,7 @@ const applyLabels = () => {
       if ((n.symbolSize ?? 0) < threshold || !n.name) return null
       const sprite = new SpriteText(n.name)
       sprite.textHeight = 5
-      sprite.color = dim && !dim.has(n.name) ? FOCUS_DIM_COLOR : '#333'
+      sprite.color = dim && !dim.has(n.name) ? sceneColors.value.dim : sceneColors.value.label
       sprite.position.set(0, 7, 0)
       return sprite
     })
@@ -323,8 +325,9 @@ onMounted(() => {
 
   graph
     .nodeId('name')
-    // 场景背景对齐旧版 2D 图表白底；深色元素（标签/边）在黑底不可见
-    .backgroundColor('#ffffff')
+    // 场景背景随主题：浅色白底对齐旧版 2D 图表，深色 antd 基准底；
+    // 深浅两套的元素色（SCENE_COLORS）都保证与各自背景拉开距离
+    .backgroundColor(sceneColors.value.bg)
     .graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
     // three-forcegraph 半径 = ∛val × nodeRelSize（val 映射体积）：直接传 symbolSize
     // 时 40/50/70 的半径仅 3.4/3.7/4.1，大小几乎不可辨；立方再缩放让半径与
@@ -392,6 +395,17 @@ watch(() => props.highlightLink, applyHighlight, { deep: true })
 watch(() => props.focusNodeNames, applyHighlight, { deep: true })
 watch(() => props.showLinkName, applyInteraction)
 watch(() => props.showSmallLabels, applyLabels)
+// 主题切换：先重设各 accessor 为新色套并换背景，再强制一次全量 refresh。
+// 增量管道按"语义状态"diff，主题切换语义未变会算出零变化，必须走 refresh
+// 让库按新 accessor 重建全部材质（含 SpriteText 标签）。低频显式动作，
+// 大图一次性重建标签可接受
+watch(effective, () => {
+  if (!graph) return
+  graph.backgroundColor(sceneColors.value.bg)
+  applyHighlight() // 重设 nodeColor/linkColor 为新色套
+  applyLabels() // 标签色换新
+  graph.refresh()
+})
 
 /** 聚焦开启前的相机快照：退出聚焦时恢复（不抢用户开启前的视角） */
 let preFocusCamera = null // { x, y, z, lookAt: { x, y, z } }
@@ -465,7 +479,8 @@ const setRepulsion = (value) => {
 }
 
 /** 导出当前视图为 PNG 并触发下载；水印只合成进导出图（画布上不显示），
- *  样式对齐旧版：黑色粗体、水平居中、位于底部约 5% 处 */
+ *  样式对齐旧版：粗体、水平居中、位于底部约 5% 处；颜色随主题背景
+ *  （浅底黑字/深底白字，导出即所见） */
 const exportPng = () => {
   if (!graph) return
   const src = graph.renderer().domElement
@@ -476,7 +491,7 @@ const exportPng = () => {
   ctx.drawImage(src, 0, 0)
   const fontSize = Math.max(18, Math.round(canvas.height * 0.022))
   ctx.font = `bold ${fontSize}px sans-serif`
-  ctx.fillStyle = '#000'
+  ctx.fillStyle = sceneColors.value.watermark
   ctx.textAlign = 'center'
   ctx.fillText('By XKnowledge', canvas.width / 2, canvas.height * 0.95)
   const url = canvas.toDataURL('image/png')
@@ -515,7 +530,8 @@ defineExpose({ setRepulsion, exportPng, resetView, focusCamera, openSearch, clos
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--xk-float-bg);
+  color: var(--xk-text); /* 深色下默认黑字不可见，须随主题 */
   padding: 8px;
   border-radius: 6px;
   font: 13px sans-serif;
@@ -549,9 +565,9 @@ defineExpose({ setRepulsion, exportPng, resetView, focusCamera, openSearch, clos
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: #fff1f0;
-  border: 1px solid #ffa39e;
-  color: #cf1322;
+  background: var(--xk-fallback-bg);
+  border: 1px solid var(--xk-fallback-border);
+  color: var(--xk-fallback-text);
   border-radius: 6px;
   padding: 16px 24px;
   font: 14px sans-serif;

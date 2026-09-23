@@ -23,5 +23,6 @@ export const IPC = {
   APP_CLOSE_WINDOW: 'app:close-window',
   APP_CONFIRM_UNSAVED: 'app:confirm-unsaved',
   APP_REQUEST_CLOSE: 'app:request-close',
-  APP_TITLE_CHANGED: 'app:title-changed'
+  APP_TITLE_CHANGED: 'app:title-changed',
+  APP_THEME_APPLIED: 'app:theme-applied'
 }

@@ -1,12 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('electron', () => ({
-  BrowserWindow: vi.fn(),
+  BrowserWindow: Object.assign(vi.fn(), { getAllWindows: vi.fn(() => []) }),
   Menu: { setApplicationMenu: vi.fn() },
-  shell: { openExternal: vi.fn() }
+  shell: { openExternal: vi.fn() },
+  nativeTheme: { themeSource: 'system' }
 }))
 
-import { enterChartMode, exitChartMode, setWindowTitle } from '../../src/main/windowManager'
+import { BrowserWindow, nativeTheme } from 'electron'
+import {
+  applyTheme,
+  enterChartMode,
+  exitChartMode,
+  setWindowTitle
+} from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
 
 /** 造一个 fake BrowserWindow，带图表模式进入/退出用到的方法 */
@@ -136,5 +143,56 @@ describe('setWindowTitle：setTitle + 推送双动作', () => {
     setWindowTitle(win, 'x')
     expect(win.setTitle).toHaveBeenCalledWith('x')
     expect(win.webContents.send).not.toHaveBeenCalled()
+  })
+})
+
+describe('applyTheme：主题上报联动', () => {
+  it('设 nativeTheme.themeSource：auto→system，强制模式直译', () => {
+    applyTheme({ mode: 'auto', effective: 'light' })
+    expect(nativeTheme.themeSource).toBe('system')
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    expect(nativeTheme.themeSource).toBe('dark')
+    applyTheme({ mode: 'light', effective: 'light' })
+    expect(nativeTheme.themeSource).toBe('light')
+  })
+
+  it('遍历所有窗口，深色换深底原生标题栏', () => {
+    const win = fakeWindow({ setTitleBarOverlay: vi.fn() })
+    BrowserWindow.getAllWindows.mockReturnValue([win])
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    expect(win.setTitleBarOverlay).toHaveBeenCalledWith({
+      color: '#141414',
+      symbolColor: '#a1a8b0'
+    })
+  })
+
+  it('浅色恢复白底标题栏（与创建时配置一致）', () => {
+    const win = fakeWindow({ setTitleBarOverlay: vi.fn() })
+    BrowserWindow.getAllWindows.mockReturnValue([win])
+    applyTheme({ mode: 'light', effective: 'light' })
+    expect(win.setTitleBarOverlay).toHaveBeenCalledWith({
+      color: '#ffffff',
+      symbolColor: '#74b1be'
+    })
+  })
+
+  it('setTitleBarOverlay 抛错时静默（Linux 等平台不支持）', () => {
+    const win = fakeWindow({
+      setTitleBarOverlay: vi.fn(() => {
+        throw new Error('not supported')
+      })
+    })
+    BrowserWindow.getAllWindows.mockReturnValue([win])
+    expect(() => applyTheme({ mode: 'dark', effective: 'dark' })).not.toThrow()
+  })
+
+  it('已销毁窗口跳过', () => {
+    const win = fakeWindow({
+      setTitleBarOverlay: vi.fn(),
+      isDestroyed: vi.fn(() => true)
+    })
+    BrowserWindow.getAllWindows.mockReturnValue([win])
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    expect(win.setTitleBarOverlay).not.toHaveBeenCalled()
   })
 })

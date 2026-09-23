@@ -1,7 +1,41 @@
-import { BrowserWindow, Menu, shell } from 'electron'
+import { BrowserWindow, Menu, nativeTheme, shell } from 'electron'
 import { join } from 'path'
 import { DEFAULT_TITLE, UNTITLED_TITLE } from './titleService'
 import { IPC } from '../shared/ipc-channels'
+
+// 会话内最近生效主题：新窗口 backgroundColor 预设依据
+let lastEffectiveTheme = 'light'
+
+/** 深浅两套原生标题栏（Windows titleBarOverlay）配色，浅色套与创建时配置一致 */
+const OVERLAY_COLORS = {
+  light: { color: '#ffffff', symbolColor: '#74b1be' },
+  dark: { color: '#141414', symbolColor: '#a1a8b0' }
+}
+
+/** 单窗口应用：换原生标题栏配色；平台不支持时静默 */
+const applyThemeToWindow = (win) => {
+  if (!win || win.isDestroyed()) return
+  try {
+    win.setTitleBarOverlay(OVERLAY_COLORS[lastEffectiveTheme])
+  } catch {
+    /* Linux 无此 API：渲染层主题不受影响 */
+  }
+}
+
+/**
+ * 渲染层上报主题变化后统一应用：
+ * - nativeTheme.themeSource：auto→system、强制模式直译。渲染层
+ *   prefers-color-scheme 媒体查询与原生部件（右键菜单等）随之一致，
+ *   主题模块只需监听 matchMedia 一个信号源
+ * - 全部窗口的原生标题栏配色
+ * - 缓存生效主题，供新窗口 backgroundColor 预设
+ */
+export const applyTheme = ({ mode: themeMode, effective }) => {
+  lastEffectiveTheme = effective === 'dark' ? 'dark' : 'light'
+  nativeTheme.themeSource =
+    themeMode === 'dark' ? 'dark' : themeMode === 'light' ? 'light' : 'system'
+  for (const win of BrowserWindow.getAllWindows()) applyThemeToWindow(win)
+}
 
 /**
  * 创建应用主窗口。onWindowClosed 在窗口销毁时回调（webContents.id 作参数），
@@ -26,6 +60,9 @@ export const createWindow = (onWindowClosed, route = '') => {
     },
     trafficLightPosition: { x: 20, y: 18 },
     autoHideMenuBar: true,
+    // 会话内已切深色时新窗口预铺深底避免闪白；重启后主进程未知（偏好存
+    // 渲染层 localStorage），首窗口白底一帧，已接受的取舍（见设计文档）
+    backgroundColor: lastEffectiveTheme === 'dark' ? '#141414' : '#ffffff',
     titleBarStyle: 'hidden',
     titleBarOverlay: {
       color: '#ffffff',
