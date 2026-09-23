@@ -3,77 +3,93 @@
 ; 本文件经 electron-builder 注入的时机早于模板页面宏展开（NsisTarget.js:599-605），
 ; 故头部的 MUI_LICENSEPAGE_CHECKBOX 能让许可页变为「勾选接受」形态。
 ;
-; 结构说明：Var 声明、页面注册与函数必须都在 customPageAfterChangeDir 宏内——
-; 卸载器编译 pass（BUILD_UNINSTALLER）不展开任何安装钩子宏，若 Var 在文件顶层
-; 声明会成为死变量，触发 NSIS 6001 warning（electron-builder 把 warning 当 error）。
-; 页面注册参照模板 multiUserUi.nsh 的 PageEx custom 模式。
+; 结构说明：引用了宏内 Var 的函数、页面注册必须在 customPageAfterChangeDir
+; 等宏内——卸载器编译 pass（BUILD_UNINSTALLER）不展开安装钩子宏，若 Var 在
+; 文件顶层声明会成为死变量，触发 NSIS 6001 warning（electron-builder 把
+; warning 当 error）；而钩子宏的展开点多在 Section/Function 体内，函数体内
+; 不能再嵌套 Function 定义。只引用内置变量/寄存器的函数（如 XKGuiInit）可
+; 以放文件顶层。页面注册参照模板 multiUserUi.nsh 的 PageEx custom 模式。
 
 !define MUI_LICENSEPAGE_CHECKBOX
 
-; 幂等标记：勿用 $R0-$R9 寄存器——MUI2 内部页面函数在页面导航时会改写它们，
-; 用户「上一步/返回」再前进会重置标记、导致按钮被反复加宽。自定义 Var 是
-; 编译期独立槽位，不受影响。顶层声明不会触发 6001 死变量警告：customInstallMode
-; 在安装器与卸载器两个编译 pass 中都展开并引用此变量。
-Var /GLOBAL shortcutBtnWidened
+; 向导按钮布局时机：MUI2 在 .onGUIInit 末尾 Call 本 define 指向的函数
+; （Interface.nsh MUI_FUNCTION_GUIINIT），此时外层对话框已创建、三个向导
+; 按钮（上一步/下一步/取消）已随对话框模板定位，且早于第一页（许可页）
+; 显示——布局一次生效、全程一致。每进程恰好触发一次，天然幂等。
+; 卸载器 pass 不受影响：un.onGUIInit 只读 MUI_CUSTOMFUNCTION_UNGUIINIT。
+!define MUI_CUSTOMFUNCTION_GUIINIT XKGuiInit
 
-; 「为谁安装」页（模板 multiUserUi.nsh）显示前加宽「下一步」按钮：
-; 选择「为所有用户」时模板会给按钮叠 UAC 盾牌图标（multiUserUi.nsh:223 BCM_SETSHIELD），
+; 向导按钮布局（作者 2026-09-23 要求「翻页式」对齐）：「上一步」移到左下角、
+; 与客户区左缘对齐；「下一步」「取消」保持在右下角相邻。XKGuiInit 由上方
+; MUI_CUSTOMFUNCTION_GUIINIT 挂入 .onGUIInit，早于全部页面、每进程恰好一次。
+; （此前挂在「为谁安装」页 Pre——customInstallMode 宏的展开点在页面 Pre
+; 函数体内，只能放内联语句：许可页仍显示默认布局，且页面 Pre 会随「上一
+; 步」返回再前进反复触发，需自定义 Var 作幂等标记。GUIINIT 时机两个问题
+; 一并消除，customInstallMode 宏随之撤销。）
+; 「下一步」仍按 DPI 加宽（右缘不动、左移）：「为谁安装」页选择「为所有
+; 用户」时模板给按钮叠 UAC 盾牌图标（multiUserUi.nsh:223 BCM_SETSHIELD），
 ; 中文按钮文字较宽，图标+文字的组合超出按钮客户区、盾牌向左溢出按钮边界。
-; 在页面 Pre 时机按 DPI 计算加宽量、左扩按钮（右边缘不动，不挤「取消」按钮）。
-; $shortcutBtnWidened 作幂等标记：用户「上一步」返回再前进时不重复加宽。
-!macro customInstallMode
-  ${If} $shortcutBtnWidened != "xk-widened"
-    System::Call 'user32::GetDC(p 0) p .r1'
-    System::Call 'gdi32::GetDeviceCaps(p r1, i 88) i .r1'   ; LOGPIXELSX
-    System::Call 'user32::ReleaseDC(p 0, p r1)'
-    IntOp $1 $1 / 4          ; 加宽量 = 盾牌图标宽(SM_CXSMICON = dpi/6) + 余量
-    ; 布局事实（2026-09-22 子控件枚举实测，125% DPI）：「上一步」与「下一步」
-    ; 零间隙相邻（back 右缘 == next 左缘），「取消」紧邻「下一步」右侧。
-    ; 控件 ID（实测推翻 multiUserUi.nsh:197 注释「0 is back」）：item 0 是内层
-    ; 页面对话框（类 #32770，563×263 覆盖内容区），item 3 才是「上一步」
-    ; （IDC_BACK），item 1 = 「下一步」。此前误用 item 0：整个内层对话框被
-    ; 左移，真「上一步」原地不动，「下一步」左移加宽 30px 直接压在其上——
-    ; 两按钮重叠 ~30px 的根因。
-    ; 方案：「下一步」右缘不动、左移 widen 加宽；「上一步」等量加宽并左移
-    ; 4×widen——首 1×widen 让出「下一步」的左移空间，其余 3×widen 向左
-    ; 拉开间距（净间距 2×widen ≈ 60px；作者 2026-09-22 要求向左移并加大
-    ; 间距），两按钮等宽。
-    ; —— 「上一步」（item 3 = IDC_BACK）：左移 4×widen，宽 +widen ——
-    GetDlgItem $0 $hwndParent 3
-    System::Call '*(i, i, i, i) p .r2'
-    System::Call 'user32::GetWindowRect(p $0, p r2)'
-    System::Call '*$2(i .r3, i .r4, i .r5, i .r6)'
-    System::Free $2
-    IntOp $7 $5 - $3
-    IntOp $7 $7 + $1
-    IntOp $8 $6 - $4
-    System::Call '*(i r3, i r4) p .r2'
-    System::Call 'user32::ScreenToClient(p $hwndParent, p r2)'
-    System::Call '*$2(i .r3, i .r4)'
-    System::Free $2
-    IntOp $3 $3 - $1
-    IntOp $3 $3 - $1
-    IntOp $3 $3 - $1
-    IntOp $3 $3 - $1
-    System::Call 'user32::MoveWindow(p $0, i r3, i r4, i r7, i r8, b 1)'
-    ; —— 「下一步」（item 1）：左移 widen、加宽（右缘不动） ——
-    GetDlgItem $0 $hwndParent 1
-    System::Call '*(i, i, i, i) p .r2'
-    System::Call 'user32::GetWindowRect(p $0, p r2)'
-    System::Call '*$2(i .r3, i .r4, i .r5, i .r6)'
-    System::Free $2
-    IntOp $7 $5 - $3
-    IntOp $7 $7 + $1
-    IntOp $8 $6 - $4
-    System::Call '*(i r3, i r4) p .r2'
-    System::Call 'user32::ScreenToClient(p $hwndParent, p r2)'
-    System::Call '*$2(i .r3, i .r4)'
-    System::Free $2
-    IntOp $3 $3 - $1
-    System::Call 'user32::MoveWindow(p $0, i r3, i r4, i r7, i r8, b 1)'
-    StrCpy $shortcutBtnWidened "xk-widened"
-  ${EndIf}
-!macroend
+; 「上一步」同步等量加宽保持两按钮等宽；左缘取「取消」的右边距（客户区宽
+; − 取消右缘），与右下角「取消」的右边距左右对称。
+; 控件 ID（2026-09-22 子控件枚举实测，推翻 multiUserUi.nsh:197 注释
+; 「0 is back」）：item 0 是内层页面对话框（类 #32770，覆盖内容区），
+; item 3 =「上一步」（IDC_BACK），item 1 =「下一步」，item 2 =「取消」。
+; Function 定义在文件顶层（下方「函数必须在宏内」的限制只针对引用了宏内
+; Var 的函数）：本函数只引用内置 $hwndParent 与 $0-$9 寄存器，安装器与
+; 卸载器两个编译 pass 都能编译；卸载器 pass 中无人调用，是无害死代码，
+; 未引用的 Function 不触发 NSIS 6001（该警告仅针对 Var）。
+Function XKGuiInit
+  System::Call 'user32::GetDC(p 0) p .r1'
+  System::Call 'gdi32::GetDeviceCaps(p r1, i 88) i .r1'   ; LOGPIXELSX
+  System::Call 'user32::ReleaseDC(p 0, p r1)'
+  IntOp $1 $1 / 4          ; 加宽量 = 盾牌图标宽(SM_CXSMICON = dpi/6) + 余量
+  ; —— 客户区宽（RECT 缓冲须 16 字节：left/top 恒 0，right = 宽） ——
+  System::Call '*(i, i, i, i) p .r2'
+  System::Call 'user32::GetClientRect(p $hwndParent, p r2)'
+  System::Call '*$2(i, i, i .r9, i)'
+  System::Free $2
+  ; —— 「取消」（item 2）右缘 → 左边距 $6 ——
+  GetDlgItem $0 $hwndParent 2
+  System::Call '*(i, i, i, i) p .r2'
+  System::Call 'user32::GetWindowRect(p $0, p r2)'
+  System::Call '*$2(i .r3, i .r4, i .r5, i .r8)'
+  System::Free $2
+  System::Call '*(i r5, i r4) p .r2'
+  System::Call 'user32::ScreenToClient(p $hwndParent, p r2)'
+  System::Call '*$2(i .r5, i .r4)'
+  System::Free $2
+  IntOp $6 $9 - $5
+  ; —— 「上一步」（item 3）：左缘 = 左边距，宽 +widen，top/高不变 ——
+  GetDlgItem $0 $hwndParent 3
+  System::Call '*(i, i, i, i) p .r2'
+  System::Call 'user32::GetWindowRect(p $0, p r2)'
+  System::Call '*$2(i .r3, i .r4, i .r5, i .r8)'
+  System::Free $2
+  IntOp $7 $5 - $3
+  IntOp $7 $7 + $1
+  IntOp $8 $8 - $4
+  System::Call '*(i r3, i r4) p .r2'
+  System::Call 'user32::ScreenToClient(p $hwndParent, p r2)'
+  System::Call '*$2(i .r3, i .r4)'
+  System::Free $2
+  StrCpy $3 $6
+  System::Call 'user32::MoveWindow(p $0, i r3, i r4, i r7, i r8, b 1)'
+  ; —— 「下一步」（item 1）：左移 widen、加宽（右缘不动，不挤「取消」） ——
+  GetDlgItem $0 $hwndParent 1
+  System::Call '*(i, i, i, i) p .r2'
+  System::Call 'user32::GetWindowRect(p $0, p r2)'
+  System::Call '*$2(i .r3, i .r4, i .r5, i .r8)'
+  System::Free $2
+  IntOp $7 $5 - $3
+  IntOp $7 $7 + $1
+  IntOp $8 $8 - $4
+  System::Call '*(i r3, i r4) p .r2'
+  System::Call 'user32::ScreenToClient(p $hwndParent, p r2)'
+  System::Call '*$2(i .r3, i .r4)'
+  System::Free $2
+  IntOp $3 $3 - $1
+  System::Call 'user32::MoveWindow(p $0, i r3, i r4, i r7, i r8, b 1)'
+FunctionEnd
 
 ; .onInit 时机初始化为「勾选」：静默安装（/S）不经过自定义页，
 ; 以此为默认，保证静默安装仍创建全部快捷方式（1 = BST_CHECKED）
@@ -145,33 +161,5 @@ Var /GLOBAL shortcutBtnWidened
   ; 已删除的快捷方式启动而静默失败——回退为直接指向应用 exe
   ${IfNot} ${FileExists} "$launchLink"
     StrCpy $launchLink "$appExe"
-  ${EndIf}
-  ; —— 临时诊断日志：取证快捷方式勾选与完成页运行问题，定位后整段移除 ——
-  FileOpen $R8 "$INSTDIR\xk-install.log" w
-  ${If} $R8 != ""
-    StrCpy $R7 "outer"
-    ${If} ${UAC_IsInnerInstance}
-      StrCpy $R7 "inner"
-    ${EndIf}
-    ${If} ${UAC_IsAdmin}
-      StrCpy $R7 "$R7+admin"
-    ${EndIf}
-    FileWrite $R8 "process=$R7$\r$\n"
-    FileWrite $R8 "pageShown=$shortcutPageShown$\r$\n"
-    FileWrite $R8 "desktopState=$shortcutDesktopState$\r$\n"
-    FileWrite $R8 "startMenuState=$shortcutStartMenuState$\r$\n"
-    FileWrite $R8 "launchLink=$launchLink$\r$\n"
-    FileWrite $R8 "newStartMenuLink=$newStartMenuLink$\r$\n"
-    StrCpy $R7 "0"
-    ${If} ${FileExists} "$SMPROGRAMS\${SHORTCUT_NAME}.lnk"
-      StrCpy $R7 "1"
-    ${EndIf}
-    FileWrite $R8 "smLnkExistsAfter=$R7$\r$\n"
-    StrCpy $R7 "0"
-    ${If} ${FileExists} "$DESKTOP\${SHORTCUT_NAME}.lnk"
-      StrCpy $R7 "1"
-    ${EndIf}
-    FileWrite $R8 "desktopLnkExistsAfter=$R7$\r$\n"
-    FileClose $R8
   ${EndIf}
 !macroend
