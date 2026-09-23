@@ -38,3 +38,11 @@
   --xk-fallback-border: #59232c;
   --xk-fallback-text: #ff7875;
 }
+
+/* 深色模式黑色 PNG 图标反白：全项目仅 ChartView 工具栏（.no-move-button img）
+   与 XkMenu 菜单图标（.no-move img）两处 <img>，均为黑色单色透明底，
+   不反色则淹没在 --xk-bg-layout(#1f1f1f) 标题栏里 */
+:root[data-theme='dark'] .no-move-button img,
+:root[data-theme='dark'] .no-move img {
+  filter: invert(1);
+}
