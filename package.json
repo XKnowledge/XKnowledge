@@ -24,6 +24,7 @@
     "productName": "XKnowledge",
     "icon": "./resources/XKnowledge.png",
     "compression": "store",
+    "publish": null,
     "directories": {
       "output": "release"
     },
