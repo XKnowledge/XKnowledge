@@ -4,6 +4,10 @@ export const HL_COLOR = '#1f1f1f'
 export const LINK_BASE_COLOR = '#4b565b'
 /** 聚焦模式：邻域外节点/边的去色（白底上退为浅灰背景，不消失） */
 export const FOCUS_DIM_COLOR = '#c4c9cc'
+/** 图内搜索：命中节点色（金黄，白底上与类目 20 色/黑/灰拉开距离） */
+export const SEARCH_HIT_COLOR = '#faad14'
+/** 图内搜索：当前项色（深橙红，比命中色深一档） */
+export const SEARCH_ACTIVE_COLOR = '#fa541c'
 
 /**
  * 编辑刷新时用旧图节点坐标合并新节点数据（已布局的图不跳）。
@@ -154,6 +158,9 @@ export const focusNeighborhood = (nodes, links, focusName, hops) => {
  * 只返回组合色（高亮 > 聚焦外灰 > 类目/底色）翻转的对象，颜色由调用方写入其 threeObj 材质。
  * @param {Set<string>|null} prevDimNodes/nextDimNodes 上一次/本次的聚焦邻域集合；
  *   null 表示聚焦未开启（不传等同 null，向后兼容）
+ * @param {Set<string>|Array|null} prevSearchNodes/nextSearchNodes 上一次/本次的搜索命中
+ *   集合；null/不传表示搜索无命中（向后兼容旧调用）
+ * @param {string|null} prevSearchActive/nextSearchActive 上一次/本次的搜索当前项名
  * @param {Map<string,string>} categoryColors 本图类型集合的色映射（assignCategoryColors 产物），
  *   退出高亮/聚焦的还原色从这里查；查询统一 get(String(category ?? ''))
  * @returns {{ nodeRepaints: Array<[datum, color]>, linkRepaints: Array<[datum, color]> }}
@@ -167,17 +174,27 @@ export const planHighlightRepaint = ({
   nextLink,
   prevDimNodes,
   nextDimNodes,
+  prevSearchNodes,
+  nextSearchNodes,
+  prevSearchActive,
+  nextSearchActive,
   categoryColors
 }) => {
   const prevSet = new Set(prevNodes ?? [])
   const nextSet = new Set(nextNodes ?? [])
-  // 节点组合色：高亮 > 聚焦外灰 > 类目色
-  const nodeColorOf = (n, hlSet, dim) =>
+  const prevSearch = new Set(prevSearchNodes ?? [])
+  const nextSearch = new Set(nextSearchNodes ?? [])
+  // 节点组合色：高亮 > 搜索当前项 > 搜索命中 > 聚焦外灰 > 类目色
+  const nodeColorOf = (n, hlSet, active, searchSet, dim) =>
     hlSet.has(n.name)
       ? HL_COLOR
-      : dim && !dim.has(n.name)
-        ? FOCUS_DIM_COLOR
-        : categoryColors?.get(String(n.category ?? ''))
+      : active && n.name === active
+        ? SEARCH_ACTIVE_COLOR
+        : searchSet.has(n.name)
+          ? SEARCH_HIT_COLOR
+          : dim && !dim.has(n.name)
+            ? FOCUS_DIM_COLOR
+            : categoryColors?.get(String(n.category ?? ''))
   // 边组合色：高亮 > 任一端不在邻域的灰 > 底色
   const linkColorOf = (l, hl, dim) =>
     hl
@@ -187,8 +204,8 @@ export const planHighlightRepaint = ({
         : LINK_BASE_COLOR
   const nodeRepaints = []
   for (const n of nodes ?? []) {
-    const was = nodeColorOf(n, prevSet, prevDimNodes)
-    const is = nodeColorOf(n, nextSet, nextDimNodes)
+    const was = nodeColorOf(n, prevSet, prevSearchActive, prevSearch, prevDimNodes)
+    const is = nodeColorOf(n, nextSet, nextSearchActive, nextSearch, nextDimNodes)
     if (was !== is) nodeRepaints.push([n, is])
   }
   const linkRepaints = []
@@ -198,4 +215,24 @@ export const planHighlightRepaint = ({
     if (was !== is) linkRepaints.push([l, is])
   }
   return { nodeRepaints, linkRepaints }
+}
+
+/**
+ * 图内搜索过滤：name/des 大小写不敏感子串匹配，排除隐藏类目节点。
+ * 命中按 nodes 原始顺序稳定返回（列表展示顺序与图数据一致）。
+ * @param {Array} nodes chartData 的节点（纯数据）
+ * @param {string} keyword 搜索关键词
+ * @param {Set<string>|null} hiddenCategories 图例隐藏的类目集合
+ * @returns {Array} 命中节点数组；空关键词返回 []
+ */
+export const searchGraphNodes = (nodes, keyword, hiddenCategories) => {
+  const kw = String(keyword ?? '').trim().toLowerCase()
+  if (!kw) return []
+  return (nodes ?? []).filter((n) => {
+    if (hiddenCategories?.has(n.category)) return false
+    return (
+      String(n.name ?? '').toLowerCase().includes(kw) ||
+      String(n.des ?? '').toLowerCase().includes(kw)
+    )
+  })
 }

@@ -424,6 +424,8 @@ const loadChartData = (data) => {
   })
 
   initAttr()
+  // 换图关闭图内搜索：关键词属于旧图，留着是误导
+  graph3dRef.value?.closeSearch()
   // 聚焦模式跨图保持：开着时装载即聚焦默认焦点（第一眼是子图不是纹理）；
   // 没开则置空，防旧图 name 泄漏进新图邻域计算
   focusNodeId.value = focusEnabled.value ? defaultFocusNode(chart.nodes, chart.links) : ''
@@ -505,6 +507,15 @@ const shortcut = (event) => {
     'ctrl+r': {
       match: () => event.ctrlKey && key === 'r',
       action: () => event.preventDefault() // 阻止浏览器刷新
+    },
+    'ctrl+f': {
+      // 不加 isTypingContext 守卫：任何输入框聚焦时按 Ctrl+F 都应跳到
+      // 搜索框（浏览器惯例）
+      match: () => event.ctrlKey && key === 'f',
+      action: () => {
+        event.preventDefault() // 防御性拦截（Electron 默认无查找，防未来版本行为变化）
+        graph3dRef.value?.openSearch()
+      }
     },
 
     // 图表区域快捷键（输入文本时不触发）

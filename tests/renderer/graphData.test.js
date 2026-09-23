@@ -6,9 +6,12 @@ import {
   labelThreshold,
   defaultFocusNode,
   focusNeighborhood,
+  searchGraphNodes,
   HL_COLOR,
   LINK_BASE_COLOR,
-  FOCUS_DIM_COLOR
+  FOCUS_DIM_COLOR,
+  SEARCH_HIT_COLOR,
+  SEARCH_ACTIVE_COLOR
 } from '../../src/renderer/src/utils/graphData'
 
 describe('mergeGraphNodes：编辑刷新时合并旧坐标', () => {
@@ -397,5 +400,212 @@ describe('planHighlightRepaint：聚焦灰化的组合色增量计划', () => {
       nextDimNodes: new Set(['A', 'B'])
     })
     expect(linkRepaints).toEqual([[links[1], FOCUS_DIM_COLOR]])
+  })
+})
+
+describe('searchGraphNodes：节点名/描述搜索过滤', () => {
+  const nodes = [
+    { name: '张三', des: '武当掌门', symbolSize: 50, category: '人物' },
+    { name: 'Zhang San', des: '拼音转写', symbolSize: 40, category: '人物' },
+    { name: '李白', des: '诗人', symbolSize: 70, category: '人物' },
+    { name: '唐诗', des: '李白的作品集', symbolSize: 40, category: '作品' }
+  ]
+
+  it('名字子串命中（大小写不敏感）', () => {
+    expect(searchGraphNodes(nodes, '张三', null).map((n) => n.name)).toEqual(['张三'])
+    expect(searchGraphNodes(nodes, 'zhang', null).map((n) => n.name)).toEqual(['Zhang San'])
+    expect(searchGraphNodes(nodes, 'ZHANG', null).map((n) => n.name)).toEqual(['Zhang San'])
+  })
+
+  it('描述子串同样命中', () => {
+    expect(searchGraphNodes(nodes, '诗人', null).map((n) => n.name)).toEqual(['李白'])
+  })
+
+  it('命中按 nodes 原始顺序稳定返回', () => {
+    expect(searchGraphNodes(nodes, '李白', null).map((n) => n.name)).toEqual(['李白', '唐诗'])
+  })
+
+  it('排除隐藏类目的节点', () => {
+    expect(searchGraphNodes(nodes, '李白', new Set(['作品'])).map((n) => n.name)).toEqual(['李白'])
+    expect(searchGraphNodes(nodes, '张三', new Set(['人物']))).toEqual([])
+  })
+
+  it('空关键词（含纯空白）返回空数组', () => {
+    expect(searchGraphNodes(nodes, '', null)).toEqual([])
+    expect(searchGraphNodes(nodes, '   ', null)).toEqual([])
+  })
+
+  it('空图/空匹配返回空数组', () => {
+    expect(searchGraphNodes([], 'x', null)).toEqual([])
+    expect(searchGraphNodes(nodes, '不存在的关键词', null)).toEqual([])
+  })
+
+  it('name/des 缺失的节点不抛错', () => {
+    expect(searchGraphNodes([{ name: 'A' }, { des: 'b' }], 'a', null).map((n) => n.name)).toEqual([
+      'A'
+    ])
+  })
+
+  it('不修改入参', () => {
+    const inNodes = [{ name: 'A', des: 'a', category: 'x' }]
+    searchGraphNodes(inNodes, 'a', new Set())
+    expect(inNodes).toEqual([{ name: 'A', des: 'a', category: 'x' }])
+  })
+
+  it('搜索色常量已定义（白底与类目/黑/灰拉开距离）', () => {
+    expect(SEARCH_HIT_COLOR).toBe('#faad14')
+    expect(SEARCH_ACTIVE_COLOR).toBe('#fa541c')
+  })
+})
+
+describe('planHighlightRepaint：搜索高亮的组合色增量计划', () => {
+  const nodes = [
+    { name: 'A', category: 'x' },
+    { name: 'B', category: 'y' },
+    { name: 'C', category: 'x' }
+  ]
+
+  it('进入搜索：命中着命中色、当前项着当前项色', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevSearchNodes: null,
+      nextSearchNodes: new Set(['A', 'B']),
+      prevSearchActive: null,
+      nextSearchActive: 'B'
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], SEARCH_HIT_COLOR],
+      [nodes[1], SEARCH_ACTIVE_COLOR]
+    ])
+  })
+
+  it('当前项切换：旧当前项落回命中色、新当前项着当前项色', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevSearchNodes: new Set(['A', 'B']),
+      nextSearchNodes: new Set(['A', 'B']),
+      prevSearchActive: 'B',
+      nextSearchActive: 'A'
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], SEARCH_ACTIVE_COLOR],
+      [nodes[1], SEARCH_HIT_COLOR]
+    ])
+  })
+
+  it('退出搜索：命中还原类目色', async () => {
+    const { assignCategoryColors } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const categoryColors = assignCategoryColors(['x', 'y'])
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevSearchNodes: new Set(['A', 'B']),
+      nextSearchNodes: null,
+      prevSearchActive: 'A',
+      nextSearchActive: null,
+      categoryColors
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], categoryColors.get('x')],
+      [nodes[1], categoryColors.get('y')]
+    ])
+  })
+
+  it('点击选中黑优先于搜索色', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: ['B'],
+      nextLink: null,
+      prevSearchNodes: null,
+      nextSearchNodes: new Set(['A', 'B']),
+      prevSearchActive: null,
+      nextSearchActive: 'B'
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], SEARCH_HIT_COLOR],
+      [nodes[1], HL_COLOR]
+    ])
+  })
+
+  it('搜索色优先于聚焦灰化（找到了就该看见）', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevDimNodes: null,
+      nextDimNodes: new Set(['A']), // 邻域只有 A：B/C 在灰化区
+      prevSearchNodes: null,
+      nextSearchNodes: new Set(['B']),
+      prevSearchActive: null,
+      nextSearchActive: null
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[1], SEARCH_HIT_COLOR], // B 命中搜索，不被灰化
+      [nodes[2], FOCUS_DIM_COLOR] // C 无搜索，照常灰
+    ])
+  })
+
+  it('搜索状态完全不变时不产生重着色', () => {
+    const plan = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevSearchNodes: new Set(['A']),
+      nextSearchNodes: new Set(['A']),
+      prevSearchActive: 'A',
+      nextSearchActive: 'A'
+    })
+    expect(plan.nodeRepaints).toEqual([])
+    expect(plan.linkRepaints).toEqual([])
+  })
+
+  it('不传搜索参数时与旧行为完全一致（向后兼容）', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      links: [],
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: ['A'],
+      nextLink: null
+    })
+    expect(nodeRepaints).toEqual([[nodes[0], HL_COLOR]])
+  })
+
+  it('边不染搜索色：命中集合变化时边无重着色', () => {
+    const links = [{ source: 'A', target: 'B', name: 'e1' }]
+    const { linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLink: null,
+      nextNodes: [],
+      nextLink: null,
+      prevSearchNodes: null,
+      nextSearchNodes: new Set(['A', 'B'])
+    })
+    expect(linkRepaints).toEqual([])
   })
 })

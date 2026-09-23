@@ -17,6 +17,21 @@
         <span>{{ cat }}</span>
       </div>
     </div>
+    <!-- 图内搜索覆盖层（Ctrl+F）：状态由本组件持有，XkGraphSearch 纯展示 -->
+    <XkGraphSearch
+      ref="searchCompRef"
+      :open="searchOpen"
+      :keyword="searchKeyword"
+      :hits="slicedSearchHits"
+      :hit-total="searchHitNodes.length"
+      :active-index="searchActiveIdx"
+      :cat-color="catColor"
+      @keyword="onSearchKeyword"
+      @next="goToHit(searchActiveIdx + 1)"
+      @prev="goToHit(searchActiveIdx - 1)"
+      @select="goToHit"
+      @close="closeSearch"
+    />
     <!-- WebGL 失败提示条 -->
     <div v-if="initFailed" class="graph3d-fallback">
       3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用
@@ -25,18 +40,22 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import SpriteText from 'three-spritetext'
 import { assignCategoryColors } from '../utils/categoryColor.js'
+import XkGraphSearch from './XkGraphSearch.vue'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
   linkEnd,
   labelThreshold,
+  searchGraphNodes,
   HL_COLOR,
   LINK_BASE_COLOR,
-  FOCUS_DIM_COLOR
+  FOCUS_DIM_COLOR,
+  SEARCH_HIT_COLOR,
+  SEARCH_ACTIVE_COLOR
 } from '../utils/graphData.js'
 
 const props = defineProps({
@@ -69,6 +88,63 @@ const toggleCategory = (cat) => {
   next.has(cat) ? next.delete(cat) : next.add(cat)
   hiddenCategories.value = next
   applyVisibility()
+  // 搜索开着时命中列表实时跟随可见类目（当前项保持或重置，不飞相机）
+  if (searchOpen.value) recomputeSearch(searchActiveName.value)
+}
+
+// 图内搜索（会话级视图辅助）：不写盘、不置脏、不进 undo/redo、换图即关
+const searchCompRef = ref(null)
+const searchOpen = ref(false)
+const searchKeyword = ref('')
+const searchHitNodes = ref([]) // 命中节点数组（nodes 原始顺序）
+const searchActiveIdx = ref(0)
+/** DOM 只渲染前 100 项（万级命中全渲染卡 UI），计数仍显示真实总数 */
+const SEARCH_LIST_LIMIT = 100
+const slicedSearchHits = computed(() => searchHitNodes.value.slice(0, SEARCH_LIST_LIMIT))
+const searchActiveName = computed(() => searchHitNodes.value[searchActiveIdx.value]?.name ?? null)
+
+/** 重算命中并触发重着色。prevActiveName：重算前的当前项名——还在命中里就保持
+ *  （不飞相机），不在了重置到第 1 个（也不飞：飞行只由显式动作触发） */
+const recomputeSearch = (prevActiveName = null) => {
+  searchHitNodes.value = searchGraphNodes(props.nodes, searchKeyword.value, hiddenCategories.value)
+  const idx = prevActiveName
+    ? searchHitNodes.value.findIndex((n) => n.name === prevActiveName)
+    : -1
+  searchActiveIdx.value = idx > -1 ? idx : 0
+  applyHighlight()
+}
+
+const onSearchKeyword = (v) => {
+  searchKeyword.value = v
+  recomputeSearch()
+  if (searchHitNodes.value.length) flyToActive()
+}
+
+/** 导航/点选跳到第 idx 个命中（回卷），并飞相机 */
+const goToHit = (idx) => {
+  if (!searchHitNodes.value.length) return
+  searchActiveIdx.value = (idx + searchHitNodes.value.length) % searchHitNodes.value.length
+  applyHighlight()
+  flyToActive()
+}
+
+const flyToActive = () => {
+  const name = searchActiveName.value
+  if (name) focusCamera(new Set([name]))
+}
+
+const openSearch = () => {
+  if (initFailed.value) return // 图都没有，搜索无意义
+  searchOpen.value = true
+  nextTick(() => searchCompRef.value?.focus())
+}
+
+/** 关闭搜索：清状态即清高亮（重算→applyHighlight 还原），相机留原地
+ *  （规格：找到并留在那） */
+const closeSearch = () => {
+  searchOpen.value = false
+  searchKeyword.value = ''
+  recomputeSearch()
 }
 
 /** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
@@ -112,21 +188,33 @@ const applyVisibility = () => {
 let prevHlNodes = new Set()
 let prevHlLink = null
 let prevHlDim = null // Set<string>|null：上一次应用的聚焦邻域
+let prevHlSearch = new Set() // Set<string>：上一次应用的搜索命中集合
+let prevHlSearchActive = null // string|null：上一次应用的搜索当前项名
 
 const applyHighlight = () => {
   if (!graph) return
   const hl = new Set(props.highlightNodes)
   const le = props.highlightLink
   const dim = props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
-  // accessor 描述"正确颜色"（高亮 > 聚焦外灰 > 类目/底色）：
+  // 搜索集合：open 或残留关键词时按当前命中集合着色
+  const search =
+    searchOpen.value || searchKeyword.value
+      ? new Set(searchHitNodes.value.map((n) => n.name))
+      : new Set()
+  const active = searchActiveName.value
+  // accessor 描述"正确颜色"（高亮 > 搜索当前项 > 搜索命中 > 聚焦外灰 > 类目/底色）：
   // graphData 重灌或 refresh 时库按它重建材质
   graph
     .nodeColor((n) =>
       hl.has(n.name)
         ? HL_COLOR
-        : dim && !dim.has(n.name)
-          ? FOCUS_DIM_COLOR
-          : catColor(n.category)
+        : active && n.name === active
+          ? SEARCH_ACTIVE_COLOR
+          : search.has(n.name)
+            ? SEARCH_HIT_COLOR
+            : dim && !dim.has(n.name)
+              ? FOCUS_DIM_COLOR
+              : catColor(n.category)
     )
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
@@ -148,6 +236,10 @@ const applyHighlight = () => {
     nextLink: le,
     prevDimNodes: prevHlDim,
     nextDimNodes: dim,
+    prevSearchNodes: prevHlSearch,
+    nextSearchNodes: search,
+    prevSearchActive: prevHlSearchActive,
+    nextSearchActive: active,
     categoryColors: categoryColors.value
   })
   const repaints = [...nodeRepaints, ...linkRepaints]
@@ -171,6 +263,8 @@ const applyHighlight = () => {
   prevHlNodes = hl
   prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
   prevHlDim = dim
+  prevHlSearch = search
+  prevHlSearchActive = active
 }
 
 /** 标签显隐：最小的 60% 节点算小节点，按 showSmallLabels 开关决定其名称显隐；
@@ -284,6 +378,9 @@ watch(
     applySimulationScale()
     graph.graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
     applyLabels()
+    // 编辑/重灌后命中重算（当前项名保持或重置第 1 个，不飞相机；
+    // 换图的显式关闭由 ChartView 调 closeSearch）
+    if (searchOpen.value) recomputeSearch(searchActiveName.value)
   },
   { deep: true }
 )
@@ -396,7 +493,7 @@ const resetView = () => {
   graph.zoomToFit(600, 80)
 }
 
-defineExpose({ setRepulsion, exportPng, resetView, focusCamera })
+defineExpose({ setRepulsion, exportPng, resetView, focusCamera, openSearch, closeSearch })
 </script>
 
 <style scoped>
