@@ -1054,6 +1054,7 @@ const buttonList = ref([
 .sider-style {
   text-align: center;
   line-height: 50px;
+  padding-top: 12px;
   width: 270px !important;
   max-width: 270px !important;
   min-width: 270px !important;
