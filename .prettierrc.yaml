@@ -2,6 +2,5 @@ singleQuote: true
 semi: false
 printWidth: 100
 trailingComma: none
-# 仓库文件为 CRLF（Windows），prettier 默认 endOfLine: lf 会产生海量
-# “Delete ␍” 告警，改为尊重各文件现有行尾
-endOfLine: auto
+# 行尾已随 .gitattributes 全仓统一为 LF，回到 prettier 默认
+endOfLine: lf

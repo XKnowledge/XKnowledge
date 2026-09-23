@@ -1,0 +1,10 @@
+# 行尾统一：仓库与工作区一律 LF（Windows 开发机也不转换）
+# 由来：历史上仓库基本 LF、但 57 个文件本地磁盘为 CRLF（autocrlf checkout 效果）、
+# .editorconfig 自身入库为 CRLF；配合 git add --renormalize 一次性统一。
+# eol=lf 保证任何环境 clone/checkout 出的工作区都是 LF——
+# 「示例清单同步守护」测试做逐字节对比，工作区字节必须与仓库一致。
+* text=auto eol=lf
+
+# 二进制文件不做任何转换
+*.png binary
+*.ico binary
