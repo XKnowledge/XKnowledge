@@ -17,11 +17,6 @@ jobs:
         shell: bash
 
     steps:
-      - name: 关闭 git 行尾自动转换
-        run: git config --global core.autocrlf false
-        # windows runner 默认 autocrlf=true，checkout 会把仓库 LF 文件转成 CRLF，
-        # 「清单同步守护」测试做逐字节对比会被误伤（本地不转换所以全绿）
-
       - name: 检出代码
         uses: actions/checkout@v5
 
@@ -33,7 +28,6 @@ jobs:
 
       - name: 安装依赖
         run: |
-          # CI 在海外，删掉本地 .npmrc 的国内镜像配置，直连官方源下载 electron 二进制
           rm .npmrc
           yarn install --frozen-lockfile
 
