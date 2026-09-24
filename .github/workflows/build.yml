@@ -10,7 +10,21 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false  # 单平台失败不取消其他平台，便于定位
+      matrix:
+        include:
+          - os: windows-latest
+            build_script: build:win
+            artifact_glob: release/*.exe
+          - os: macos-latest
+            build_script: build:mac
+            artifact_glob: release/*.dmg
+          - os: ubuntu-latest
+            build_script: build:linux
+            artifact_glob: release/*.AppImage
+
+    runs-on: ${{ matrix.os }}
 
     defaults:
       run:
@@ -37,12 +51,33 @@ jobs:
       - name: 类型检查
         run: yarn typecheck
 
-      - name: 构建项目
-        run: yarn build:win
+      - name: 构建安装包
+        run: yarn ${{ matrix.build_script }}
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: ${{ matrix.artifact_glob }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
 
       - name: 创建 Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*.exe
+          files: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
