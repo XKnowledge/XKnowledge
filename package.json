@@ -34,6 +34,11 @@
       "license": "LICENSE",
       "include": "build/installer.nsh"
     },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
     "asar": true,
     "files": [
       "out/**/*",
