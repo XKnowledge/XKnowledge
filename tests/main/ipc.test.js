@@ -427,7 +427,7 @@ describe('FILE_DIRTY：未保存圆点', () => {
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d1.xk' })
     setWindowTitle.mockClear()
     await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
-    expect(setWindowTitle).toHaveBeenCalledWith(win, 'd1 ● — XKnowledge', '● d1 — XKnowledge')
+    expect(setWindowTitle).toHaveBeenCalledWith(win, 'd1 • — XKnowledge', '• d1 — XKnowledge')
   })
 
   it('未命名窗口（无文件登记）上报 dirty 走未命名分支', async () => {
@@ -438,8 +438,8 @@ describe('FILE_DIRTY：未保存圆点', () => {
     await handlerOf(IPC.FILE_DIRTY)(senderOf(7), { dirty: true })
     expect(setWindowTitle).toHaveBeenCalledWith(
       win,
-      '未命名 ● — XKnowledge',
-      '● 未命名 — XKnowledge'
+      '未命名 • — XKnowledge',
+      '• 未命名 — XKnowledge'
     )
   })
 

@@ -123,8 +123,8 @@ XKnowledge/
   自动补目录消歧）；图表页卸载恢复默认。`titleBarOverlay` 只画控制按钮不画标题文字，
   故标题经 `setWindowTitle` 同时 `setTitle`（任务栏/Alt-Tab）并推送 `app:title-changed`，
   由 BasicLayout 的 30px 自绘标题条纯展示（渲染端不自算）。未保存修改时标题带
-  圆点且两处位置不同：标题条在文件名后（`金融 ● — XKnowledge`）、任务栏在标题前
-  （`● 金融 — XKnowledge`），由渲染端 `file:dirty` 上报驱动。
+  圆点且两处位置不同：标题条在文件名后（`金融 • — XKnowledge`）、任务栏在标题前
+  （`• 金融 — XKnowledge`），由渲染端 `file:dirty` 上报驱动。
 - **单实例锁**：`requestSingleInstanceLock` 失败即退出。
 - **禁止刷新**（F5 / Ctrl+R / Ctrl+F5）：pending 图表数据取后即清，刷新会直接丢失
   图表内容，因此经 `before-input-event` 统一拦截。
@@ -210,7 +210,7 @@ webContents.id 登记簿）：
   同名窗口的开/关/换名联动（重名解除即恢复短标题）；窗口为空或已销毁时 setWindowTitle
   自行跳过。
 - `dirtyWindows`（有未保存修改的窗口集合）：`file:dirty` 上报维护并重算标题——有
-  登记的窗口走 `refreshTitles()`，未命名窗口直接设「未命名[ ●] — XKnowledge」双标题；
+  登记的窗口走 `refreshTitles()`，未命名窗口直接设「未命名[ •] — XKnowledge」双标题；
   `file:opened` 上报（含空路径）重置（装载即干净）；窗口 `closed` 清理时一并删除。
 
 ### 5.4 fileService.js
@@ -382,8 +382,8 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 `saveNodeVisible` 在**任何**修改后置 true：编辑操作、属性开关、排斥力调节等；
 `saveFile / saveAs` 成功后置 false，并经 `file:opened` 更新主进程登记。它不再驱动
 顶栏红条（已删除），而是由 `watch` 经 `file:dirty` 上报主进程，窗口标题加圆点提示
-未保存：应用内标题条圆点在文件名后（`金融 ● — XKnowledge`）、任务栏/Alt-Tab 圆点
-在标题前（`● 金融 — XKnowledge`）；保存成功后圆点随干净态消失。60 秒自动保存与
+未保存：应用内标题条圆点在文件名后（`金融 • — XKnowledge`）、任务栏/Alt-Tab 圆点
+在标题前（`• 金融 — XKnowledge`）；保存成功后圆点随干净态消失。60 秒自动保存与
 关闭确认继续读 `saveNodeVisible`。
 
 ### 7.3 保存 / 自动保存 / 冲突

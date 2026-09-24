@@ -137,7 +137,7 @@ expectEq('跳数默认 2', await focusRow.locator('.focus-hops-select .ant-selec
 await shot('01-focus-on')
 
 // 5. 聚焦不置脏：窗口标题不得出现未保存圆点
-expectOk('聚焦开启不置脏（标题无圆点）', !((await nativeTitle()) ?? '').includes('●'))
+expectOk('聚焦开启不置脏（标题无圆点）', !((await nativeTitle()) ?? '').includes('•'))
 
 // 6. 画布单击换焦点：3D 坐标命中不可控，软观察（打印实际值，不计失败）；
 //    点击本身不应抛错。命中节点/边会切到对应表单、隐藏属性面板——检测到
@@ -164,7 +164,7 @@ await dropdownOption('隐藏').click()
 await page.waitForTimeout(500)
 expectEq('隐藏模式锚点', await focusRow.getAttribute('data-focus-mode'), 'deep')
 expectEq('隐藏焦点保持', await focusRow.getAttribute('data-focus-node'), focusBeforeDeep)
-expectOk('隐藏不置脏（标题无圆点）', !((await nativeTitle()) ?? '').includes('●'))
+expectOk('隐藏不置脏（标题无圆点）', !((await nativeTitle()) ?? '').includes('•'))
 await shot('03-deep-on')
 
 // 9. 切回「关闭」→ 恢复

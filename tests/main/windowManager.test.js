@@ -117,9 +117,9 @@ describe('setWindowTitle：setTitle + 推送双动作', () => {
 
   it('display 与 taskbar 不同时：setTitle 用 taskbar，推送用 display', () => {
     const win = fakeWindow()
-    setWindowTitle(win, '金融 ● — XKnowledge', '● 金融 — XKnowledge')
-    expect(win.setTitle).toHaveBeenCalledWith('● 金融 — XKnowledge')
-    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, '金融 ● — XKnowledge')
+    setWindowTitle(win, '金融 • — XKnowledge', '• 金融 — XKnowledge')
+    expect(win.setTitle).toHaveBeenCalledWith('• 金融 — XKnowledge')
+    expect(win.webContents.send).toHaveBeenCalledWith(IPC.APP_TITLE_CHANGED, '金融 • — XKnowledge')
   })
 
   it('只传 display 时 taskbar 缺省同 display（现状调用不变）', () => {

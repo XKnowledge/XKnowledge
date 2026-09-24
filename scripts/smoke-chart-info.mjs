@@ -84,11 +84,11 @@ expectEq('编辑栏显示原简介', await textarea.inputValue(), description)
 
 // 4. 修改简介 → 断言脏标记链路（窗口标题出现未保存圆点）
 const cleanTitle = await nativeTitle()
-expectOk('修改前标题无圆点', !cleanTitle.includes('●'), cleanTitle)
+expectOk('修改前标题无圆点', !cleanTitle.includes('•'), cleanTitle)
 await textarea.fill('冒烟测试：简介已由编辑栏修改')
 await page.waitForTimeout(500) // 等 fileDirty → titleService → setWindowTitle
 const dirtyTitle = await nativeTitle()
-expectOk('修改后标题带圆点', dirtyTitle.startsWith('● '), dirtyTitle)
+expectOk('修改后标题带圆点', dirtyTitle.startsWith('• '), dirtyTitle)
 await shot('02-dirty-dot')
 
 console.log('renderer-errors:', errors.length === 0 ? 'none (ok)' : JSON.stringify(errors, null, 2))

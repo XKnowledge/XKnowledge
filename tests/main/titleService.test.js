@@ -58,8 +58,8 @@ describe('computeTitles：同名消歧', () => {
 describe('computeTitles：未保存圆点', () => {
   it('entry 带 dirty 时：标题条圆点在展示名后、任务栏圆点在整标题前', () => {
     const titles = computeTitles([{ path: 'C:\\资料\\金融.xk', webContentsId: 2, dirty: true }])
-    expect(titles.get(2).display).toBe('金融 ● — XKnowledge')
-    expect(titles.get(2).taskbar).toBe('● 金融 — XKnowledge')
+    expect(titles.get(2).display).toBe('金融 • — XKnowledge')
+    expect(titles.get(2).taskbar).toBe('• 金融 — XKnowledge')
   })
 
   it('entry 缺 dirty 字段时按干净处理（向后兼容）', () => {
@@ -75,8 +75,8 @@ describe('computeTitles：未保存圆点', () => {
       { path: 'C:\\资料\\金融.xk', webContentsId: 2, dirty: true },
       entry('C:\\下载\\金融.xk', 3)
     ])
-    expect(titles.get(2).display).toBe('金融 — 资料 ● — XKnowledge')
-    expect(titles.get(2).taskbar).toBe('● 金融 — 资料 — XKnowledge')
+    expect(titles.get(2).display).toBe('金融 — 资料 • — XKnowledge')
+    expect(titles.get(2).taskbar).toBe('• 金融 — 资料 — XKnowledge')
     expect(titles.get(3).display).toBe('金融 — 下载 — XKnowledge')
     expect(titles.get(3).taskbar).toBe('金融 — 下载 — XKnowledge')
   })
@@ -85,8 +85,8 @@ describe('computeTitles：未保存圆点', () => {
 describe('composeWindowTitles：纯函数', () => {
   it('dirty 时 display 圆点在展示名后、taskbar 圆点在标题前', () => {
     expect(composeWindowTitles('金融', true)).toEqual({
-      display: '金融 ● — XKnowledge',
-      taskbar: '● 金融 — XKnowledge'
+      display: '金融 • — XKnowledge',
+      taskbar: '• 金融 — XKnowledge'
     })
   })
 

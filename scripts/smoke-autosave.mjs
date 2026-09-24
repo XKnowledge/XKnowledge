@@ -116,7 +116,7 @@ await page2.waitForTimeout(500)
 const dirtyTitles = await titleOf()
 expectOk(
   '修改简介后标题带圆点',
-  dirtyTitles.some((t) => t.includes('●')),
+  dirtyTitles.some((t) => t.includes('•')),
   JSON.stringify(dirtyTitles)
 )
 
@@ -138,7 +138,7 @@ await page2.waitForTimeout(70_000)
 let saved = false
 for (let i = 0; i < 20; i++) {
   const titles = await titleOf()
-  if (!titles.some((t) => t.includes('●'))) {
+  if (!titles.some((t) => t.includes('•'))) {
     saved = true
     break
   }

@@ -22,8 +22,8 @@ const displayOf = (p, k) => {
 export const composeWindowTitles = (displayName, dirty) =>
   dirty
     ? {
-        display: `${displayName} ● — ${DEFAULT_TITLE}`,
-        taskbar: `● ${displayName} — ${DEFAULT_TITLE}`
+        display: `${displayName} • — ${DEFAULT_TITLE}`,
+        taskbar: `• ${displayName} — ${DEFAULT_TITLE}`
       }
     : { display: `${displayName} — ${DEFAULT_TITLE}`, taskbar: `${displayName} — ${DEFAULT_TITLE}` }
 
