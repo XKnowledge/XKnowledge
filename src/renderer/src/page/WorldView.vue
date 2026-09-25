@@ -13,6 +13,9 @@
         ref="graphRef"
         :scene="scene"
         :expanded="worldState.expanded"
+        :focus-node-ids="focusNodeIds"
+        :focus-deep="focusMode === 'deep'"
+        :search-hit-ids="searchHitIds"
         @node-click="onNodeClick"
       />
       <!-- 已展开域浮动列表：逐个收拢 + 全部收拢 -->
@@ -21,6 +24,68 @@
           {{ g.title }}
         </a-tag>
         <a-button size="small" @click="collapseAll">全部收拢</a-button>
+      </div>
+      <!-- 视图调节：排斥力 + 聚焦模式（会话级浮动卡片，默认收起）。
+           data-focus-node/data-focus-mode 是冒烟断言锚点（同图表页 focus-row） -->
+      <div
+        v-if="!loading"
+        class="world-view-panel"
+        :data-focus-node="focusNodeId"
+        :data-focus-mode="focusMode"
+      >
+        <a-button v-if="!viewPanelOpen" size="small" @click="viewPanelOpen = true">视图</a-button>
+        <div v-else class="world-view-panel-body">
+          <div class="world-view-panel-head">
+            <span>视图调节</span>
+            <button class="world-view-panel-fold" title="收起" @click="viewPanelOpen = false">
+              −
+            </button>
+          </div>
+          <div class="world-view-panel-row">
+            <span class="world-view-label">排斥力</span>
+            <a-slider
+              v-model:value="repulsion"
+              class="world-view-slider"
+              :min="1"
+              :max="500"
+              @change="onChangeRepulsion"
+            />
+            <a-input-number
+              v-model:value="repulsion"
+              :min="1"
+              :max="500"
+              size="small"
+              class="world-view-number"
+              @change="onChangeRepulsion"
+            />
+          </div>
+          <div class="world-view-panel-row">
+            <span class="world-view-label">聚焦</span>
+            <a-select
+              v-model:value="focusMode"
+              size="small"
+              class="world-view-select"
+              :options="[
+                { value: 'off', label: '关闭' },
+                { value: 'focus', label: '灰化' },
+                { value: 'deep', label: '隐藏' }
+              ]"
+              @change="onFocusModeChange"
+            />
+            <span class="world-view-label">跳数</span>
+            <a-select
+              v-model:value="focusHops"
+              size="small"
+              class="world-view-hops"
+              :disabled="focusMode === 'off'"
+              :options="[
+                { value: 1, label: '1' },
+                { value: 2, label: '2' },
+                { value: 3, label: '3' }
+              ]"
+            />
+          </div>
+        </div>
       </div>
       <!-- 超节点信息卡：展开 / 打开完整编辑 -->
       <a-drawer v-model:open="cardOpen" :title="selected?.title" width="320px">
@@ -54,7 +119,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import XkWorldGraph from '../components/XkWorldGraph.vue'
@@ -65,7 +130,9 @@ import {
   applyExpansion,
   applyCollapse,
   worldScene,
-  searchWorldNodes
+  searchWorldNodes,
+  worldFocusNeighborhood,
+  defaultFocusNodeId
 } from '../utils/worldGraph.js'
 
 const router = useRouter()
@@ -109,6 +176,51 @@ const closeSearch = () => {
   searchKeyword.value = ''
   recomputeSearch()
 }
+
+// 视图调节（会话级，不写盘）：排斥力 + 聚焦模式（同图表页语义，按场景 id）
+const viewPanelOpen = ref(false)
+const repulsion = ref(100)
+const focusMode = ref('off') // off 关闭 / focus 灰化（邻域外退灰）/ deep 隐藏
+// 默认 1 跳：世界是小世界网络（缝合紧密），从度数最高枢纽出发 2 跳即
+// 覆盖 44% 的图（实测 135/310）、3 跳 72%——探照灯照大半个世界等于没照；
+// 1 跳 = 焦点图 + 直连缝合邻居，才有聚光效果（图表页默认 2 跳不适用）
+const focusHops = ref(1)
+const focusNodeId = ref('')
+const focusNodeIds = computed(() => {
+  if (focusMode.value === 'off' || !focusNodeId.value) return []
+  return [...worldFocusNeighborhood(scene.value, focusNodeId.value, focusHops.value)]
+})
+// 搜索命中 id 豁免深度隐藏（找到了就该看见，跳转不飞空处）
+const searchHitIds = computed(() =>
+  searchOpen.value ? hits.value.map((h) => `${h.graphId}|${h.name}`) : []
+)
+
+const onChangeRepulsion = () => {
+  graphRef.value?.setRepulsion(repulsion.value)
+}
+
+/** 开启聚焦的默认焦点：当前选中超节点（信息卡，须仍在场景中）→ 度数最高 */
+const pickDefaultFocus = () => {
+  const sel = selected.value
+  if (sel && scene.value.nodes.some((n) => n.id === sel.id)) return sel.id
+  return defaultFocusNodeId(scene.value.nodes, scene.value.links)
+}
+
+/** 模式切换（取 change 新值：antdv select 的 update:value 触发顺序无契约） */
+const onFocusModeChange = (mode) => {
+  focusNodeId.value = mode === 'off' ? '' : pickDefaultFocus()
+}
+
+// 焦点随场景消失（收拢其域/刷新）：回退默认焦点，探照灯不灭（同图表页）
+watch(
+  () => scene.value.nodes,
+  (nodes) => {
+    if (focusMode.value === 'off' || !focusNodeId.value) return
+    if (!nodes.some((n) => n.id === focusNodeId.value)) {
+      focusNodeId.value = defaultFocusNodeId(nodes, scene.value.links)
+    }
+  }
+)
 
 const loadIndex = async () => {
   loading.value = true
@@ -159,7 +271,13 @@ const collapseAll = () => {
 }
 
 const onNodeClick = (payload) => {
-  if (payload.__kind !== 'graph') return // 展开域节点点击：MVP 无动作
+  // 聚焦模式：点击只移焦点，不弹信息卡——抽屉自带全屏遮罩，会把后续
+  // 连续点击吃掉（点画布变成关抽屉，到不了节点）；关聚焦后点击即可打开信息卡
+  if (focusMode.value !== 'off') {
+    focusNodeId.value = payload.id
+    return
+  }
+  if (payload.__kind !== 'graph') return // 展开域节点点击：无其他动作
   selected.value = payload
   cardOpen.value = true
 }
@@ -283,5 +401,58 @@ onUnmounted(() => {
   padding: 6px 8px;
   font: 13px sans-serif;
   z-index: 2;
+}
+.world-view-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+}
+.world-view-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 248px;
+  background: var(--xk-float-bg);
+  border: 1px solid var(--xk-border-strong);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: 13px sans-serif;
+}
+.world-view-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+.world-view-panel-fold {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.world-view-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.world-view-label {
+  flex-shrink: 0;
+}
+.world-view-slider {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.world-view-number {
+  width: 64px;
+}
+.world-view-select {
+  width: 76px;
+}
+.world-view-hops {
+  width: 56px;
 }
 </style>

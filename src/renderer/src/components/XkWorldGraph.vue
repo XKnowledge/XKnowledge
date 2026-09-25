@@ -20,7 +20,12 @@ import { superNodeVal, ANCHOR_STRENGTH } from '../utils/worldGraph.js'
 
 const props = defineProps({
   scene: { type: Object, default: () => ({ nodes: [], links: [] }) },
-  expanded: { type: Object, default: () => ({}) }
+  expanded: { type: Object, default: () => ({}) },
+  // 聚焦邻域（场景节点 id 集合）与深度聚焦开关；搜索命中 id 豁免深度隐藏
+  // （找到了就该看见，否则跳转命中项时相机飞到空处）
+  focusNodeIds: { type: Array, default: () => [] },
+  focusDeep: { type: Boolean, default: false },
+  searchHitIds: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['node-click'])
 
@@ -30,12 +35,11 @@ let graph = null
 let resizeObserver = null
 
 const sceneColors = computed(() => SCENE_COLORS[effective.value])
-/** 社区色：按本场景社区集合分配（assignCategoryColors 保证同集合同分配） */
-const communityColors = computed(() =>
-  assignCategoryColors(
-    props.scene.nodes.filter((n) => n.__kind === 'graph').map((n) => String(n.community ?? 0))
-  )
-)
+/** 超节点统一色（不分社区）：缝合语义依赖用户命名质量（「水/火」这类通用词
+ *  会被误缝合，分色会把污染放大成视觉噪声）——全景一律同色，颜色只属于
+ *  展开域内部（图内类目色）。须与链接灰、聚焦去色 dim 拉开距离，双主题各一 */
+const SUPER_NODE_COLORS = { light: '#4a8db5', dark: '#79b4cf' }
+const superNodeColor = computed(() => SUPER_NODE_COLORS[effective.value])
 /** 展开域内原类目色：per-graph 分配（图内观感与单图视图一致） */
 const graphCatColors = computed(() => {
   const byGraph = new Map()
@@ -49,10 +53,29 @@ const graphCatColors = computed(() => {
   return out
 })
 
-const nodeColorOf = (n) =>
-  n.__kind === 'graph'
-    ? communityColors.value.get(String(n.community ?? 0))
+/** 聚焦邻域 id 集（空数组 → null 表达「无聚焦，全图正常色」）与搜索命中集 */
+const focusSet = computed(() => (props.focusNodeIds.length ? new Set(props.focusNodeIds) : null))
+const searchSet = computed(() => (props.searchHitIds.length ? new Set(props.searchHitIds) : null))
+
+/** 边端点取 id：字符串原样；d3 灌库后可能已解析为节点对象 */
+const endId = (end) => (typeof end === 'object' && end !== null ? end.id : end)
+
+const nodeColorOf = (n) => {
+  if (focusSet.value && !focusSet.value.has(n.id)) return sceneColors.value.dim
+  return n.__kind === 'graph'
+    ? superNodeColor.value
     : (graphCatColors.value.get(n.graphId)?.get(String(n.category ?? '')) ?? sceneColors.value.link)
+}
+
+const linkColorOf = (l) => {
+  if (
+    focusSet.value &&
+    !(focusSet.value.has(endId(l.source)) && focusSet.value.has(endId(l.target)))
+  ) {
+    return sceneColors.value.dim
+  }
+  return l.__kind === 'stitch' ? sceneColors.value.dim : sceneColors.value.link
+}
 
 /** 重灌时按 id 保留旧坐标（展开/收拢不重聚类）；语义同 graphData.mergeGraphNodes */
 const mergeCoords = (next) => {
@@ -71,7 +94,8 @@ const feed = () => {
   })
 }
 
-/** 标签：超节点常显 title；展开域节点常显 name（单图 30~175 个，标签量可控） */
+/** 标签：超节点常显 title；展开域节点常显 name（单图 30~175 个，标签量可控）。
+ *  重建时遵守聚焦灰化：灰球不配正常色标签（同 XkGraph3D 策略） */
 const applyLabels = () => {
   if (!graph) return
   graph.nodeThreeObjectExtend(true).nodeThreeObject((n) => {
@@ -79,7 +103,8 @@ const applyLabels = () => {
     if (!text) return null
     const sprite = new SpriteText(text)
     sprite.textHeight = n.__kind === 'graph' ? 6 : 5
-    sprite.color = sceneColors.value.label
+    sprite.color =
+      focusSet.value && !focusSet.value.has(n.id) ? sceneColors.value.dim : sceneColors.value.label
     sprite.position.set(0, 7, 0)
     return sprite
   })
@@ -105,7 +130,7 @@ onMounted(() => {
     .nodeRelSize(1)
     .nodeColor(nodeColorOf)
     .nodeLabel((n) => (n.__kind === 'graph' ? `${n.title}（${n.nodeCount} 节点）` : n.name))
-    .linkColor((l) => (l.__kind === 'stitch' ? sceneColors.value.dim : sceneColors.value.link))
+    .linkColor(linkColorOf)
     .linkWidth((l) => (l.__kind === 'stitch' ? 0.5 : 1))
     .onNodeClick((n) =>
       emit(
@@ -138,6 +163,14 @@ onMounted(() => {
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
   if (navInfo) navInfo.textContent = '左键：旋转　滚轮/中键：缩放　右键：平移'
 
+  applyVisibility()
+  // 滑杆语义对齐（同 XkGraph3D）：视图面板默认 100 → charge -10；不设则库默认
+  // -30，用户第一次拖滑杆到 100 时布局会突跳。只设强度不 reheat——首次
+  // graphData digest 尚未运行（state.layout 未定义），d3ReheatSimulation 会
+  // 置 engineRunning=true，下一帧 tickFrame 读 state.layout.tick 即崩溃
+  const charge = graph.d3Force('charge')
+  if (charge) charge.strength(-10)
+
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
     if (el && graph) graph.width(el.clientWidth).height(el.clientHeight)
@@ -153,12 +186,17 @@ onUnmounted(() => {
   }
 })
 
-// 场景重灌（展开/收拢/刷新）：保留坐标，锚定力经 accessor 自动跟随
+/** 上一次材质已反映的聚焦邻域：增量重着色只处理进出邻域的翻转对象 */
+let prevDimSet = null
+
+// 场景重灌（展开/收拢/刷新）：保留坐标，锚定力经 accessor 自动跟随。
+// 材质经 accessor 重建已是正确灰化态，同步 prevDimSet 防 diff 基线漂移
 watch(
   () => props.scene,
   () => {
     feed()
     applyLabels()
+    prevDimSet = focusSet.value ? new Set(focusSet.value) : null
     graph?.d3ReheatSimulation()
   },
   { deep: true }
@@ -168,7 +206,87 @@ watch(
 watch(effective, () => {
   if (!graph) return
   graph.backgroundColor(sceneColors.value.bg).nodeColor(nodeColorOf).refresh()
+  prevDimSet = focusSet.value ? new Set(focusSet.value) : null
 })
+
+/** 深度聚焦可见性：邻域外（搜索命中豁免）节点隐藏，边随两端隐藏。
+ *  纯可见性翻转——颜色管道两态共用（隐藏节点底下仍按聚焦规则着色），
+ *  切回灰化时原样重现，无需重着色（同 XkGraph3D） */
+const applyVisibility = () => {
+  if (!graph) return
+  const focus = props.focusDeep ? focusSet.value : null
+  const hits = searchSet.value
+  const visible = (id) => !focus || focus.has(id) || hits?.has(id)
+  graph
+    .nodeVisibility((n) => visible(n.id))
+    .linkVisibility((l) => visible(endId(l.source)) && visible(endId(l.target)))
+}
+
+/** 聚焦灰化：accessor 描述正确颜色（邻域外退灰）。必须重设 nodeColor/linkColor
+ *  accessor 触发库重灌材质——库按颜色字符串共享材质实例（同色节点共用一个
+ *  material），纯增量 color.set() 会污染邻域内同色节点（整个世界连带变灰），
+ *  重设 accessor 让库下一帧按 accessor 重建材质自愈（同 XkGraph3D.applyHighlight
+ *  的 accessor + 增量双轨）。增量 set() 仅提供同帧反馈；不调 refresh()，它会
+ *  重建全部 SpriteText 标签，世界全景万级节点逐次调节持续掉帧 */
+const applyDim = () => {
+  if (!graph) return
+  graph.nodeColor(nodeColorOf).linkColor(linkColorOf)
+  const prev = prevDimSet
+  const next = focusSet.value
+  const linkIn = (l, set) => !!set && set.has(endId(l.source)) && set.has(endId(l.target))
+  let wanted = 0
+  let painted = 0
+  for (const n of graph.graphData().nodes) {
+    const was = prev?.has(n.id) ?? true // prev null = 无聚焦 = 全员正常色
+    const is = next?.has(n.id) ?? true
+    if (was !== is) {
+      wanted++
+      if (n.__threeObj?.material?.color) {
+        const color = nodeColorOf(n)
+        n.__threeObj.material.color.set(color)
+        // 灰球上的标签一并退灰：深字挂灰球是主要视觉噪音；边对象无 sprite 子级，空转无害
+        for (const child of n.__threeObj.children ?? []) {
+          if (child.isSprite && child.material?.color?.set) {
+            child.material.color.set(
+              color === sceneColors.value.dim ? sceneColors.value.dim : sceneColors.value.label
+            )
+          }
+        }
+        painted++
+      }
+    }
+  }
+  for (const l of graph.graphData().links) {
+    if (linkIn(l, prev) !== linkIn(l, next)) {
+      wanted++
+      if (l.__threeObj?.material?.color) {
+        l.__threeObj.material.color.set(linkColorOf(l))
+        painted++
+      }
+    }
+  }
+  // 库升级破坏 __threeObj 时回退全量 refresh，保证聚焦功能仍生效
+  if (wanted > 0 && painted === 0) graph.refresh()
+  prevDimSet = next ? new Set(next) : null
+}
+
+// 聚焦邻域变化：增量重着色 + 深度聚焦时连带刷新可见性
+watch(
+  () => props.focusNodeIds,
+  () => {
+    applyDim()
+    if (props.focusDeep) applyVisibility()
+  },
+  { deep: true }
+)
+watch(() => props.focusDeep, applyVisibility)
+watch(
+  () => props.searchHitIds,
+  () => {
+    if (props.focusDeep) applyVisibility()
+  },
+  { deep: true }
+)
 
 /** 相机飞到 id 集合包围盒（沿当前视线推拉）；命中有限坐标返回 true，无坐标返回 false */
 const focusCamera = (ids) => {
@@ -206,7 +324,41 @@ const superNodeCoords = (id) => {
   return n && Number.isFinite(n.x) ? { x: n.x, y: n.y, z: n.z } : null
 }
 
-defineExpose({ focusCamera, superNodeCoords })
+/** 聚焦开启前的相机快照：退出聚焦时恢复（不抢用户开启前的视角） */
+let preFocusCamera = null
+
+// 聚焦邻域变化 → 取景/恢复。首次开启快照相机；换焦点/改跳数只取景（退出
+// 仍回开启前位）；关闭恢复快照（同 XkGraph3D）
+watch(
+  () => props.focusNodeIds,
+  (next, prev) => {
+    if (!graph) return
+    const had = prev?.length > 0
+    const has = next.length > 0
+    if (!had && has) {
+      const cam = graph.cameraPosition()
+      preFocusCamera = { x: cam.x, y: cam.y, z: cam.z, lookAt: cam.lookAt ?? { x: 0, y: 0, z: 0 } }
+      focusCamera(next)
+    } else if (had && has) {
+      focusCamera(next)
+    } else if (had && !has && preFocusCamera) {
+      const { x, y, z, lookAt } = preFocusCamera
+      graph.cameraPosition({ x, y, z }, lookAt, 400)
+      preFocusCamera = null
+    }
+  },
+  { deep: true }
+)
+
+/** 排斥力滑杆映射：d3 charge 强度 = -repulsion/10（滑杆 1~500 → -0.1~-50），同 XkGraph3D */
+const setRepulsion = (value) => {
+  if (!graph) return
+  const charge = graph.d3Force('charge')
+  if (charge) charge.strength(-(value ?? 100) / 10)
+  graph.d3ReheatSimulation()
+}
+
+defineExpose({ focusCamera, superNodeCoords, setRepulsion })
 </script>
 
 <style scoped>
