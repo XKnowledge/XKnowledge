@@ -93,9 +93,15 @@ const writeWorldUserDir = async (userDir) => {
   await atomicWrite(settingsFile(), JSON.stringify({ version: SETTINGS_VERSION, userDir }))
 }
 
-/** 单源扫描：命中缓存（id+mtime+source 三同）免读盘；损坏跳过计数 */
-const scanSource = async (dir, { recursive, source }, cached, entries, broken) => {
+/**
+ * 单源扫描：命中缓存（id+mtime+source 三同）免读盘；损坏跳过计数。
+ * skipInside：user 源扫描时跳过 examplesDir 内的文件——userDir 若覆盖
+ * examples 的父目录，同一文件会被两源发现，缓存按 source 匹配将永续
+ * 失效（每次全量重读）且 source 被改写为 user，跳过保住示例归属与缓存
+ */
+const scanSource = async (dir, { recursive, source, skipInside }, cached, entries, broken) => {
   for (const { id, mtimeMs } of await listChartFiles(dir, recursive)) {
+    if (skipInside && insideDir(id, skipInside)) continue
     const hit = cached.get(id)
     if (hit && hit.graph.mtimeMs === mtimeMs && hit.graph.source === source) {
       entries.set(id, hit)
@@ -134,7 +140,13 @@ export const loadWorldIndex = async () => {
   const broken = { count: 0 }
   await scanSource(examplesDir(), { recursive: false, source: 'example' }, cached, entries, broken)
   if (userDir && path.resolve(userDir) !== path.resolve(examplesDir())) {
-    await scanSource(userDir, { recursive: true, source: 'user' }, cached, entries, broken)
+    await scanSource(
+      userDir,
+      { recursive: true, source: 'user', skipInside: examplesDir() },
+      cached,
+      entries,
+      broken
+    )
   }
   const graphs = []
   const nodes = []

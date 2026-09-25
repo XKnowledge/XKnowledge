@@ -26,7 +26,12 @@ vi.mock('../../src/main/fileService', () => ({
 }))
 
 import { app, dialog } from 'electron'
-import { loadWorldIndex, buildStitches, readWorldGraph, setWorldUserDir } from '../../src/main/worldIndex'
+import {
+  loadWorldIndex,
+  buildStitches,
+  readWorldGraph,
+  setWorldUserDir
+} from '../../src/main/worldIndex'
 
 const mkChart = (names, extra = {}) =>
   JSON.stringify({
@@ -136,6 +141,24 @@ describe('loadWorldIndex', () => {
     const idx = await loadWorldIndex()
     expect(idx.graphs.map((g) => g.title)).toEqual(['A'])
     expect(fs.existsSync(join(userData, 'world-index.json.bak'))).toBe(true)
+  })
+
+  it('userDir 包含 examplesDir：示例不重复收录、source 保持 example、缓存照常命中', async () => {
+    await fs.promises.writeFile(join(root, 'examples', '化学.xk'), mkChart(['化学']))
+    await fs.promises.writeFile(join(root, 'U.xk'), mkChart(['u'])) // userDir 根下的用户图
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 1, userDir: root }) // examples 的父目录
+    )
+
+    const idx = await loadWorldIndex()
+    expect(idx.graphs.filter((g) => g.title === '化学')).toHaveLength(1)
+    expect(idx.graphs.find((g) => g.title === '化学').source).toBe('example')
+    expect(idx.graphs.find((g) => g.title === 'U').source).toBe('user')
+    expect(globalThis.__worldCalls).toHaveLength(2) // 每文件只读一次
+
+    await loadWorldIndex()
+    expect(globalThis.__worldCalls).toHaveLength(2) // 全缓存命中，无永续失效
   })
 })
 

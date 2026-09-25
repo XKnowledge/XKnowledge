@@ -118,6 +118,11 @@ const loadIndex = async () => {
     if (res.brokenCount) {
       message.warning(`世界索引：${res.brokenCount} 个损坏文件已跳过`)
     }
+    // spec §6：用户目录配置了却没扫到图（不存在/无权限/为空）须有界面提示，
+    // 否则选错目录的用户只看到无声的空操作
+    if (res.userDir && !res.graphs.some((g) => g.source === 'user')) {
+      message.warning(`图库目录未发现任何图谱：${res.userDir}`)
+    }
     index.value = res
     worldState.value = createWorldState(res.graphs, res.stitches)
   } catch (err) {
@@ -160,13 +165,21 @@ const onNodeClick = (payload) => {
   cardOpen.value = true
 }
 
-/** 打开完整编辑：示例副本语义（path 置空走另存），用户图带真实路径可写回 */
+/**
+ * 打开完整编辑（spec §5.1）：示例走同窗口副本语义（path 置空走另存，
+ * 与首页打开示例同流）；用户图走新窗口直存回原路径——世界会话
+ * （展开域/视角）不被打断
+ */
 const openFull = async (g) => {
   if (!g) return
   try {
     const { content } = await window.electronAPI.worldReadGraph(g.id)
-    setPendingChart({ value: content, path: g.source === 'example' ? '' : g.id })
-    router.push('/chart')
+    if (g.source === 'example') {
+      setPendingChart({ value: content, path: '' })
+      router.push('/chart')
+    } else {
+      await window.electronAPI.newChartWindow({ content, path: g.id })
+    }
   } catch (err) {
     console.error('打开失败', err)
     message.error('打开失败：文件读取失败或已损坏')
