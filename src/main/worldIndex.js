@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import { examplesDir } from './examplePaths'
 import { readChartFile } from './fileService'
 
@@ -11,6 +11,7 @@ import { readChartFile } from './fileService'
  * 世界层永不写任何 .xk。
  */
 const INDEX_VERSION = 1
+const SETTINGS_VERSION = 1
 
 const cacheFile = () => path.join(app.getPath('userData'), 'world-index.json')
 const settingsFile = () => path.join(app.getPath('userData'), 'world-settings.json')
@@ -78,7 +79,7 @@ const readCache = async () => {
   return new Map()
 }
 
-export const readWorldUserDir = async () => {
+const readWorldUserDir = async () => {
   try {
     const parsed = JSON.parse(await fs.promises.readFile(settingsFile(), 'utf-8'))
     if (typeof parsed?.userDir === 'string' && parsed.userDir) return parsed.userDir
@@ -86,6 +87,10 @@ export const readWorldUserDir = async () => {
     /* 缺失/损坏：视为未配置 */
   }
   return null
+}
+
+const writeWorldUserDir = async (userDir) => {
+  await atomicWrite(settingsFile(), JSON.stringify({ version: SETTINGS_VERSION, userDir }))
 }
 
 /** 单源扫描：命中缓存（id+mtime+source 三同）免读盘；损坏跳过计数 */
@@ -147,4 +152,63 @@ export const loadWorldIndex = async () => {
     })
   )
   return { graphs, nodes, stitches: buildStitches(nodes), brokenCount: broken.count, userDir }
+}
+
+/** 前缀判定：resolve 后以 dir + 分隔符开头（大小写不敏感，同 examplePaths 惯例） */
+const insideDir = (filePath, dir) => {
+  const resolved = path.resolve(filePath)
+  return resolved.toLowerCase().startsWith(path.resolve(dir).toLowerCase() + path.sep)
+}
+
+/**
+ * 读取世界图库内单图：id 必须位于 examplesDir 或当前 userDir 前缀内，
+ * 防止渲染端传任意路径读盘。合法路径走 readChartFile 复用损坏拦截。
+ */
+export const readWorldGraph = async (id) => {
+  if (typeof id !== 'string' || !id || !path.isAbsolute(id)) {
+    throw Object.assign(new Error('[WORLD_PATH_REJECTED] 无效的图谱路径'), {
+      code: 'WORLD_PATH_REJECTED',
+      detail: String(id)
+    })
+  }
+  const userDir = await readWorldUserDir()
+  const allowed = insideDir(id, examplesDir()) || (userDir ? insideDir(id, userDir) : false)
+  if (!allowed) {
+    throw Object.assign(new Error('[WORLD_PATH_REJECTED] 路径不在世界图库范围内'), {
+      code: 'WORLD_PATH_REJECTED',
+      detail: id
+    })
+  }
+  return readChartFile(id)
+}
+
+/**
+ * 设置/清除/选择用户图目录。'pick' 走主进程目录对话框；null 清除；
+ * 字符串须为绝对路径。变更持久化到 world-settings.json，
+ * 下次 loadWorldIndex 按新目录增量重建（旧 user 源条目自然消失）。
+ */
+export const setWorldUserDir = async (dir) => {
+  if (dir === 'pick') {
+    const res = await dialog.showOpenDialog({
+      title: '选择图库目录',
+      properties: ['openDirectory']
+    })
+    if (res.canceled || !res.filePaths?.length) {
+      return { ok: false, userDir: await readWorldUserDir() }
+    }
+    dir = res.filePaths[0]
+  }
+  if (dir === null) {
+    await writeWorldUserDir(null)
+    return { ok: true, userDir: null }
+  }
+  if (typeof dir !== 'string' || !path.isAbsolute(dir)) {
+    throw Object.assign(new Error('[WORLD_DIR_REJECTED] 无效的图库目录'), {
+      code: 'WORLD_DIR_REJECTED',
+      detail: String(dir)
+    })
+  }
+  const resolved = path.resolve(dir)
+  await writeWorldUserDir(resolved)
+  return { ok: true, userDir: resolved }
 }

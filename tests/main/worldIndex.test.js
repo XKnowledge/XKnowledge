@@ -25,8 +25,8 @@ vi.mock('../../src/main/fileService', () => ({
   })
 }))
 
-import { app } from 'electron'
-import { loadWorldIndex, buildStitches } from '../../src/main/worldIndex'
+import { app, dialog } from 'electron'
+import { loadWorldIndex, buildStitches, readWorldGraph, setWorldUserDir } from '../../src/main/worldIndex'
 
 const mkChart = (names, extra = {}) =>
   JSON.stringify({
@@ -136,5 +136,88 @@ describe('loadWorldIndex', () => {
     const idx = await loadWorldIndex()
     expect(idx.graphs.map((g) => g.title)).toEqual(['A'])
     expect(fs.existsSync(join(userData, 'world-index.json.bak'))).toBe(true)
+  })
+})
+
+describe('readWorldGraph', () => {
+  beforeEach(async () => {
+    await fs.promises.writeFile(join(root, 'examples', '化学.xk'), mkChart(['化学']))
+  })
+
+  it('合法 examples 路径透传 readChartFile 返回内容', async () => {
+    const { content } = await readWorldGraph(join(root, 'examples', '化学.xk'))
+    expect(JSON.parse(content).nodes[0].name).toBe('化学')
+  })
+
+  // it.each 用例表在收集期求值，root（beforeEach 里赋值）不可用——
+  // 越界路径用收集期即可计算的 tmpdir 级绝对路径（必在 examples/userDir 之外）
+  const OUTSIDE = join(os.tmpdir(), 'xk-world-outside-bomb.xk')
+  it.each([
+    ['相对路径', 'examples/化学.xk'],
+    ['非字符串', 42],
+    ['空串', ''],
+    ['越界绝对路径', OUTSIDE]
+  ])('拒绝 %s：中文 message + WORLD_PATH_REJECTED token', async (_label, bad) => {
+    await fs.promises.writeFile(OUTSIDE, mkChart(['x']))
+    await expect(readWorldGraph(bad)).rejects.toThrow('[WORLD_PATH_REJECTED]')
+  })
+
+  it('userDir 内合法路径放行；设置 userDir 后 examples 路径仍合法', async () => {
+    const userDir = join(root, 'my-graphs')
+    await fs.promises.mkdir(userDir, { recursive: true })
+    const inside = join(userDir, 'U.xk')
+    await fs.promises.writeFile(inside, mkChart(['u']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 1, userDir })
+    )
+    const { content } = await readWorldGraph(inside)
+    expect(JSON.parse(content).nodes[0].name).toBe('u')
+    // examples 前缀始终合法（与 userDir 设置无关）
+    await expect(readWorldGraph(join(root, 'examples', '化学.xk'))).resolves.toBeDefined()
+  })
+})
+
+describe('setWorldUserDir', () => {
+  it("'pick' 对话框取消：ok=false、目录不变", async () => {
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 1, userDir: join(root, 'a') })
+    )
+    dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
+    const res = await setWorldUserDir('pick')
+    expect(res.ok).toBe(false)
+    expect(res.userDir).toBe(join(root, 'a'))
+  })
+
+  it("'pick' 选中目录：持久化且下次 loadWorldIndex 扫到新目录", async () => {
+    const userDir = join(root, 'picked')
+    await fs.promises.mkdir(userDir, { recursive: true })
+    await fs.promises.writeFile(join(userDir, 'P.xk'), mkChart(['p']))
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [userDir] })
+    const res = await setWorldUserDir('pick')
+    expect(res).toEqual({ ok: true, userDir })
+    const idx = await loadWorldIndex()
+    expect(idx.graphs.some((g) => g.title === 'P')).toBe(true)
+    expect(idx.userDir).toBe(userDir)
+  })
+
+  it('null 清除：user 源条目随下次重建消失', async () => {
+    const userDir = join(root, 'old')
+    await fs.promises.mkdir(userDir, { recursive: true })
+    await fs.promises.writeFile(join(userDir, 'O.xk'), mkChart(['o']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 1, userDir })
+    )
+    await loadWorldIndex() // user 源进缓存
+    const res = await setWorldUserDir(null)
+    expect(res).toEqual({ ok: true, userDir: null })
+    const idx = await loadWorldIndex()
+    expect(idx.graphs.some((g) => g.source === 'user')).toBe(false)
+  })
+
+  it('非绝对路径字符串：拒绝', async () => {
+    await expect(setWorldUserDir('relative/dir')).rejects.toThrow('[WORLD_DIR_REJECTED]')
   })
 })
