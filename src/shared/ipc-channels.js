@@ -24,5 +24,10 @@ export const IPC = {
   APP_CONFIRM_UNSAVED: 'app:confirm-unsaved',
   APP_REQUEST_CLOSE: 'app:request-close',
   APP_TITLE_CHANGED: 'app:title-changed',
-  APP_THEME_APPLIED: 'app:theme-applied'
+  APP_THEME_APPLIED: 'app:theme-applied',
+
+  // 世界域（分层聚合世界图：只读派生视图）
+  WORLD_LOAD_INDEX: 'world:load-index',
+  WORLD_READ_GRAPH: 'world:read-graph',
+  WORLD_SET_USER_DIR: 'world:set-user-dir'
 }

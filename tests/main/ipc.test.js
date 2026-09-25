@@ -28,9 +28,22 @@ vi.mock('../../src/main/exampleService', () => ({
   openExample: vi.fn()
 }))
 
+vi.mock('../../src/main/worldIndex', () => ({
+  loadWorldIndex: vi.fn(async () => ({
+    graphs: [],
+    nodes: [],
+    stitches: [],
+    brokenCount: 0,
+    userDir: null
+  })),
+  readWorldGraph: vi.fn(async (id) => ({ content: `{"id":"${id}"}`, path: id })),
+  setWorldUserDir: vi.fn(async (dir) => ({ ok: true, userDir: dir }))
+}))
+
 import { ipcMain, BrowserWindow } from 'electron'
 import * as fileService from '../../src/main/fileService'
 import { listExamples, openExample } from '../../src/main/exampleService'
+import * as worldIndex from '../../src/main/worldIndex'
 import { createChartWindow, takePendingChart, setWindowTitle } from '../../src/main/windowManager'
 import { registerIpc } from '../../src/main/ipc'
 import { IPC } from '../../src/shared/ipc-channels'
@@ -475,5 +488,27 @@ describe('FILE_DIRTY：未保存圆点', () => {
     // 同窗口再开新文件：若 dirty 未被重置，此处会带圆点
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d5.xk' })
     expect(setWindowTitle).toHaveBeenLastCalledWith(win, 'd5 — XKnowledge', 'd5 — XKnowledge')
+  })
+})
+
+describe('世界域通道', () => {
+  it('world:load-index 注册并透传 loadWorldIndex 结果', async () => {
+    const handler = handlerOf(IPC.WORLD_LOAD_INDEX)
+    expect(handler).toBeTypeOf('function')
+    const res = await handler()
+    expect(res).toEqual({ graphs: [], nodes: [], stitches: [], brokenCount: 0, userDir: null })
+    expect(worldIndex.loadWorldIndex).toHaveBeenCalledTimes(1)
+  })
+
+  it('world:read-graph 透传 { id } 参数', async () => {
+    const handler = handlerOf(IPC.WORLD_READ_GRAPH)
+    await handler(senderOf(1), { id: 'C:/x.xk' })
+    expect(worldIndex.readWorldGraph).toHaveBeenCalledWith('C:/x.xk')
+  })
+
+  it('world:set-user-dir 透传 { dir } 参数', async () => {
+    const handler = handlerOf(IPC.WORLD_SET_USER_DIR)
+    await handler(senderOf(1), { dir: 'pick' })
+    expect(worldIndex.setWorldUserDir).toHaveBeenCalledWith('pick')
   })
 })

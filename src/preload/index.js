@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
   themeApplied: (payload) => ipcRenderer.invoke(IPC.APP_THEME_APPLIED, payload),
+  worldLoadIndex: () => ipcRenderer.invoke(IPC.WORLD_LOAD_INDEX),
+  worldReadGraph: (id) => ipcRenderer.invoke(IPC.WORLD_READ_GRAPH, { id }),
+  worldSetUserDir: (dir) => ipcRenderer.invoke(IPC.WORLD_SET_USER_DIR, { dir }),
   onRequestClose: (callback) => {
     const listener = () => callback()
     ipcRenderer.on(IPC.APP_REQUEST_CLOSE, listener)

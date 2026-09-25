@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
+import * as worldIndex from './worldIndex'
 import { isExamplePath } from './examplePaths'
 import {
   applyTheme,
@@ -195,4 +196,9 @@ export const registerIpc = () => {
     applyTheme(payload)
     return { ok: true }
   })
+
+  // 世界域：主进程 throw（路径拒绝/读取损坏）经 invoke 自动变渲染端 reject
+  ipcMain.handle(IPC.WORLD_LOAD_INDEX, () => worldIndex.loadWorldIndex())
+  ipcMain.handle(IPC.WORLD_READ_GRAPH, (event, { id }) => worldIndex.readWorldGraph(id))
+  ipcMain.handle(IPC.WORLD_SET_USER_DIR, (event, { dir }) => worldIndex.setWorldUserDir(dir))
 }
