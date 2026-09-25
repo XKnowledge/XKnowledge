@@ -2,12 +2,13 @@ import { describe, it, expect } from 'vitest'
 import {
   superNodeVal,
   buildSuperGraph,
-  labelCommunities,
   searchWorldNodes,
   createWorldState,
   applyExpansion,
   applyCollapse,
-  worldScene
+  worldScene,
+  worldFocusNeighborhood,
+  defaultFocusNodeId
 } from '../../src/renderer/src/utils/worldGraph'
 
 const g = (id, title) => ({ id, title, source: 'example', nodeCount: 3, linkCount: 2, mtimeMs: 0 })
@@ -45,33 +46,6 @@ describe('buildSuperGraph', () => {
 
   it('无缝合：links 为空数组', () => {
     expect(buildSuperGraph([g('A', 'A')], []).links).toEqual([])
-  })
-})
-
-describe('labelCommunities', () => {
-  it('两团结构聚成两个社区，社区编号自 0 连续', () => {
-    const nodes = [g('A', 'A'), g('B', 'B'), g('C', 'C'), g('D', 'D')]
-    const links = [
-      { source: 'A', target: 'B', weight: 3, sharedNames: ['x'] },
-      { source: 'B', target: 'C', weight: 3, sharedNames: ['x'] }
-    ]
-    const labeled = labelCommunities(nodes, links)
-    const comm = new Map(labeled.map((n) => [n.id, n.community]))
-    expect(comm.get('A')).toBe(comm.get('B'))
-    expect(comm.get('B')).toBe(comm.get('C'))
-    expect(comm.get('D')).not.toBe(comm.get('A'))
-    const ids = [...new Set(labeled.map((n) => n.community))].sort((a, b) => a - b)
-    expect(ids).toEqual([0, 1])
-  })
-
-  it('确定性：同输入重复调用结果相同；全断图每点自成一社区', () => {
-    const nodes = [g('A', 'A'), g('B', 'B'), g('C', 'C')]
-    const links = [{ source: 'A', target: 'B', weight: 1, sharedNames: ['x'] }]
-    const r1 = labelCommunities(nodes, links)
-    const r2 = labelCommunities(nodes, links)
-    expect(r1).toEqual(r2)
-    const isolated = labelCommunities(nodes, [])
-    expect(new Set(isolated.map((n) => n.community)).size).toBe(3)
   })
 })
 
@@ -157,5 +131,85 @@ describe('世界状态：展开/收拢/场景', () => {
       }
     )
     expect(worldScene(state2).links.some((l) => l.__kind !== 'stitch')).toBe(true)
+  })
+})
+
+describe('worldFocusNeighborhood：全场景 id 版 BFS', () => {
+  // A、C 收拢超节点；B 已展开为 B|n1/B|n2。三种边全覆盖：
+  // 收拢缝合(A—C)、脐带(A—B|n1)、域内真实边(B|n1—B|n2)
+  const scene = {
+    nodes: [
+      { id: 'A', __kind: 'graph' },
+      { id: 'C', __kind: 'graph' },
+      { id: 'B|n1', __kind: 'node' },
+      { id: 'B|n2', __kind: 'node' }
+    ],
+    links: [
+      { source: 'A', target: 'C', __kind: 'stitch' },
+      { source: 'A', target: 'B|n1', __kind: 'stitch' },
+      { source: 'B|n1', target: 'B|n2', __kind: 'link' }
+    ]
+  }
+
+  it('1 跳：缝合边与脐带边混合扩展，含焦点自身', () => {
+    expect([...worldFocusNeighborhood(scene, 'A', 1)].sort()).toEqual(['A', 'B|n1', 'C'])
+  })
+
+  it('2 跳：继续沿域内真实边扩展', () => {
+    expect([...worldFocusNeighborhood(scene, 'A', 2)].sort()).toEqual(['A', 'B|n1', 'B|n2', 'C'])
+  })
+
+  it('0 跳只有焦点自身；焦点不在场景返回空集', () => {
+    expect([...worldFocusNeighborhood(scene, 'A', 0)]).toEqual(['A'])
+    expect(worldFocusNeighborhood(scene, 'X', 2).size).toBe(0)
+  })
+
+  it('不连通的孤立域不越界混入', () => {
+    const withIsland = {
+      nodes: [...scene.nodes, { id: 'D', __kind: 'graph' }],
+      links: scene.links
+    }
+    expect([...worldFocusNeighborhood(withIsland, 'A', 3)].sort()).toEqual([
+      'A',
+      'B|n1',
+      'B|n2',
+      'C'
+    ])
+  })
+
+  it('边端点为已解析节点对象（d3 灌库后）也按 id 识别', () => {
+    const resolved = {
+      nodes: scene.nodes,
+      links: [
+        { source: { id: 'A' }, target: { id: 'C' }, __kind: 'stitch' },
+        { source: { id: 'A' }, target: { id: 'B|n1' }, __kind: 'stitch' },
+        { source: { id: 'B|n1' }, target: { id: 'B|n2' }, __kind: 'link' }
+      ]
+    }
+    expect([...worldFocusNeighborhood(resolved, 'A', 1)].sort()).toEqual(['A', 'B|n1', 'C'])
+  })
+})
+
+describe('defaultFocusNodeId', () => {
+  const nodes = [
+    { id: 'A', __kind: 'graph', nodeCount: 10 },
+    { id: 'B', __kind: 'graph', nodeCount: 99 },
+    { id: 'C|n', __kind: 'node', symbolSize: 50 }
+  ]
+
+  it('度数最高优先', () => {
+    const links = [
+      { source: 'A', target: 'C|n' },
+      { source: 'A', target: 'B' }
+    ]
+    expect(defaultFocusNodeId(nodes, links)).toBe('A')
+  })
+
+  it('同度数比体量：超节点 nodeCount / 真实节点 symbolSize', () => {
+    expect(defaultFocusNodeId(nodes, [{ source: 'A', target: 'B' }])).toBe('B')
+  })
+
+  it('空场景返回空串', () => {
+    expect(defaultFocusNodeId([], [])).toBe('')
   })
 })

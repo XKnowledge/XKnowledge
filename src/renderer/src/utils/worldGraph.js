@@ -1,5 +1,5 @@
 /**
- * 世界层纯函数：超图构建、社区检测、跨库搜索、展开/收拢状态变换、
+ * 世界层纯函数：超图构建、跨库搜索、展开/收拢状态变换、
  * 缝合边三态与渲染场景导出。全部无副作用——组件层（XkWorldGraph /
  * WorldView）只做装配。数据形状见 docs/superpowers/specs/2026-09-25-world-graph-design.md
  */
@@ -43,54 +43,6 @@ export const buildSuperGraph = (graphs, stitches) => {
   return { nodes, links }
 }
 
-/**
- * 加权标签传播社区检测（确定性）：节点按 id 升序遍历，取邻居加权票数
- * 最高社区（平局取社区标号最小），至多 20 轮或收敛。返回带 community
- * 字段的节点副本；社区编号按首现顺序自 0 连续。
- * 背景实测：缝合图 85% 图在一个连通分量内，连通分量着色无结构，
- * 社区检测让「知识大区」自然浮现。
- */
-export const labelCommunities = (nodes, links) => {
-  const order = (nodes ?? []).map((n) => n.id).sort()
-  const label = new Map(order.map((id, i) => [id, i]))
-  const adj = new Map(order.map((id) => [id, []]))
-  for (const l of links ?? []) {
-    const w = l.weight ?? 1
-    adj.get(l.source)?.push([l.target, w])
-    adj.get(l.target)?.push([l.source, w])
-  }
-  let changed = true
-  let rounds = 0
-  while (changed && rounds++ < 20) {
-    changed = false
-    for (const id of order) {
-      const votes = new Map()
-      for (const [nb, w] of adj.get(id) ?? []) {
-        votes.set(label.get(nb), (votes.get(label.get(nb)) ?? 0) + w)
-      }
-      let bestLabel = label.get(id)
-      let bestW = -1
-      for (const [lab, w] of [...votes.entries()].sort((a, b) => a[0] - b[0])) {
-        if (w > bestW) {
-          bestW = w
-          bestLabel = lab
-        }
-      }
-      if (bestLabel !== label.get(id)) {
-        label.set(id, bestLabel)
-        changed = true
-      }
-    }
-  }
-  const rename = new Map()
-  let next = 0
-  for (const id of order) {
-    const lab = label.get(id)
-    if (!rename.has(lab)) rename.set(lab, next++)
-  }
-  return (nodes ?? []).map((n) => ({ ...n, community: rename.get(label.get(n.id)) }))
-}
-
 /** 跨全库节点搜索：name/des 大小写不敏感子串（语义同 searchGraphNodes） */
 export const searchWorldNodes = (nodes, graphsById, keyword) => {
   const kw = String(keyword ?? '')
@@ -120,7 +72,7 @@ export const searchWorldNodes = (nodes, graphsById, keyword) => {
 export const createWorldState = (graphs, stitches) => {
   const built = buildSuperGraph(graphs, stitches)
   return {
-    superNodes: labelCommunities(built.nodes, built.links),
+    superNodes: built.nodes,
     superLinks: built.links,
     expanded: {}, // graphId → { anchor: {x,y,z} }
     graphNodes: [], // { ...节点, id: `${graphId}|${name}`, graphId, __kind: 'node' }
@@ -190,4 +142,70 @@ export const worldScene = (state) => {
     }
   }
   return { nodes, links }
+}
+
+/** 边端点取 id：字符串原样；d3 灌库后可能已解析为节点对象（同 graphData.linkEnd 语义） */
+const linkEndId = (end) => (typeof end === 'object' && end !== null ? end.id : end)
+
+/**
+ * 世界聚焦邻域：从 focusId 出发沿场景全部边（域内真实边 + 缝合边/脐带边）
+ * BFS hops 跳的节点 id 集合（含焦点自身）。语义对齐图表页 focusNeighborhood，
+ * 但按 id——世界场景跨图同名（name 不唯一）。焦点不在场景中时返回空集
+ * （调用方以空集表达「无聚焦，全图正常色」）。
+ */
+export const worldFocusNeighborhood = (scene, focusId, hops) => {
+  if (!focusId || !scene?.nodes?.some((n) => n?.id === focusId)) return new Set()
+  const adj = new Map()
+  const addEdge = (s, t) => {
+    if (!adj.has(s)) adj.set(s, [])
+    adj.get(s).push(t)
+  }
+  for (const l of scene?.links ?? []) {
+    const s = linkEndId(l.source)
+    const t = linkEndId(l.target)
+    if (s == null || t == null || s === t) continue
+    addEdge(s, t)
+    addEdge(t, s)
+  }
+  const visited = new Set([focusId])
+  let frontier = [focusId]
+  for (let d = 0; d < (hops ?? 0) && frontier.length; d++) {
+    const next = []
+    for (const id of frontier) {
+      for (const nb of adj.get(id) ?? []) {
+        if (!visited.has(nb)) {
+          visited.add(nb)
+          next.push(nb)
+        }
+      }
+    }
+    frontier = next
+  }
+  return visited
+}
+
+/**
+ * 世界默认焦点（聚焦开启且无当前选中时）：度数最高 → 体量
+ * （超节点 nodeCount / 真实节点 symbolSize）→ 先出现。空场景返回 ''。
+ * 语义对齐图表页 defaultFocusNode，按 id 而非 name。
+ */
+export const defaultFocusNodeId = (nodes, links) => {
+  if (!nodes?.length) return ''
+  const degree = new Map()
+  const bump = (id) => degree.set(id, (degree.get(id) ?? 0) + 1)
+  for (const l of links ?? []) {
+    bump(linkEndId(l.source))
+    bump(linkEndId(l.target))
+  }
+  const sizeOf = (n) => (n.__kind === 'graph' ? n.nodeCount : n.symbolSize) ?? 0
+  let best = nodes[0]
+  let bestDeg = degree.get(best.id) ?? 0
+  for (let i = 1; i < nodes.length; i++) {
+    const d = degree.get(nodes[i].id) ?? 0
+    if (d > bestDeg || (d === bestDeg && (sizeOf(nodes[i]) ?? 0) > (sizeOf(best) ?? 0))) {
+      best = nodes[i]
+      bestDeg = d
+    }
+  }
+  return best.id
 }
