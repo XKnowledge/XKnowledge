@@ -1,4 +1,4 @@
-// 冒烟驱动：世界图——首页入口进入、全景渲染、Ctrl+F 全库搜索、
+// 冒烟驱动：世界树——首页入口进入、全景渲染、Ctrl+F 全库搜索、
 // 搜索跳转自动展开（展开列表出现 + 相机飞达）。覆盖 WorldView /
 // XkWorldGraph / worldGraph.js 在真实渲染链路上的行为。
 // 用法：node scripts/smoke-world.mjs   （需先 npm run build）
@@ -52,7 +52,7 @@ await page.locator('#openWorld').click()
 await page.waitForSelector('.world-graph-container canvas', { timeout: 60_000 }) // 首建全量扫描放宽
 await page.waitForTimeout(4_000) // 力布局铺开 + 标签渲染
 await shot('world-overview')
-expectTrue('世界页标题', (await page.locator('.world-title').textContent()) === '世界图')
+expectTrue('世界页标题', (await page.locator('.world-title').textContent()) === '世界树')
 
 // 场景 2：Ctrl+F 全库搜索
 await page.keyboard.press('Control+f')

@@ -2,7 +2,7 @@
   <a-layout style="height: 100vh">
     <a-layout-header class="world-header">
       <a-button size="small" @click="router.push('/')">← 返回</a-button>
-      <span class="world-title">世界图</span>
+      <span class="world-title">世界树</span>
       <a-button size="small" :loading="loading" @click="loadIndex">刷新世界</a-button>
       <a-button size="small" @click="pickUserDir">图库目录</a-button>
       <span class="world-tip">Ctrl+F 搜索全库</span>

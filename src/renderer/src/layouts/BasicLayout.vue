@@ -5,7 +5,7 @@
     <a-layout-sider class="xk-sider">
       <div style="height: 50px" />
       <div class="sider-buttons">
-        <a-button id="openWorld" @click="router.push('/world')">世界图</a-button>
+        <a-button id="openWorld" @click="router.push('/world')">世界树</a-button>
         <a-button id="openSettings" @click="settingsRef?.open()">设置</a-button>
         <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
       </div>

@@ -5,7 +5,7 @@ import { examplesDir } from './examplePaths'
 import { readChartFile } from './fileService'
 
 /**
- * 世界图索引：双源（examples/ + 用户图目录）扫描 .xk，聚合跨图同名缝合线，
+ * 世界树索引：双源（examples/ + 用户图目录）扫描 .xk，聚合跨图同名缝合线，
  * 产出只读世界层数据。.xk 文件是唯一权威，本模块产物（world-index.json）
  * 是纯缓存：mtime 未变的图不重读，损坏即弃、全量可重建。
  * 世界层永不写任何 .xk。
@@ -173,7 +173,7 @@ const insideDir = (filePath, dir) => {
 }
 
 /**
- * 读取世界图库内单图：id 必须位于 examplesDir 或当前 userDir 前缀内，
+ * 读取世界树图库内单图：id 必须位于 examplesDir 或当前 userDir 前缀内，
  * 防止渲染端传任意路径读盘。合法路径走 readChartFile 复用损坏拦截。
  */
 export const readWorldGraph = async (id) => {
@@ -186,7 +186,7 @@ export const readWorldGraph = async (id) => {
   const userDir = await readWorldUserDir()
   const allowed = insideDir(id, examplesDir()) || (userDir ? insideDir(id, userDir) : false)
   if (!allowed) {
-    throw Object.assign(new Error('[WORLD_PATH_REJECTED] 路径不在世界图库范围内'), {
+    throw Object.assign(new Error('[WORLD_PATH_REJECTED] 路径不在世界树图库范围内'), {
       code: 'WORLD_PATH_REJECTED',
       detail: id
     })
