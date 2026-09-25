@@ -198,10 +198,12 @@ export const readWorldGraph = async (id) => {
  * 设置/清除/选择用户图目录。'pick' 走主进程目录对话框；null 清除；
  * 字符串须为绝对路径。变更持久化到 world-settings.json，
  * 下次 loadWorldIndex 按新目录增量重建（旧 user 源条目自然消失）。
+ * window 为触发窗口：绑定为对话框 parent 使其模态，防止对话框
+ * 打开期间窗口仍可点击「图库目录」连开多个选择框（可为 undefined）。
  */
-export const setWorldUserDir = async (dir) => {
+export const setWorldUserDir = async (dir, window) => {
   if (dir === 'pick') {
-    const res = await dialog.showOpenDialog({
+    const res = await dialog.showOpenDialog(window, {
       title: '选择图库目录',
       properties: ['openDirectory']
     })

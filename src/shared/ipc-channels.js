@@ -20,6 +20,8 @@ export const IPC = {
   APP_TAKE_PENDING_CHART: 'app:take-pending-chart',
   APP_ENTER_CHART_MODE: 'app:enter-chart-mode',
   APP_EXIT_CHART_MODE: 'app:exit-chart-mode',
+  APP_ENTER_WORLD_MODE: 'app:enter-world-mode',
+  APP_EXIT_WORLD_MODE: 'app:exit-world-mode',
   APP_CLOSE_WINDOW: 'app:close-window',
   APP_CONFIRM_UNSAVED: 'app:confirm-unsaved',
   APP_REQUEST_CLOSE: 'app:request-close',

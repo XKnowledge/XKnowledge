@@ -174,6 +174,32 @@ export const createChartWindow = ({ content, path = '' }) => {
 const chartModeWindows = new Map()
 
 /**
+ * 解锁窗口尺寸：图表页与世界树页共用（放开最大化/最小化/缩放，
+ * 最小尺寸基线与创建时默认尺寸一致）。
+ */
+const unlockSizing = (current_window) => {
+  current_window.setMaximizable(true)
+  current_window.setMinimizable(true)
+  current_window.setResizable(true)
+  current_window.setMinimumSize(900, 670)
+}
+
+/**
+ * 锁回窗口尺寸，与 unlockSizing 对称：取消最大化、回退最小尺寸、
+ * 恢复默认 900x670。unmaximize 对非最大化窗口是无害空操作，
+ * 无须条件判断；必须先 unmaximize 再 setSize（最大化中的窗口
+ * 直接 setSize 不生效）。
+ */
+const lockSizing = (current_window) => {
+  current_window.setMaximizable(false)
+  current_window.setMinimizable(false)
+  current_window.setResizable(false)
+  current_window.unmaximize()
+  current_window.setMinimumSize(0, 0)
+  current_window.setSize(900, 670)
+}
+
+/**
  * 设置窗口标题并同步推送渲染端自绘标题栏。两个字符串分工：setTitle 只影响
  * 任务栏/Alt-Tab（titleBarOverlay 仅绘制窗口控制按钮，不画标题文字），
  * 应用内标题条由 BasicLayout 订阅 app:title-changed 渲染——未保存圆点在
@@ -227,10 +253,7 @@ export const enterChartMode = (current_window) => {
     responsiveHandler
   })
 
-  current_window.setMaximizable(true)
-  current_window.setMinimizable(true)
-  current_window.setResizable(true)
-  current_window.setMinimumSize(900, 670)
+  unlockSizing(current_window)
   // 进图表页先给默认标题；装载/保存上报路径后由 ipc 层按登记簿覆盖为文件名。
   // 放这里而非渲染端：标题消歧需要跨窗口全局视角
   setWindowTitle(current_window, UNTITLED_TITLE)
@@ -259,15 +282,39 @@ export const exitChartMode = (current_window) => {
   current_window.removeListener('responsive', handlers.responsiveHandler)
   chartModeWindows.delete(id)
 
-  current_window.setMaximizable(false)
-  current_window.setMinimizable(false)
-  current_window.setResizable(false)
-  // 对称恢复（图表页卸载不再只有关窗一条路——「关闭文件」会同窗口跳回首页）：
-  // 取消最大化、回退图表页设置的最小尺寸、恢复默认窗口尺寸。unmaximize 对
-  // 非最大化窗口是无害空操作，无须条件判断
-  current_window.unmaximize()
-  current_window.setMinimumSize(0, 0)
-  current_window.setSize(900, 670)
+  lockSizing(current_window)
   // 与 enterChartMode 的标题设置对称：图表页卸载（回首页/关窗）恢复默认标题
   setWindowTitle(current_window, DEFAULT_TITLE)
+}
+
+// 已进入世界树模式的窗口：id -> closed 清理器（退出时移除）
+const worldModeWindows = new Map()
+
+/**
+ * 进入世界树模式：仅解锁窗口尺寸（世界页是只读派生视图，无未保存态，
+ * 故不注册「关闭前确认」拦截，也不改窗口标题——与 enterChartMode 的
+ * 两点差异）。由世界页挂载时 invoke app:enter-world-mode 触发；幂等。
+ */
+export const enterWorldMode = (current_window) => {
+  if (!current_window) return // sender 窗口已销毁（见 ipc.js senderWindow 说明）
+  const { id } = current_window
+  if (worldModeWindows.has(id)) return
+  const closedHandler = () => worldModeWindows.delete(id)
+  worldModeWindows.set(id, { closedHandler })
+  current_window.on('closed', closedHandler)
+  unlockSizing(current_window)
+}
+
+/**
+ * 退出世界树模式：恢复窗口锁定，与 enterWorldMode 对称。
+ * 由世界页卸载时 invoke app:exit-world-mode 触发；未在世界树模式时为空操作。
+ */
+export const exitWorldMode = (current_window) => {
+  if (!current_window || current_window.isDestroyed()) return
+  const { id } = current_window
+  const handlers = worldModeWindows.get(id)
+  if (!handlers) return
+  current_window.removeListener('closed', handlers.closedHandler)
+  worldModeWindows.delete(id)
+  lockSizing(current_window)
 }

@@ -52,7 +52,10 @@ await page.locator('#openWorld').click()
 await page.waitForSelector('.world-graph-container canvas', { timeout: 60_000 }) // 首建全量扫描放宽
 await page.waitForTimeout(4_000) // 力布局铺开 + 标签渲染
 await shot('world-overview')
-expectTrue('世界页标题', (await page.locator('.world-title').textContent()) === '世界树')
+expectTrue(
+  '世界页头部按钮',
+  (await page.locator('.world-header button', { hasText: '图库目录' }).count()) === 1
+)
 
 // 场景 2：Ctrl+F 全库搜索
 await page.keyboard.press('Control+f')

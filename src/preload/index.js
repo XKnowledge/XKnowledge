@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   takePendingChart: () => ipcRenderer.invoke(IPC.APP_TAKE_PENDING_CHART),
   enterChartMode: () => ipcRenderer.invoke(IPC.APP_ENTER_CHART_MODE),
   exitChartMode: () => ipcRenderer.invoke(IPC.APP_EXIT_CHART_MODE),
+  enterWorldMode: () => ipcRenderer.invoke(IPC.APP_ENTER_WORLD_MODE),
+  exitWorldMode: () => ipcRenderer.invoke(IPC.APP_EXIT_WORLD_MODE),
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
   themeApplied: (payload) => ipcRenderer.invoke(IPC.APP_THEME_APPLIED, payload),

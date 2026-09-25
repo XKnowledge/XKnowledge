@@ -19,6 +19,8 @@ vi.mock('../../src/main/windowManager', () => ({
   createChartWindow: vi.fn(),
   enterChartMode: vi.fn(),
   exitChartMode: vi.fn(),
+  enterWorldMode: vi.fn(() => ({ ok: true })),
+  exitWorldMode: vi.fn(() => ({ ok: true })),
   takePendingChart: vi.fn(),
   setWindowTitle: vi.fn()
 }))
@@ -45,6 +47,7 @@ import * as fileService from '../../src/main/fileService'
 import { listExamples, openExample } from '../../src/main/exampleService'
 import * as worldIndex from '../../src/main/worldIndex'
 import { createChartWindow, takePendingChart, setWindowTitle } from '../../src/main/windowManager'
+import * as windowManager from '../../src/main/windowManager'
 import { registerIpc } from '../../src/main/ipc'
 import { IPC } from '../../src/shared/ipc-channels'
 
@@ -506,9 +509,20 @@ describe('世界域通道', () => {
     expect(worldIndex.readWorldGraph).toHaveBeenCalledWith('C:/x.xk')
   })
 
-  it('world:set-user-dir 透传 { dir } 参数', async () => {
+  it('world:set-user-dir 透传 { dir } 参数并绑定触发窗口（模态对话框）', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
     const handler = handlerOf(IPC.WORLD_SET_USER_DIR)
     await handler(senderOf(1), { dir: 'pick' })
-    expect(worldIndex.setWorldUserDir).toHaveBeenCalledWith('pick')
+    expect(worldIndex.setWorldUserDir).toHaveBeenCalledWith('pick', win)
+  })
+
+  it('world 模式通道绑定触发窗口（解锁/锁定窗口尺寸）', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    await handlerOf(IPC.APP_ENTER_WORLD_MODE)(senderOf(1))
+    await handlerOf(IPC.APP_EXIT_WORLD_MODE)(senderOf(1))
+    expect(windowManager.enterWorldMode).toHaveBeenCalledWith(win)
+    expect(windowManager.exitWorldMode).toHaveBeenCalledWith(win)
   })
 })

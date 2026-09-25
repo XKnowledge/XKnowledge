@@ -12,6 +12,8 @@ import {
   applyTheme,
   enterChartMode,
   exitChartMode,
+  enterWorldMode,
+  exitWorldMode,
   setWindowTitle
 } from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
@@ -104,6 +106,58 @@ describe('图表模式窗口标题', () => {
     enterChartMode(win)
     expect(() => exitChartMode(win)).not.toThrow()
     expect(win.setTitle).not.toHaveBeenCalledWith('XKnowledge')
+  })
+})
+
+describe('世界树模式：仅解锁尺寸', () => {
+  // worldModeWindows 同为模块级 Map，各用例用独立 id 隔离（同图表模式标题组惯例）
+  it('enterWorldMode 解锁最大化/最小化/缩放并设最小尺寸', () => {
+    const win = fakeWindow({ id: 10 })
+    enterWorldMode(win)
+    expect(win.setMaximizable).toHaveBeenCalledWith(true)
+    expect(win.setMinimizable).toHaveBeenCalledWith(true)
+    expect(win.setResizable).toHaveBeenCalledWith(true)
+    expect(win.setMinimumSize).toHaveBeenCalledWith(900, 670)
+  })
+
+  it('与图表模式的差异：不注册 close 拦截、不改窗口标题（只读页无未保存态）', () => {
+    const win = fakeWindow({ id: 11 })
+    enterWorldMode(win)
+    expect(win.on).not.toHaveBeenCalledWith('close', expect.anything())
+    expect(win.setTitle).not.toHaveBeenCalled()
+  })
+
+  it('exitWorldMode 对称恢复：锁回三项并取消最大化、恢复默认 900x670', () => {
+    const win = fakeWindow({ id: 12 })
+    enterWorldMode(win)
+    exitWorldMode(win)
+    expect(win.setMaximizable).toHaveBeenCalledWith(false)
+    expect(win.setMinimizable).toHaveBeenCalledWith(false)
+    expect(win.setResizable).toHaveBeenCalledWith(false)
+    expect(win.unmaximize).toHaveBeenCalledTimes(1)
+    expect(win.setMinimumSize).toHaveBeenCalledWith(0, 0)
+    expect(win.setSize).toHaveBeenCalledWith(900, 670)
+  })
+
+  it('未进入世界树模式时 exitWorldMode 为空操作，不碰窗口', () => {
+    const win = fakeWindow({ id: 13 })
+    exitWorldMode(win)
+    expect(win.unmaximize).not.toHaveBeenCalled()
+    expect(win.setSize).not.toHaveBeenCalled()
+  })
+
+  it('重复 enter 幂等：closed 清理器只注册一次', () => {
+    const win = fakeWindow({ id: 14 })
+    enterWorldMode(win)
+    enterWorldMode(win)
+    const closedCalls = win.on.mock.calls.filter(([evt]) => evt === 'closed')
+    expect(closedCalls).toHaveLength(1)
+  })
+
+  it('窗口已销毁时 enter 后 exit 不抛异常', () => {
+    const win = fakeWindow({ id: 15, isDestroyed: vi.fn(() => true) })
+    enterWorldMode(win)
+    expect(() => exitWorldMode(win)).not.toThrow()
   })
 })
 

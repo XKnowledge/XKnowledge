@@ -213,6 +213,16 @@ describe('setWorldUserDir', () => {
     expect(res.userDir).toBe(join(root, 'a'))
   })
 
+  it("'pick' 对话框以触发窗口为 parent（模态，防连点开多个目录选择框）", async () => {
+    const win = {}
+    dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
+    await setWorldUserDir('pick', win)
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith(win, {
+      title: '选择图库目录',
+      properties: ['openDirectory']
+    })
+  })
+
   it("'pick' 选中目录：持久化且下次 loadWorldIndex 扫到新目录", async () => {
     const userDir = join(root, 'picked')
     await fs.promises.mkdir(userDir, { recursive: true })

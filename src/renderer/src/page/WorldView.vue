@@ -1,11 +1,9 @@
 <template>
   <a-layout style="height: 100vh">
     <a-layout-header class="world-header">
-      <a-button size="small" @click="router.push('/')">← 返回</a-button>
-      <span class="world-title">世界树</span>
-      <a-button size="small" :loading="loading" @click="loadIndex">刷新世界</a-button>
-      <a-button size="small" @click="pickUserDir">图库目录</a-button>
-      <span class="world-tip">Ctrl+F 搜索全库</span>
+      <a-button size="small" @click="router.push('/')">关闭</a-button>
+      <a-button size="small" :loading="loading" @click="loadIndex">刷新</a-button>
+      <a-button size="small" :disabled="picking" @click="pickUserDir">图库目录</a-button>
     </a-layout-header>
     <a-layout-content class="world-content">
       <a-spin v-if="loading" class="world-loading" />
@@ -88,6 +86,7 @@ const searchRef = ref(null)
 const cardOpen = ref(false)
 const selected = ref(null)
 const expanding = ref(false)
+const picking = ref(false)
 
 // 图内搜索（会话级，同图表页语义：不写盘、换页即弃）
 const searchOpen = ref(false)
@@ -201,6 +200,10 @@ const goToHit = async (idx) => {
 }
 
 const pickUserDir = async () => {
+  // 选目录期间禁用按钮：主进程对话框对同窗口模态，但渲染层仍须防
+  // 对话框弹出前的连点（每次 invoke 都会各开一个目录选择框）
+  if (picking.value) return
+  picking.value = true
   try {
     const res = await window.electronAPI.worldSetUserDir('pick')
     if (res.ok) {
@@ -210,6 +213,8 @@ const pickUserDir = async () => {
   } catch (err) {
     console.error('设置图库目录失败', err)
     message.error('设置图库目录失败')
+  } finally {
+    picking.value = false
   }
 }
 
@@ -225,10 +230,18 @@ const onKeydown = (event) => {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
+  // 通知主进程解锁窗口（最大化/最小化/缩放），与图表页的 enterChartMode 同构
+  window.electronAPI.enterWorldMode().catch((err) => {
+    console.error('进入世界树模式失败', err)
+  })
   await loadIndex()
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  // 恢复窗口锁定（与挂载时的 enterWorldMode 对称）
+  window.electronAPI.exitWorldMode().catch((err) => {
+    console.error('退出世界树模式失败', err)
+  })
 })
 </script>
 
@@ -237,19 +250,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
-  height: 44px !important;
-  line-height: 44px;
+  /* ！important：BasicLayout 全局 .ant-layout-header{padding-inline:0!important}
+     会清掉本页头部左右留白，使「关闭」贴死窗口左缘 */
+  padding: 0 16px !important;
+  height: 53px !important; /* 与图表页头部（.move-show/.move-header）一致 */
+  line-height: 53px;
   background-color: var(--xk-bg-layout);
   border-bottom: 1px solid var(--xk-border);
-}
-.world-title {
-  font-weight: 600;
-}
-.world-tip {
-  margin-left: auto;
-  color: var(--xk-text-secondary);
-  font: 12px sans-serif;
 }
 .world-content {
   position: relative;
