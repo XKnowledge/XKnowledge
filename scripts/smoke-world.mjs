@@ -1,0 +1,81 @@
+// 冒烟驱动：世界图——首页入口进入、全景渲染、Ctrl+F 全库搜索、
+// 搜索跳转自动展开（展开列表出现 + 相机飞达）。覆盖 WorldView /
+// XkWorldGraph / worldGraph.js 在真实渲染链路上的行为。
+// 用法：node scripts/smoke-world.mjs   （需先 npm run build）
+import { _electron as electron } from 'playwright-core'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+// 专属截图目录（避免与其他冒烟脚本并行互删，同 smoke-search 惯例）
+const SHOT_DIR = process.env.SMOKESHOT_DIR
+  ? path.resolve(APP_DIR, process.env.SMOKESHOT_DIR)
+  : path.join(APP_DIR, '.smoke-shots-world')
+fs.rmSync(SHOT_DIR, { recursive: true, force: true })
+fs.mkdirSync(SHOT_DIR, { recursive: true })
+
+const electronBin = path.join(APP_DIR, 'node_modules', 'electron', 'dist', 'electron.exe')
+if (!fs.existsSync(electronBin)) {
+  console.error('FATAL: electron binary not found at', electronBin)
+  process.exit(1)
+}
+
+const errors = []
+let failures = 0
+let app
+try {
+  app = await electron.launch({ executablePath: electronBin, args: [APP_DIR], timeout: 30_000 })
+} catch (err) {
+  // 应用带单实例锁：已有 XKnowledge 实例在跑时新实例直接退出
+  console.error('FATAL: 应用启动即退出——请先关闭正在运行的 XKnowledge（含 yarn dev）再跑冒烟')
+  console.error(err.message.split('\n')[0])
+  process.exit(1)
+}
+const page = await app.firstWindow()
+page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
+page.on('console', (msg) => {
+  if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`)
+})
+
+const shot = async (name) => {
+  await page.screenshot({ path: path.join(SHOT_DIR, `${name}.png`) })
+  console.log(`shot: ${name}`)
+}
+const expectTrue = (label, cond, detail = '') => {
+  console.log(`${cond ? 'PASS' : 'FAIL'} ${label}${detail ? `: ${detail}` : ''}`)
+  if (!cond) failures++
+}
+
+// 场景 1：首页入口 → 世界全景
+await page.locator('#openWorld').click()
+await page.waitForSelector('.world-graph-container canvas', { timeout: 60_000 }) // 首建全量扫描放宽
+await page.waitForTimeout(4_000) // 力布局铺开 + 标签渲染
+await shot('world-overview')
+expectTrue('世界页标题', (await page.locator('.world-title').textContent()) === '世界图')
+
+// 场景 2：Ctrl+F 全库搜索
+await page.keyboard.press('Control+f')
+await page.waitForSelector('.world-search')
+await page.locator('.world-search-input').fill('化学')
+await page.waitForTimeout(500)
+const hitCount = await page.locator('.world-search-item').count()
+expectTrue('全库搜索有命中', hitCount > 0, `命中 ${hitCount} 项`)
+const firstHit = (await page.locator('.world-search-item').first().textContent()) ?? ''
+expectTrue('命中为「图名 › 节点名」两级', firstHit.includes('›'), firstHit.trim().slice(0, 40))
+await shot('world-search')
+
+// 场景 3：回车跳转 → 自动展开（展开列表出现 = 展开链路全通）
+await page.keyboard.press('Enter')
+await page.waitForSelector('.world-expanded-bar', { timeout: 20_000 })
+await page.waitForTimeout(2_000) // 相机飞行
+await shot('world-expanded')
+expectTrue('展开列表出现', (await page.locator('.world-expanded-bar .ant-tag').count()) === 1)
+
+expectTrue('无页面错误', errors.length === 0, errors.join(' | '))
+await app.close()
+if (failures > 0) {
+  console.error(`\n${failures} 项失败`)
+  process.exit(1)
+}
+console.log('\n全部通过')
