@@ -1,7 +1,8 @@
 <template>
   <a-config-provider :theme="antdTheme">
-    <BasicLayout v-if="$route.name !== 'chart'" />
-    <RouterView v-if="$route.name === 'chart'" />
+    <!-- 世界页与图表页同为全幅 3D 画布，不套首页布局 -->
+    <BasicLayout v-if="$route.name !== 'chart' && $route.name !== 'world'" />
+    <RouterView v-if="$route.name === 'chart' || $route.name === 'world'" />
   </a-config-provider>
 </template>
 
