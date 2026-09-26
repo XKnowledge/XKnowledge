@@ -22,7 +22,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exitChartMode: () => ipcRenderer.invoke(IPC.APP_EXIT_CHART_MODE),
   enterWorldMode: () => ipcRenderer.invoke(IPC.APP_ENTER_WORLD_MODE),
   exitWorldMode: () => ipcRenderer.invoke(IPC.APP_EXIT_WORLD_MODE),
-  setOverlayDimmed: (on) => ipcRenderer.invoke(IPC.APP_OVERLAY_DIM, on),
   closeWindow: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW),
   confirmUnsaved: () => ipcRenderer.invoke(IPC.APP_CONFIRM_UNSAVED),
   themeApplied: (payload) => ipcRenderer.invoke(IPC.APP_THEME_APPLIED, payload),

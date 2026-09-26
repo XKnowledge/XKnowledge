@@ -14,8 +14,7 @@ import {
   exitChartMode,
   enterWorldMode,
   exitWorldMode,
-  setWindowTitle,
-  setOverlayDimmed
+  setWindowTitle
 } from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
 
@@ -307,89 +306,5 @@ describe('标题栏配色随页面切换（图表/世界树页头部为布局底
       color: '#141414',
       symbolColor: '#a1a8b0'
     })
-  })
-})
-
-describe('setOverlayDimmed：模态遮罩期按钮条同步暗化（随 antFadeIn 200ms 线性步进）', () => {
-  // 模块级 Map/Set 与 lastEffectiveTheme 跨用例存留，用例内先显式定主题；
-  // 步进动画依赖定时器与 Date.now，用假时钟驱动
-  beforeEach(() => {
-    vi.useFakeTimers()
-    BrowserWindow.getAllWindows.mockReturnValue([])
-  })
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('暗化按遮罩节奏步进：起始帧不变 → 中间态 → 200ms 后全暗（浅色）', () => {
-    applyTheme({ mode: 'light', effective: 'light' })
-    const win = fakeWindow({ id: 40, setTitleBarOverlay: vi.fn() })
-    setOverlayDimmed(win, true)
-    const last = () => win.setTitleBarOverlay.mock.calls.at(-1)?.[0]
-    expect(last()).toEqual({ color: '#ffffff', symbolColor: '#74b1be' }) // 起始帧未暗
-    vi.advanceTimersByTime(100)
-    expect(last().color).not.toBe('#ffffff')
-    expect(last().color).not.toBe('#8c8c8c') // 半程中间态
-    expect(win.setTitleBarOverlay.mock.calls.length).toBeGreaterThan(3) // 步进非一步到位
-    vi.advanceTimersByTime(150)
-    expect(last()).toEqual({ color: '#8c8c8c', symbolColor: '#406169' })
-  })
-
-  it('关闭对称：200ms 内回到基础配色', () => {
-    applyTheme({ mode: 'light', effective: 'light' })
-    const win = fakeWindow({ id: 41, setTitleBarOverlay: vi.fn() })
-    setOverlayDimmed(win, true)
-    vi.advanceTimersByTime(250)
-    setOverlayDimmed(win, false)
-    vi.advanceTimersByTime(250)
-    expect(win.setTitleBarOverlay.mock.calls.at(-1)?.[0]).toEqual({
-      color: '#ffffff',
-      symbolColor: '#74b1be'
-    })
-  })
-
-  it('动画中途反向：从当前进度按比例缩短时长回到基础配色', () => {
-    applyTheme({ mode: 'light', effective: 'light' })
-    const win = fakeWindow({ id: 42, setTitleBarOverlay: vi.fn() })
-    setOverlayDimmed(win, true)
-    vi.advanceTimersByTime(100) // 半程反向
-    setOverlayDimmed(win, false)
-    vi.advanceTimersByTime(150)
-    expect(win.setTitleBarOverlay.mock.calls.at(-1)?.[0]).toEqual({
-      color: '#ffffff',
-      symbolColor: '#74b1be'
-    })
-  })
-
-  it('图表模式窗口暗化到底为布局底暗色（深色）', () => {
-    applyTheme({ mode: 'dark', effective: 'dark' })
-    const win = fakeWindow({ id: 43, setTitleBarOverlay: vi.fn() })
-    enterChartMode(win)
-    setOverlayDimmed(win, true)
-    vi.advanceTimersByTime(250)
-    expect(win.setTitleBarOverlay.mock.calls.at(-1)?.[0]).toEqual({
-      color: '#111111',
-      symbolColor: '#595c61'
-    })
-  })
-
-  it('暗化中切主题：随新主题继续暗化', () => {
-    applyTheme({ mode: 'light', effective: 'light' })
-    const win = fakeWindow({ id: 44, setTitleBarOverlay: vi.fn() })
-    setOverlayDimmed(win, true)
-    vi.advanceTimersByTime(250)
-    BrowserWindow.getAllWindows.mockReturnValue([win])
-    applyTheme({ mode: 'dark', effective: 'dark' })
-    expect(win.setTitleBarOverlay.mock.calls.at(-1)?.[0]).toEqual({
-      color: '#0b0b0b',
-      symbolColor: '#595c61'
-    })
-  })
-
-  it('窗口为空或已销毁时空操作', () => {
-    expect(() => setOverlayDimmed(null, true)).not.toThrow()
-    const win = fakeWindow({ id: 45, isDestroyed: vi.fn(() => true), setTitleBarOverlay: vi.fn() })
-    setOverlayDimmed(win, true)
-    expect(win.setTitleBarOverlay).not.toHaveBeenCalled()
   })
 })
