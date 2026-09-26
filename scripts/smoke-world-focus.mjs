@@ -2,7 +2,7 @@
 // 开面板 → 切「灰化」（自动聚焦默认焦点=度数最高超节点，data-focus-node 非空）
 // → 跳数切换（焦点保持）→ 切「隐藏」（data-focus-mode=deep、焦点保持）→
 // 切回「关闭」（焦点清空、跳数禁用）→ 聚焦+Ctrl+F 搜索自动展开 →
-// 隐藏+全部收拢（模式保持）→ 刷新（模式保持）→ 主题切换 → 画布点击换焦点
+// 隐藏+全部收拢（模式保持）→ 刷新（模式/排斥力保持）→ 主题切换 → 画布点击换焦点
 // （3D 命中不确定：命中则焦点变化，未命中只验证不报错）→ 排斥力调节。
 // 视觉灰化/隐藏/取景以截图人工复核，不逐像素断言（同 smoke-focus 惯例）。
 // 用法：node scripts/smoke-world-focus.mjs   （需先 yarn build）
@@ -56,6 +56,9 @@ const expectOk = (label, ok, detail = '') => {
 const panel = page.locator('.world-view-panel')
 const focusNode = async () => (await panel.getAttribute('data-focus-node')) ?? ''
 const focusMode = async () => (await panel.getAttribute('data-focus-mode')) ?? ''
+/** 图实例已应用的 charge 强度（XkWorldGraph 挂载点 data-charge-strength 锚点） */
+const chargeStrength = async () =>
+  (await page.locator('.world-graph-wrap').getAttribute('data-charge-strength')) ?? ''
 
 // antdv 关闭的下拉仍挂载在 DOM（ant-select-dropdown-hidden），只点当前展开的
 const dropdownOption = (title) =>
@@ -130,10 +133,11 @@ expectOk(
 )
 await shot('06-world-focus-off')
 
-// 场景 6：排斥力滑杆（软观察：调节不报错）
+// 场景 6：排斥力滑杆（200 → charge -20；锚点断言 + 截图）
 await page.locator('.world-view-number input').fill('200')
 await page.keyboard.press('Enter')
 await page.waitForTimeout(500)
+expectEq('排斥力 200 应用到 charge', await chargeStrength(), '-20')
 await shot('07-world-repulsion')
 
 // 场景 7：聚焦（灰化）+ Ctrl+F 搜索 → 回车跳转自动展开（聚焦中场景变化）
@@ -162,12 +166,14 @@ expectEq('收拢后仍处隐藏模式', await focusMode(), 'deep')
 expectOk('收拢后焦点回退非空', (await focusNode()).length > 0, `焦点=${await focusNode()}`)
 await shot('09-world-deep-collapse-all')
 
-// 场景 9：聚焦开启时刷新世界索引（模式保持、焦点回退）
+// 场景 9：聚焦开启时刷新世界索引（模式保持、焦点回退、排斥力经 prop 回灌重挂实例）
 // 两字按钮 antdv 自动插空格（「刷 新」），hasText 匹配不可靠，按顺序取第 2 个
 await page.locator('.world-header button').nth(1).click()
 await page.waitForTimeout(3_000)
 expectEq('刷新后仍处隐藏模式', await focusMode(), 'deep')
 expectOk('刷新后焦点回退非空', (await focusNode()).length > 0, `焦点=${await focusNode()}`)
+expectEq('刷新后排斥力保持（重挂回灌 charge）', await chargeStrength(), '-20')
+expectEq('刷新后滑杆值保持', await page.locator('.world-view-number input').inputValue(), '200')
 await shot('10-world-deep-refresh')
 
 // 场景 10：聚焦开启时切主题（storage 事件同窗口手动派发触发 themeStore 联动）

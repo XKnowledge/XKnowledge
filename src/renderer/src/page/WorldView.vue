@@ -14,6 +14,7 @@
           ref="graphRef"
           :scene="scene"
           :expanded="worldState.expanded"
+          :repulsion="repulsion"
           :focus-node-ids="focusNodeIds"
           :focus-deep="focusMode === 'deep'"
           :search-hit-ids="searchHitIds"

@@ -1,5 +1,6 @@
 <template>
-  <div class="world-graph-wrap">
+  <!-- data-charge-strength：已应用的 d3 charge 强度，冒烟断言锚点（同面板 data-focus-*） -->
+  <div class="world-graph-wrap" :data-charge-strength="appliedCharge">
     <!-- 3D 库独占挂载点（同 XkGraph3D 的冷启动坑：覆盖层放外面） -->
     <div ref="containerRef" class="world-graph-container"></div>
     <div v-if="initFailed" class="world-graph-fallback">
@@ -25,12 +26,17 @@ const props = defineProps({
   // （找到了就该看见，否则跳转命中项时相机飞到空处）
   focusNodeIds: { type: Array, default: () => [] },
   focusDeep: { type: Boolean, default: false },
-  searchHitIds: { type: Array, default: () => [] }
+  searchHitIds: { type: Array, default: () => [] },
+  // 会话级排斥力初值：刷新（loading v-else）整卸重挂组件后由父页回灌，
+  // 滑杆与图力不再错位（bug记录 #2）；实时调节仍走 setRepulsion（需 reheat）
+  repulsion: { type: Number, default: 100 }
 })
 const emit = defineEmits(['node-click', 'bg-click'])
 
 const containerRef = ref(null)
 const initFailed = ref(false)
+/** 已应用到 d3 charge 的强度（冒烟断言锚点，见模板 data-charge-strength） */
+const appliedCharge = ref(0)
 let graph = null
 let resizeObserver = null
 
@@ -179,9 +185,12 @@ onMounted(() => {
   // 滑杆语义对齐（同 XkGraph3D）：视图面板默认 100 → charge -10；不设则库默认
   // -30，用户第一次拖滑杆到 100 时布局会突跳。只设强度不 reheat——首次
   // graphData digest 尚未运行（state.layout 未定义），d3ReheatSimulation 会
-  // 置 engineRunning=true，下一帧 tickFrame 读 state.layout.tick 即崩溃
+  // 置 engineRunning=true，下一帧 tickFrame 读 state.layout.tick 即崩溃。
+  // 强度取 props.repulsion：刷新重挂是全新实例，会话级排斥力经 prop 回灌（bug记录 #2）
   const charge = graph.d3Force('charge')
-  if (charge) charge.strength(-10)
+  const strength = -(props.repulsion ?? 100) / 10
+  if (charge) charge.strength(strength)
+  appliedCharge.value = strength
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
@@ -366,7 +375,9 @@ watch(
 const setRepulsion = (value) => {
   if (!graph) return
   const charge = graph.d3Force('charge')
-  if (charge) charge.strength(-(value ?? 100) / 10)
+  const strength = -(value ?? 100) / 10
+  if (charge) charge.strength(strength)
+  appliedCharge.value = strength
   graph.d3ReheatSimulation()
 }
 
