@@ -14,7 +14,8 @@ import {
   exitChartMode,
   enterWorldMode,
   exitWorldMode,
-  setWindowTitle
+  setWindowTitle,
+  setOverlayDimmed
 } from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
 
@@ -22,6 +23,7 @@ import { IPC } from '../../src/shared/ipc-channels'
 const fakeWindow = (overrides = {}) => ({
   id: 1,
   on: vi.fn(),
+  once: vi.fn(),
   removeListener: vi.fn(),
   isDestroyed: vi.fn(() => false),
   setMaximizable: vi.fn(),
@@ -305,5 +307,63 @@ describe('标题栏配色随页面切换（图表/世界树页头部为布局底
       color: '#141414',
       symbolColor: '#a1a8b0'
     })
+  })
+})
+
+describe('setOverlayDimmed：模态遮罩期按钮条同步暗化', () => {
+  // 模块级 Map/Set 与 lastEffectiveTheme 跨用例存留，用例内先显式定主题
+  beforeEach(() => {
+    BrowserWindow.getAllWindows.mockReturnValue([])
+  })
+
+  it('暗化开：配色按遮罩 rgba(0,0,0,0.45) 逐通道乘 0.55（浅色内容底）', () => {
+    applyTheme({ mode: 'light', effective: 'light' })
+    const win = fakeWindow({ id: 40, setTitleBarOverlay: vi.fn() })
+    setOverlayDimmed(win, true)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#8c8c8c',
+      symbolColor: '#406169'
+    })
+  })
+
+  it('暗化关：恢复未暗化配色', () => {
+    applyTheme({ mode: 'light', effective: 'light' })
+    const win = fakeWindow({ id: 41, setTitleBarOverlay: vi.fn() })
+    setOverlayDimmed(win, true)
+    setOverlayDimmed(win, false)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#ffffff',
+      symbolColor: '#74b1be'
+    })
+  })
+
+  it('图表模式窗口暗化：布局底配色暗化（深色）', () => {
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    const win = fakeWindow({ id: 42, setTitleBarOverlay: vi.fn() })
+    enterChartMode(win)
+    setOverlayDimmed(win, true)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#111111',
+      symbolColor: '#595c61'
+    })
+  })
+
+  it('暗化中切主题：随新主题继续暗化', () => {
+    applyTheme({ mode: 'light', effective: 'light' })
+    const win = fakeWindow({ id: 43, setTitleBarOverlay: vi.fn() })
+    setOverlayDimmed(win, true)
+    BrowserWindow.getAllWindows.mockReturnValue([win])
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#0b0b0b',
+      symbolColor: '#595c61'
+    })
+  })
+
+  it('窗口为空或已销毁时空操作', () => {
+    expect(() => setOverlayDimmed(null, true)).not.toThrow()
+    const win = fakeWindow({ id: 44, isDestroyed: vi.fn(() => true), setTitleBarOverlay: vi.fn() })
+    setOverlayDimmed(win, true)
+    expect(win.setTitleBarOverlay).not.toHaveBeenCalled()
   })
 })

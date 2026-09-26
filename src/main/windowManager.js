@@ -30,6 +30,40 @@ const applyOverlayToWindow = (win) => {
   }
 }
 
+/* —— 模态遮罩期按钮条同步暗化 —— */
+
+/** 遮罩 rgba(0,0,0,0.45) 叠在头部上的合成色 = 逐通道乘 (1-0.45)。
+ *  overlay 是 OS 绘制的不透明层，页面遮罩压不到它，模态弹窗开/关时
+ *  由渲染端经 setOverlayDimmed 上报，换用同款暗化配色实现全窗统一置灰 */
+const dimColor = (hex) => {
+  const n = parseInt(hex.slice(1), 16)
+  const dim = (v) => Math.round(v * 0.55)
+  const to2 = (v) => v.toString(16).padStart(2, '0')
+  return `#${to2(dim(n >> 16))}${to2(dim((n >> 8) & 255))}${to2(dim(n & 255))}`
+}
+
+const dimmedOverlayColors = ({ color, symbolColor }) => ({
+  color: dimColor(color),
+  symbolColor: dimColor(symbolColor)
+})
+
+// 暗化中的窗口：win.id 集合（closed 时随窗口清理，见 setOverlayDimmed）
+const overlayDimmedWins = new Set()
+
+/** 设置/解除窗口按钮条暗化（模态弹窗开/关时渲染端上报），即时刷新 overlay */
+export const setOverlayDimmed = (win, on) => {
+  if (!win || win.isDestroyed()) return
+  if (on) {
+    overlayDimmedWins.add(win.id)
+    // 每次开启注册一个 once 清理器：多次开关注册多个，均于 closed 触发，
+    // Set.delete 幂等无害；防开着弹窗直接关窗的残留
+    win.once('closed', () => overlayDimmedWins.delete(win.id))
+  } else {
+    overlayDimmedWins.delete(win.id)
+  }
+  applyOverlayToWindow(win)
+}
+
 /**
  * 渲染层上报主题变化后统一应用：
  * - nativeTheme.themeSource：auto→system、强制模式直译。渲染层
@@ -336,12 +370,16 @@ export const exitWorldMode = (current_window) => {
 }
 
 /**
- * 按窗口所处页面选 overlay 配色：图表/世界树窗口取布局底套，其余取内容
- * 底套（两套色值对齐 renderer theme.css 的 --xk-bg-layout / --xk-bg），
- * 保证按钮条始终与当前页头部同色。enter/exit 图表与世界树模式时及主题
- * 切换时（applyOverlayToWindow）都经此取色。
+ * 按窗口所处页面与遮罩态选 overlay 配色：图表/世界树窗口取布局底套，
+ * 其余取内容底套（两套色值对齐 renderer theme.css 的 --xk-bg-layout /
+ * --xk-bg-bg）；处于模态遮罩暗化态（setOverlayDimmed）时再整体暗化。
+ * enter/exit 图表与世界树模式、模态弹窗开/关及主题切换时都经此取色。
  */
-const overlayColorsFor = (win) =>
-  (chartModeWindows.has(win.id) || worldModeWindows.has(win.id)
-    ? OVERLAY_LAYOUT_COLORS
-    : OVERLAY_COLORS)[lastEffectiveTheme]
+const overlayColorsFor = (win) => {
+  const colors = (
+    chartModeWindows.has(win.id) || worldModeWindows.has(win.id)
+      ? OVERLAY_LAYOUT_COLORS
+      : OVERLAY_COLORS
+  )[lastEffectiveTheme]
+  return overlayDimmedWins.has(win.id) ? dimmedOverlayColors(colors) : colors
+}

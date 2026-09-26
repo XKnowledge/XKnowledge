@@ -11,6 +11,7 @@ import {
   enterWorldMode,
   exitWorldMode,
   takePendingChart,
+  setOverlayDimmed,
   setWindowTitle
 } from './windowManager'
 import { computeTitles, composeWindowTitles } from './titleService'
@@ -177,6 +178,12 @@ export const registerIpc = () => {
 
   ipcMain.handle(IPC.APP_EXIT_WORLD_MODE, (event) => {
     exitWorldMode(BrowserWindow.fromWebContents(event.sender))
+    return { ok: true }
+  })
+
+  // 模态弹窗开/关上报：窗口控制按钮条同步暗化/还原（遮罩压不到 OS 绘制的 overlay）
+  ipcMain.handle(IPC.APP_OVERLAY_DIM, (event, on) => {
+    setOverlayDimmed(BrowserWindow.fromWebContents(event.sender), on)
     return { ok: true }
   })
 

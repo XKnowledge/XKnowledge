@@ -27,6 +27,7 @@ export const IPC = {
   APP_REQUEST_CLOSE: 'app:request-close',
   APP_TITLE_CHANGED: 'app:title-changed',
   APP_THEME_APPLIED: 'app:theme-applied',
+  APP_OVERLAY_DIM: 'app:overlay-dim',
 
   // 世界域（分层聚合世界树：只读派生视图）
   WORLD_LOAD_INDEX: 'world:load-index',
