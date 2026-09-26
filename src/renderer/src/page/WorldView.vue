@@ -87,8 +87,17 @@
           </div>
         </div>
       </div>
-      <!-- 超节点信息卡：展开 / 打开完整编辑 -->
-      <a-drawer v-model:open="cardOpen" :title="selected?.title" width="320px">
+      <!-- 超节点信息卡：展开 / 打开完整编辑。rootClassName 供非 scoped 样式
+           命名空间命中（抽屉 portal 到 body，scoped :deep 祖先选择器够不到）。
+           closable=false：自带 × 与右上角窗口关闭按钮并排易混淆，关闭走
+           点遮罩（主图）/ Esc（antd 默认 maskClosable/keyboard 均开） -->
+      <a-drawer
+        v-model:open="cardOpen"
+        :title="selected?.title"
+        width="320px"
+        root-class-name="world-card-drawer"
+        :closable="false"
+      >
         <p v-if="selected">
           节点 {{ selected.nodeCount }} 个 · 来源：{{
             selected.source === 'example' ? '内置示例' : '用户图库'
@@ -463,5 +472,18 @@ onUnmounted(() => {
 }
 .world-view-hops {
   width: 56px;
+}
+</style>
+
+<style>
+/* 超节点信息卡抽屉底色对齐标题栏布局底：抽屉全高、会盖住右上角窗口
+   控制按钮区，titleBarOverlay 按钮条为布局底配色，抽屉保持 antd 默认
+   colorBgElevated（浅色 #ffffff）会与按钮条异色（深色下两者同为 #1f1f1f
+   恰好无差，仅浅色可见）。抽屉 portal 到 body，scoped 样式够不到，经
+   rootClassName 命名空间命中；!important 压 antd 运行时注入规则
+   （同 .world-header 背景的处理） */
+.world-card-drawer .ant-drawer-content,
+.world-card-drawer .ant-drawer-header {
+  background-color: var(--xk-bg-layout) !important;
 }
 </style>
