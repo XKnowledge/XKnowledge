@@ -121,6 +121,16 @@ onMounted(() => {
     return
   }
 
+  // 画布初始即容器尺寸：库默认取 window.innerWidth/innerHeight，比头部
+  // 下方的容器大——构造出的画布直接把文档撑出双向滚动条；ResizeObserver
+  // 的修正要等下一个渲染机会，会被场景构建的长帧推迟数百毫秒，溢出态被
+  // 画足一拍才消失（bug记录 #1）。width/height 只改库内 state（其 resize
+  // 经 Kapsule debounce 1ms 赶不上首帧），画布本体由 setSize 同步落定
+  const W = containerRef.value.clientWidth
+  const H = containerRef.value.clientHeight
+  graph.width(W).height(H)
+  graph.renderer().setSize(W, H)
+
   graph
     .nodeId('id')
     .backgroundColor(sceneColors.value.bg)

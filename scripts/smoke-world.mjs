@@ -47,11 +47,32 @@ const expectTrue = (label, cond, detail = '') => {
   if (!cond) failures++
 }
 
+// bug记录 #1 回归锚点：逐帧盯文档溢出态——画布曾以库默认 window 尺寸
+// （比容器高 53px）创建，首帧溢出闪双向滚动条，场景构建长帧把溢出画足
+// 数百毫秒才被 ResizeObserver 修正；修复后应全程零溢出帧
+await page.evaluate(() => {
+  window.__ovfFrames = 0
+  const tick = () => {
+    const de = document.documentElement
+    if (de.scrollWidth > de.clientWidth || de.scrollHeight > de.clientHeight) {
+      window.__ovfFrames++
+    }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+})
+
 // 场景 1：首页入口 → 世界全景
+await page.evaluate(() => (window.__ovfFrames = 0)) // 只统计世界页打开后的帧
 await page.locator('#openWorld').click()
 await page.waitForSelector('.world-graph-container canvas', { timeout: 60_000 }) // 首建全量扫描放宽
 await page.waitForTimeout(4_000) // 力布局铺开 + 标签渲染
 await shot('world-overview')
+expectTrue(
+  '世界页打开全程无文档溢出',
+  (await page.evaluate(() => window.__ovfFrames)) === 0,
+  `溢出帧 ${await page.evaluate(() => window.__ovfFrames)}`
+)
 expectTrue(
   '世界页头部按钮',
   (await page.locator('.world-header button', { hasText: '图库目录' }).count()) === 1

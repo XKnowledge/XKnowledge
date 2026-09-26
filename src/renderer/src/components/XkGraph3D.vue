@@ -333,6 +333,15 @@ onMounted(() => {
     return
   }
 
+  // 同 XkWorldGraph：画布初始即容器尺寸，免库默认 window 尺寸把文档撑出
+  // 滚动条——常规小图一帧内被 ResizeObserver 修正不可见，大图场景构建的
+  // 长帧会把溢出画足数百毫秒（width/height 的 resize 经 Kapsule debounce
+  // 赶不上首帧，画布本体须 setSize 同步落定）
+  const W = containerRef.value.clientWidth
+  const H = containerRef.value.clientHeight
+  graph.width(W).height(H)
+  graph.renderer().setSize(W, H)
+
   applySimulationScale()
 
   graph
