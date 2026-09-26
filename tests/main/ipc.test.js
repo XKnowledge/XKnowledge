@@ -359,6 +359,51 @@ describe('新窗口 pending 数据传递', () => {
   })
 })
 
+describe('自绘窗口控制按钮（XkWindowControls）', () => {
+  it('APP_WINDOW_MINIMIZE 调用窗口 minimize', async () => {
+    const win = fakeWindow({ minimize: vi.fn() })
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    const res = await handlerOf(IPC.APP_WINDOW_MINIMIZE)(senderOf(1))
+    expect(res).toEqual({ ok: true })
+    expect(win.minimize).toHaveBeenCalledTimes(1)
+  })
+
+  it('APP_WINDOW_MAXIMIZE_TOGGLE：未最大化时 maximize，已最大化时 unmaximize', async () => {
+    const win = fakeWindow({
+      isMaximized: vi.fn(() => false),
+      maximize: vi.fn(),
+      unmaximize: vi.fn()
+    })
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    await handlerOf(IPC.APP_WINDOW_MAXIMIZE_TOGGLE)(senderOf(1))
+    expect(win.maximize).toHaveBeenCalledTimes(1)
+    expect(win.unmaximize).not.toHaveBeenCalled()
+
+    win.isMaximized.mockReturnValue(true)
+    await handlerOf(IPC.APP_WINDOW_MAXIMIZE_TOGGLE)(senderOf(1))
+    expect(win.unmaximize).toHaveBeenCalledTimes(1)
+  })
+
+  it('APP_CLOSE_WINDOW_REQUEST 走 close()（可被未保存确认拦截），区别于 APP_CLOSE_WINDOW 的 destroy()', async () => {
+    const win = fakeWindow({ close: vi.fn(), destroy: vi.fn() })
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    await handlerOf(IPC.APP_CLOSE_WINDOW_REQUEST)(senderOf(1))
+    expect(win.close).toHaveBeenCalledTimes(1)
+    expect(win.destroy).not.toHaveBeenCalled()
+
+    // 已确认路径（渲染端 onRequestClose 处理后回调）才允许绕过拦截
+    await handlerOf(IPC.APP_CLOSE_WINDOW)(senderOf(1))
+    expect(win.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it('sender 窗口已销毁（fromWebContents 返回 undefined）时各 handler 静默返回 ok', async () => {
+    BrowserWindow.fromWebContents.mockReturnValue(undefined)
+    expect(await handlerOf(IPC.APP_WINDOW_MINIMIZE)(senderOf(1))).toEqual({ ok: true })
+    expect(await handlerOf(IPC.APP_WINDOW_MAXIMIZE_TOGGLE)(senderOf(1))).toEqual({ ok: true })
+    expect(await handlerOf(IPC.APP_CLOSE_WINDOW_REQUEST)(senderOf(1))).toEqual({ ok: true })
+  })
+})
+
 describe('FILE_OPENED：窗口标题联动', () => {
   // 用例间登记簿是模块级状态，各用例用独立文件名避免跨用例同名分组干扰
   it('登记路径后窗口标题设为「文件名 — XKnowledge」', async () => {

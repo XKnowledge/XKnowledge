@@ -160,6 +160,27 @@ export const registerIpc = () => {
     return { ok: true }
   })
 
+  // ===== 自绘窗口控制按钮（XkWindowControls）=====
+  // 最小化/最大化切换为直接动作；关闭请求走 close()：图表页的
+  // 「未保存确认」拦截（enterChartMode 注册的 close 监听）照常生效，
+  // 与移除前的原生 titleBarOverlay X 按钮行为等价
+  ipcMain.handle(IPC.APP_WINDOW_MINIMIZE, (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.APP_WINDOW_MAXIMIZE_TOGGLE, (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return { ok: true }
+    win.isMaximized() ? win.unmaximize() : win.maximize()
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.APP_CLOSE_WINDOW_REQUEST, (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+    return { ok: true }
+  })
+
   ipcMain.handle(IPC.APP_ENTER_CHART_MODE, (event) => {
     enterChartMode(BrowserWindow.fromWebContents(event.sender))
     return { ok: true }

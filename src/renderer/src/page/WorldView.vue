@@ -4,6 +4,8 @@
       <a-button size="small" @click="router.push('/')">关闭</a-button>
       <a-button size="small" :loading="loading" @click="loadIndex">刷新</a-button>
       <a-button size="small" :disabled="picking" @click="pickUserDir">图库目录</a-button>
+      <!-- 世界树页经 enterWorldMode 解锁窗口尺寸：最小化/最大化/关闭齐备 -->
+      <XkWindowControls sizable />
     </a-layout-header>
     <a-layout>
       <a-layout-content class="world-content">
@@ -133,6 +135,7 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import XkWorldGraph from '../components/XkWorldGraph.vue'
 import XkWorldSearch from '../components/XkWorldSearch.vue'
+import XkWindowControls from '../components/XkWindowControls.vue'
 import { setPendingChart } from '../store/chartStore'
 import {
   createWorldState,
@@ -385,6 +388,8 @@ onUnmounted(() => {
   padding: 0 16px !important;
   height: 53px !important; /* 与图表页头部（.move-show/.move-header）一致 */
   line-height: 53px;
+  /* relative：作为 XkWindowControls（绝对定位于右上角）的定位上下文 */
+  position: relative;
   /* 背景 !important：antd 的 .ant-layout .ant-layout-header(#001529 藏青)
      运行时注入在后，scoped 同优先级时时序决胜会盖掉布局底（同图表页
      .move-show 的处理） */

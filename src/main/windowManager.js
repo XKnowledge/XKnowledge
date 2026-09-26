@@ -6,46 +6,20 @@ import { IPC } from '../shared/ipc-channels'
 // 会话内最近生效主题：新窗口 backgroundColor 预设依据
 let lastEffectiveTheme = 'light'
 
-/** 深浅两套原生标题栏（Windows titleBarOverlay）配色：内容底套与布局底套。
- *  内容底套（--xk-bg）用于首页等窗口，浅色值与创建时配置一致；
- *  布局底套（--xk-bg-layout，值见 renderer theme.css）用于图表/世界树
- *  窗口——这两页头部为布局底，用内容底会让右上角按钮条呈异色方块 */
-const OVERLAY_COLORS = {
-  light: { color: '#ffffff', symbolColor: '#74b1be' },
-  dark: { color: '#141414', symbolColor: '#a1a8b0' }
-}
-
-const OVERLAY_LAYOUT_COLORS = {
-  light: { color: '#f5f5f5', symbolColor: '#74b1be' },
-  dark: { color: '#1f1f1f', symbolColor: '#a1a8b0' }
-}
-
-/** 单窗口应用：按主题与窗口所处页面换原生标题栏配色；平台不支持时静默 */
-const applyOverlayToWindow = (win) => {
-  if (!win || win.isDestroyed()) return
-  try {
-    win.setTitleBarOverlay(overlayColorsFor(win))
-  } catch {
-    /* Linux 无此 API：渲染层主题不受影响 */
-  }
-}
-
-/* 模态遮罩期按钮条同步暗化机制已随「设置弹窗不置灰」需求整体移除
- * （:mask="false" 后无遮罩可同步）；如需恢复见 git 历史 d59f677/99eefbc */
+/* 窗口控制按钮为渲染层自绘（XkWindowControls 组件，主题随 CSS 变量自动
+ * 切换），主进程不再维护原生 titleBarOverlay 的配色同步机制 */
 
 /**
  * 渲染层上报主题变化后统一应用：
  * - nativeTheme.themeSource：auto→system、强制模式直译。渲染层
  *   prefers-color-scheme 媒体查询与原生部件（右键菜单等）随之一致，
  *   主题模块只需监听 matchMedia 一个信号源
- * - 全部窗口的原生标题栏配色
  * - 缓存生效主题，供新窗口 backgroundColor 预设
  */
 export const applyTheme = ({ mode: themeMode, effective }) => {
   lastEffectiveTheme = effective === 'dark' ? 'dark' : 'light'
   nativeTheme.themeSource =
     themeMode === 'dark' ? 'dark' : themeMode === 'light' ? 'light' : 'system'
-  for (const win of BrowserWindow.getAllWindows()) applyOverlayToWindow(win)
 }
 
 /**
@@ -74,11 +48,10 @@ export const createWindow = (onWindowClosed, route = '') => {
     // 会话内已切深色时新窗口预铺深底避免闪白；重启后主进程未知（偏好存
     // 渲染层 localStorage），首窗口白底一帧，已接受的取舍（见设计文档）
     backgroundColor: lastEffectiveTheme === 'dark' ? '#141414' : '#ffffff',
+    // 原生 titleBarOverlay 已移除（无法脱离窗口右缘、无法精确控制几何）：
+    // 窗口控制按钮改由渲染层 XkWindowControls 自绘——上下居中于 53px
+    // 头部并与右缘留隙。titleBarStyle 仍 hidden：macOS 红绿灯不受影响
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#ffffff',
-      symbolColor: '#74b1be'
-    },
     title: 'XKnowledge'
   })
   Menu.setApplicationMenu(null)
@@ -94,6 +67,18 @@ export const createWindow = (onWindowClosed, route = '') => {
   current_window.on('ready-to-show', () => {
     current_window.show()
   })
+
+  // 最大化状态推送：自绘窗口控制按钮（XkWindowControls）的图标在
+  // 最大化/还原间切换。只靠点击按钮切换无法覆盖双击拖拽区最大化等
+  // 路径，故监听窗口事件统一推送。判销毁：窗口销毁竞态期 send 会抛
+  // "Object has been destroyed"（同 setWindowTitle 的处理）
+  const sendMaximizeChanged = (maximized) => {
+    if (!current_window.isDestroyed() && !current_window.webContents.isDestroyed()) {
+      current_window.webContents.send(IPC.APP_MAXIMIZE_CHANGED, maximized)
+    }
+  }
+  current_window.on('maximize', () => sendMaximizeChanged(true))
+  current_window.on('unmaximize', () => sendMaximizeChanged(false))
 
   // 控制台只在开发模式打开：生产环境弹出 DevTools 会暴露 IPC 桥接接口
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -265,8 +250,6 @@ export const enterChartMode = (current_window) => {
   })
 
   unlockSizing(current_window)
-  // 图表页头部为布局底，标题栏按钮条同步换布局底配色
-  applyOverlayToWindow(current_window)
   // 进图表页先给默认标题；装载/保存上报路径后由 ipc 层按登记簿覆盖为文件名。
   // 放这里而非渲染端：标题消歧需要跨窗口全局视角
   setWindowTitle(current_window, UNTITLED_TITLE)
@@ -296,8 +279,6 @@ export const exitChartMode = (current_window) => {
   chartModeWindows.delete(id)
 
   lockSizing(current_window)
-  // 与 enterChartMode 对称：离开图表页恢复内容底配色
-  applyOverlayToWindow(current_window)
   // 与 enterChartMode 的标题设置对称：图表页卸载（回首页/关窗）恢复默认标题
   setWindowTitle(current_window, DEFAULT_TITLE)
 }
@@ -318,8 +299,6 @@ export const enterWorldMode = (current_window) => {
   worldModeWindows.set(id, { closedHandler })
   current_window.on('closed', closedHandler)
   unlockSizing(current_window)
-  // 世界树页头部同为布局底，与图表页同步换配色
-  applyOverlayToWindow(current_window)
 }
 
 /**
@@ -334,19 +313,5 @@ export const exitWorldMode = (current_window) => {
   current_window.removeListener('closed', handlers.closedHandler)
   worldModeWindows.delete(id)
   lockSizing(current_window)
-  // 与 enterWorldMode 对称：离开世界树页恢复内容底配色
-  applyOverlayToWindow(current_window)
 }
 
-/**
- * 按窗口所处页面选 overlay 配色：图表/世界树窗口取布局底套，其余取
- * 内容底套（两套色值对齐 renderer theme.css 的 --xk-bg-layout /
- * --xk-bg-bg）。enter/exit 图表与世界树模式及主题切换时都经此取色。
- */
-const overlayColorsFor = (win) => {
-  return (
-    chartModeWindows.has(win.id) || worldModeWindows.has(win.id)
-      ? OVERLAY_LAYOUT_COLORS
-      : OVERLAY_COLORS
-  )[lastEffectiveTheme]
-}

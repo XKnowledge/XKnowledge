@@ -26,6 +26,8 @@
               </a-space>
             </a-space>
           </a-layout-content>
+          <!-- 图表页经 enterChartMode 解锁窗口尺寸：最小化/最大化/关闭齐备 -->
+          <XkWindowControls sizable />
         </a-layout>
       </a-layout-header>
       <a-layout>
@@ -188,6 +190,7 @@ import XkMenu from '../components/XkMenu.vue'
 import XkGraph3D from '../components/XkGraph3D.vue'
 import XkTitleText from '../components/XkTitleText.vue'
 import XkSettings from '../components/XkSettings.vue'
+import XkWindowControls from '../components/XkWindowControls.vue'
 
 import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
@@ -987,8 +990,8 @@ const buttonList = ref([
   -webkit-app-region: drag;
   /* 可拖动 */
   /* 背景 !important：antd 的 .ant-layout .ant-layout-header(#001529 藏青)
-     specificity (0,2,0) 高于单类 (0,1,0)，不压则头部被盖成藏青、右上角
-     titleBarOverlay 按钮条与头部异色（同 BasicLayout .xk-header 的处理） */
+     specificity (0,2,0) 高于单类 (0,1,0)，不压则头部被盖成藏青
+     （同 BasicLayout .xk-header 的处理） */
   background-color: var(--xk-bg-layout) !important;
   width: 100%;
   height: 53px !important;

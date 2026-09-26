@@ -15,6 +15,8 @@
       <a-layout-header class="xk-header">
         <div class="title-bar">
           <XkTitleText />
+          <!-- 首页窗口锁定 900x670（不可最小化/最大化），控制按钮只有关闭 -->
+          <XkWindowControls />
         </div>
       </a-layout-header>
       <a-layout-content class="xk-content">
@@ -31,6 +33,7 @@ import { ref } from 'vue'
 import { setPendingChart } from '../store/chartStore'
 import XkTitleText from '../components/XkTitleText.vue'
 import XkSettings from '../components/XkSettings.vue'
+import XkWindowControls from '../components/XkWindowControls.vue'
 
 const router = useRouter()
 const settingsRef = ref(null)
@@ -90,7 +93,7 @@ const openFile = async () => {
    现状用法）；content 无 antd 背景规则，不需要 */
 .xk-header {
   text-align: center;
-  height: 30px;
+  height: 53px; /* 与图表页头部（ChartView .move-show）同高 */
   padding-inline: 50px;
   line-height: 64px;
   background-color: var(--xk-bg) !important;
@@ -110,7 +113,7 @@ const openFile = async () => {
 }
 
 .ant-layout-header {
-  height: 30px !important;
+  height: 53px !important;
   padding-inline: 0 !important;
 }
 
@@ -121,7 +124,7 @@ const openFile = async () => {
   -webkit-app-region: drag; /* 可拖动 */
   background-color: var(--xk-bg);
   width: 100%;
-  height: 30px;
+  height: 53px;
   position: relative; /* 作为绝对定位子元素的上下文 */
 }
 

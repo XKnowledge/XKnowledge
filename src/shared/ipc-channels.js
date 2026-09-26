@@ -28,6 +28,16 @@ export const IPC = {
   APP_TITLE_CHANGED: 'app:title-changed',
   APP_THEME_APPLIED: 'app:theme-applied',
 
+  // 自绘窗口控制按钮（XkWindowControls，替代原生 titleBarOverlay）
+  APP_WINDOW_MINIMIZE: 'app:window-minimize',
+  APP_WINDOW_MAXIMIZE_TOGGLE: 'app:window-maximize-toggle',
+  // 走 close()：可被图表页「未保存确认」拦截——与原生标题栏 X 等价；
+  // 区别于 APP_CLOSE_WINDOW（destroy()，确认后的直接关闭，绕过拦截）
+  APP_CLOSE_WINDOW_REQUEST: 'app:close-window-request',
+  // 主进程推送：最大化状态变化（maximize/unmaximize 事件 → 图标切换，
+  // 双击拖拽区最大化等非按钮路径也要同步）
+  APP_MAXIMIZE_CHANGED: 'app:maximize-changed',
+
   // 世界域（分层聚合世界树：只读派生视图）
   WORLD_LOAD_INDEX: 'world:load-index',
   WORLD_READ_GRAPH: 'world:read-graph',
