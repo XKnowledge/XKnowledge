@@ -56,6 +56,15 @@ expectTrue(
   '世界页头部按钮',
   (await page.locator('.world-header button', { hasText: '图库目录' }).count()) === 1
 )
+// 头部拖动区回归：titleBarStyle hidden 后窗口拖动全靠 CSS 区域声明，曾整页漏配
+// drag 致世界页不可拖（图表页正常）。只断言 CSS 区域——合成鼠标事件触发原生
+// 拖动在 CDP 下不稳定，不做窗口位移断言；按钮 no-drag 保证拖动语义不吞点击
+const dragRegions = await page.evaluate(() => ({
+  header: getComputedStyle(document.querySelector('.world-header')).webkitAppRegion,
+  button: getComputedStyle(document.querySelector('.world-header .ant-btn')).webkitAppRegion
+}))
+expectTrue('头部为窗口拖动区', dragRegions.header === 'drag', `实际 ${dragRegions.header}`)
+expectTrue('头部按钮 no-drag 可点击', dragRegions.button === 'no-drag', `实际 ${dragRegions.button}`)
 
 // 场景 2：Ctrl+F 全库搜索
 await page.keyboard.press('Control+f')
