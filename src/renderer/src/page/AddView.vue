@@ -194,30 +194,11 @@ const openExampleChart = async (ex) => {
   /* 例如，设置一个固定的高度 */
   width: calc(100% - 2px);
   /* 或者设置为父元素宽度的一部分 */
-}
-
-.inner-div::-webkit-scrollbar-track {
-  background: var(--xk-bg);
-  /* 设置滚动条轨道背景颜色 */
-}
-
-.inner-div::-webkit-scrollbar-thumb {
-  background: var(--xk-card-border);
-  /* 设置滚动条滑块颜色 */
-}
-
-.inner-div::-webkit-scrollbar-button {
-  display: none;
-  /* 隐藏滚动条按钮 */
-}
-
-.inner-div::-webkit-scrollbar-thumb:hover {
-  background: var(--xk-border-strong);
-  /* 设置滚动条滑块鼠标悬停时的颜色 */
-}
-
-.inner-div::-webkit-scrollbar-corner {
-  background: var(--xk-bg-layout);
-  /* 设置滚动条角落背景颜色 */
+  /* 滚动条配色（滑块 轨道）随主题变量切换。Electron 44（Chromium 152）
+     起滚动条统一化，::-webkit-scrollbar 伪元素样式不再生效（回退为跟随
+     操作系统浅色的原生滚动条，深色主题下呈亮色），须改用标准属性
+     scrollbar-color（Chromium 121+ 支持，且跟随 CSS 变量）。滑块沿用
+     原设计的 --xk-card-border，轨道与内容底同色 */
+  scrollbar-color: var(--xk-card-border) var(--xk-bg);
 }
 </style>
