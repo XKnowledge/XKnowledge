@@ -90,13 +90,17 @@
       <!-- 超节点信息卡：展开 / 打开完整编辑。rootClassName 供非 scoped 样式
            命名空间命中（抽屉 portal 到 body，scoped :deep 祖先选择器够不到）。
            closable=false：自带 × 与右上角窗口关闭按钮并排易混淆，关闭走
-           点遮罩（主图）/ Esc（antd 默认 maskClosable/keyboard 均开） -->
+           点遮罩（主图）/ Esc（antd 默认 maskClosable/keyboard 均开）。
+           maskStyle 下移到 53px 头部以下：遮罩若压暗标题栏，OS 绘制的按钮条
+           （不透明 overlay）不随遮罩变暗，且面板滑入盖住按钮区的瞬间周边
+           从渐暗跳回亮面板，形成视觉错位；标题栏整条保持常亮则全程无跳变 -->
       <a-drawer
         v-model:open="cardOpen"
         :title="selected?.title"
         width="320px"
         root-class-name="world-card-drawer"
         :closable="false"
+        :mask-style="{ top: '53px' }"
       >
         <p v-if="selected">
           节点 {{ selected.nodeCount }} 个 · 来源：{{
@@ -485,5 +489,21 @@ onUnmounted(() => {
 .world-card-drawer .ant-drawer-content,
 .world-card-drawer .ant-drawer-header {
   background-color: var(--xk-bg-layout) !important;
+}
+
+/* 遮罩只作用于 53px 头部以下（见模板 maskStyle）后，标题栏不再有渐变压暗，
+   抽屉面板与头部同为布局底、滑入时在标题栏段隐形——配合两点收尾：
+   1. 根节点 pointer-events 穿透：标题栏露出段（root-only 区域）仍可拖拽窗口，
+      遮罩与面板自身恢复 auto 保住点遮罩关闭；
+   2. 面板左缘阴影去除：否则阴影会在标题栏上画出一条竖线，暴露面板边界 */
+.world-card-drawer {
+  pointer-events: none;
+}
+.world-card-drawer .ant-drawer-mask,
+.world-card-drawer .ant-drawer-content-wrapper {
+  pointer-events: auto;
+}
+.world-card-drawer .ant-drawer-content-wrapper {
+  box-shadow: none !important;
 }
 </style>
