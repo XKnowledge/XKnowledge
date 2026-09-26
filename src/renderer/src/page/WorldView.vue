@@ -5,103 +5,111 @@
       <a-button size="small" :loading="loading" @click="loadIndex">刷新</a-button>
       <a-button size="small" :disabled="picking" @click="pickUserDir">图库目录</a-button>
     </a-layout-header>
-    <a-layout-content class="world-content">
-      <a-spin v-if="loading" class="world-loading" />
-      <a-empty v-else-if="!index?.graphs?.length" class="world-loading" description="世界为空" />
-      <XkWorldGraph
-        v-else
-        ref="graphRef"
-        :scene="scene"
-        :expanded="worldState.expanded"
-        :focus-node-ids="focusNodeIds"
-        :focus-deep="focusMode === 'deep'"
-        :search-hit-ids="searchHitIds"
-        @node-click="onNodeClick"
-      />
-      <!-- 已展开域浮动列表：逐个收拢 + 全部收拢 -->
-      <div v-if="expandedList.length" class="world-expanded-bar">
-        <a-tag v-for="g in expandedList" :key="g.id" closable @close="collapse(g.id)">
-          {{ g.title }}
-        </a-tag>
-        <a-button size="small" @click="collapseAll">全部收拢</a-button>
-      </div>
-      <!-- 视图调节：排斥力 + 聚焦模式（会话级浮动卡片，默认收起）。
-           data-focus-node/data-focus-mode 是冒烟断言锚点（同图表页 focus-row） -->
-      <div
-        v-if="!loading"
-        class="world-view-panel"
-        :data-focus-node="focusNodeId"
-        :data-focus-mode="focusMode"
-      >
-        <a-button v-if="!viewPanelOpen" size="small" @click="viewPanelOpen = true">视图</a-button>
-        <div v-else class="world-view-panel-body">
-          <div class="world-view-panel-head">
-            <span>视图调节</span>
-            <button class="world-view-panel-fold" title="收起" @click="viewPanelOpen = false">
-              −
-            </button>
-          </div>
-          <div class="world-view-panel-row">
-            <span class="world-view-label">排斥力</span>
-            <a-slider
-              v-model:value="repulsion"
-              class="world-view-slider"
-              :min="1"
-              :max="500"
-              @change="onChangeRepulsion"
-            />
-            <a-input-number
-              v-model:value="repulsion"
-              :min="1"
-              :max="500"
-              size="small"
-              class="world-view-number"
-              @change="onChangeRepulsion"
-            />
-          </div>
-          <div class="world-view-panel-row">
-            <span class="world-view-label">聚焦</span>
-            <a-select
-              v-model:value="focusMode"
-              size="small"
-              class="world-view-select"
-              :options="[
-                { value: 'off', label: '关闭' },
-                { value: 'focus', label: '灰化' },
-                { value: 'deep', label: '隐藏' }
-              ]"
-              @change="onFocusModeChange"
-            />
-            <span class="world-view-label">跳数</span>
-            <a-select
-              v-model:value="focusHops"
-              size="small"
-              class="world-view-hops"
-              :disabled="focusMode === 'off'"
-              :options="[
-                { value: 1, label: '1' },
-                { value: 2, label: '2' },
-                { value: 3, label: '3' }
-              ]"
-            />
+    <a-layout>
+      <a-layout-content class="world-content">
+        <a-spin v-if="loading" class="world-loading" />
+        <a-empty v-else-if="!index?.graphs?.length" class="world-loading" description="世界为空" />
+        <XkWorldGraph
+          v-else
+          ref="graphRef"
+          :scene="scene"
+          :expanded="worldState.expanded"
+          :focus-node-ids="focusNodeIds"
+          :focus-deep="focusMode === 'deep'"
+          :search-hit-ids="searchHitIds"
+          @node-click="onNodeClick"
+          @bg-click="cardOpen = false"
+        />
+        <!-- 已展开域浮动列表：逐个收拢 + 全部收拢 -->
+        <div v-if="expandedList.length" class="world-expanded-bar">
+          <a-tag v-for="g in expandedList" :key="g.id" closable @close="collapse(g.id)">
+            {{ g.title }}
+          </a-tag>
+          <a-button size="small" @click="collapseAll">全部收拢</a-button>
+        </div>
+        <!-- 视图调节：排斥力 + 聚焦模式（会话级浮动卡片，默认收起）。
+             data-focus-node/data-focus-mode 是冒烟断言锚点（同图表页 focus-row） -->
+        <div
+          v-if="!loading"
+          class="world-view-panel"
+          :data-focus-node="focusNodeId"
+          :data-focus-mode="focusMode"
+        >
+          <a-button v-if="!viewPanelOpen" size="small" @click="viewPanelOpen = true">视图</a-button>
+          <div v-else class="world-view-panel-body">
+            <div class="world-view-panel-head">
+              <span>视图调节</span>
+              <button class="world-view-panel-fold" title="收起" @click="viewPanelOpen = false">
+                −
+              </button>
+            </div>
+            <div class="world-view-panel-row">
+              <span class="world-view-label">排斥力</span>
+              <a-slider
+                v-model:value="repulsion"
+                class="world-view-slider"
+                :min="1"
+                :max="500"
+                @change="onChangeRepulsion"
+              />
+              <a-input-number
+                v-model:value="repulsion"
+                :min="1"
+                :max="500"
+                size="small"
+                class="world-view-number"
+                @change="onChangeRepulsion"
+              />
+            </div>
+            <div class="world-view-panel-row">
+              <span class="world-view-label">聚焦</span>
+              <a-select
+                v-model:value="focusMode"
+                size="small"
+                class="world-view-select"
+                :options="[
+                  { value: 'off', label: '关闭' },
+                  { value: 'focus', label: '灰化' },
+                  { value: 'deep', label: '隐藏' }
+                ]"
+                @change="onFocusModeChange"
+              />
+              <span class="world-view-label">跳数</span>
+              <a-select
+                v-model:value="focusHops"
+                size="small"
+                class="world-view-hops"
+                :disabled="focusMode === 'off'"
+                :options="[
+                  { value: 1, label: '1' },
+                  { value: 2, label: '2' },
+                  { value: 3, label: '3' }
+                ]"
+              />
+            </div>
           </div>
         </div>
-      </div>
-      <!-- 超节点信息卡：展开 / 打开完整编辑。rootClassName 供非 scoped 样式
-           命名空间命中（抽屉 portal 到 body，scoped :deep 祖先选择器够不到）。
-           closable=false：自带 × 与右上角窗口关闭按钮并排易混淆，关闭走
-           点遮罩（主图）/ Esc（antd 默认 maskClosable/keyboard 均开）。
-           maskStyle 下移到 53px 头部以下：遮罩若压暗标题栏，OS 绘制的按钮条
-           （不透明 overlay）不随遮罩变暗，且面板滑入盖住按钮区的瞬间周边
-           从渐暗跳回亮面板，形成视觉错位；标题栏整条保持常亮则全程无跳变 -->
-      <a-drawer
-        v-model:open="cardOpen"
-        :title="selected?.title"
-        width="320px"
-        root-class-name="world-card-drawer"
-        :closable="false"
-        :mask-style="{ top: '53px' }"
-      >
+        <XkWorldSearch
+          ref="searchRef"
+          :open="searchOpen"
+          :keyword="searchKeyword"
+          :hits="slicedHits"
+          :hit-total="hits.length"
+          :active-index="searchActiveIdx"
+          @keyword="onKeyword"
+          @next="goToHit(searchActiveIdx + 1)"
+          @prev="goToHit(searchActiveIdx - 1)"
+          @select="goToHit"
+          @close="closeSearch"
+        />
+      </a-layout-content>
+      <!-- 超节点信息卡：布局内嵌停靠侧栏（同图表页编辑栏 .sider-style）——
+           参与页面布局，展开时挤压重排图区而非浮层覆盖，图区尺寸变化由
+           XkWorldGraph 内置 ResizeObserver 自适应；原抽屉遮罩/portal 带来的
+           标题栏视觉错位（bug记录 #3）随浮层移除一并消失。关闭沿原抽屉
+           语义：点主图空白 / Esc，无可见关闭钮 -->
+      <a-layout-sider v-show="cardOpen" class="world-card-sider">
+        <div class="world-card-title" :title="selected?.title">{{ selected?.title }}</div>
         <p v-if="selected">
           节点 {{ selected.nodeCount }} 个 · 来源：{{
             selected.source === 'example' ? '内置示例' : '用户图库'
@@ -113,21 +121,8 @@
           </a-button>
           <a-button block @click="openFull(selected)">打开完整编辑</a-button>
         </a-space>
-      </a-drawer>
-      <XkWorldSearch
-        ref="searchRef"
-        :open="searchOpen"
-        :keyword="searchKeyword"
-        :hits="slicedHits"
-        :hit-total="hits.length"
-        :active-index="searchActiveIdx"
-        @keyword="onKeyword"
-        @next="goToHit(searchActiveIdx + 1)"
-        @prev="goToHit(searchActiveIdx - 1)"
-        @select="goToHit"
-        @close="closeSearch"
-      />
-    </a-layout-content>
+      </a-layout-sider>
+    </a-layout>
   </a-layout>
 </template>
 
@@ -284,8 +279,8 @@ const collapseAll = () => {
 }
 
 const onNodeClick = (payload) => {
-  // 聚焦模式：点击只移焦点，不弹信息卡——抽屉自带全屏遮罩，会把后续
-  // 连续点击吃掉（点画布变成关抽屉，到不了节点）；关聚焦后点击即可打开信息卡
+  // 聚焦模式：点击只移焦点，不弹信息卡——连续移焦点是探照操作，不该被
+  // 逐次挤开图区的信息卡打断；关聚焦后点击即可打开信息卡
   if (focusMode.value !== 'off') {
     focusNodeId.value = payload.id
     return
@@ -357,6 +352,9 @@ const onKeydown = (event) => {
       nextTick(() => searchRef.value?.focus())
     }
   }
+  // Esc 关信息卡（接管原抽屉 antd keyboard 关闭）；搜索框开着时让给它——
+  // 输入框自身的 keydown.esc 已处理，避免一次 Esc 连关两个面板
+  if (event.key === 'Escape' && !searchOpen.value) cardOpen.value = false
 }
 
 onMounted(async () => {
@@ -477,33 +475,25 @@ onUnmounted(() => {
 .world-view-hops {
   width: 56px;
 }
-</style>
 
-<style>
-/* 超节点信息卡抽屉底色对齐标题栏布局底：抽屉全高、会盖住右上角窗口
-   控制按钮区，titleBarOverlay 按钮条为布局底配色，抽屉保持 antd 默认
-   colorBgElevated（浅色 #ffffff）会与按钮条异色（深色下两者同为 #1f1f1f
-   恰好无差，仅浅色可见）。抽屉 portal 到 body，scoped 样式够不到，经
-   rootClassName 命名空间命中；!important 压 antd 运行时注入规则
-   （同 .world-header 背景的处理） */
-.world-card-drawer .ant-drawer-content,
-.world-card-drawer .ant-drawer-header {
+/* 超节点信息卡侧栏：同图表页 .sider-style 的停靠写法——宽三连 !important
+   压 Sider 默认 200px，背景 !important 压 antd 运行时注入的
+   .ant-layout .ant-layout-sider 藏青底（同 .world-header 背景的处理） */
+.world-card-sider {
+  width: 320px !important;
+  max-width: 320px !important;
+  min-width: 320px !important;
   background-color: var(--xk-bg-layout) !important;
+  padding: 12px;
+  text-align: left;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
-
-/* 遮罩只作用于 53px 头部以下（见模板 maskStyle）后，标题栏不再有渐变压暗，
-   抽屉面板与头部同为布局底、滑入时在标题栏段隐形——配合两点收尾：
-   1. 根节点 pointer-events 穿透：标题栏露出段（root-only 区域）仍可拖拽窗口，
-      遮罩与面板自身恢复 auto 保住点遮罩关闭；
-   2. 面板左缘阴影去除：否则阴影会在标题栏上画出一条竖线，暴露面板边界 */
-.world-card-drawer {
-  pointer-events: none;
-}
-.world-card-drawer .ant-drawer-mask,
-.world-card-drawer .ant-drawer-content-wrapper {
-  pointer-events: auto;
-}
-.world-card-drawer .ant-drawer-content-wrapper {
-  box-shadow: none !important;
+.world-card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
 }
 </style>

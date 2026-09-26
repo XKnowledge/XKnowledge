@@ -27,7 +27,7 @@ const props = defineProps({
   focusDeep: { type: Boolean, default: false },
   searchHitIds: { type: Array, default: () => [] }
 })
-const emit = defineEmits(['node-click'])
+const emit = defineEmits(['node-click', 'bg-click'])
 
 const containerRef = ref(null)
 const initFailed = ref(false)
@@ -140,6 +140,8 @@ onMounted(() => {
           : { __kind: 'node', id: n.id, name: n.name, graphId: n.graphId }
       )
     )
+    // 空白处单击（旋转拖拽不算 click）：信息卡的「点主图关闭」
+    .onBackgroundClick(() => emit('bg-click'))
   feed()
   applyLabels()
 
