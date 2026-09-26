@@ -32,36 +32,77 @@ const applyOverlayToWindow = (win) => {
 
 /* —— 模态遮罩期按钮条同步暗化 —— */
 
-/** 遮罩 rgba(0,0,0,0.45) 叠在头部上的合成色 = 逐通道乘 (1-0.45)。
- *  overlay 是 OS 绘制的不透明层，页面遮罩压不到它，模态弹窗开/关时
- *  由渲染端经 setOverlayDimmed 上报，换用同款暗化配色实现全窗统一置灰 */
-const dimColor = (hex) => {
+/** 遮罩 rgba(0,0,0,0.45) 叠在基色上的合成色 = 逐通道乘 (1 - 0.45·p)，
+ *  p∈[0,1] 为暗化进度，p=1 即遮罩完全不透明时的合成色。overlay 是 OS
+ *  绘制的不透明层，页面遮罩压不到它，模态弹窗开/关时由渲染端经
+ *  setOverlayDimmed 上报，换用同款暗化配色实现全窗统一置灰 */
+const DIM_ALPHA = 0.45
+// 遮罩渐变实测参数（modal mask 的 antFadeIn）：200ms 线性。overlay 无
+// 原生动画，按步进插值逼近同节奏，免按钮条先于底面置灰的错位。
+// 步长 8ms：Windows 定时器 ~15.6ms 粒度会把 16ms 间隔取整成 24-31ms
+// 一跳（实测一跳 15%，观感抢跑），8ms 间隔实际 ~15.6ms/跳、步数翻倍
+const DIM_DURATION_MS = 200
+const DIM_TICK_MS = 8
+
+const dimColor = (hex, p) => {
+  const k = 1 - DIM_ALPHA * p
   const n = parseInt(hex.slice(1), 16)
-  const dim = (v) => Math.round(v * 0.55)
-  const to2 = (v) => v.toString(16).padStart(2, '0')
-  return `#${to2(dim(n >> 16))}${to2(dim((n >> 8) & 255))}${to2(dim(n & 255))}`
+  const to2 = (v) => Math.round(v).toString(16).padStart(2, '0')
+  return `#${to2(((n >> 16) & 255) * k)}${to2(((n >> 8) & 255) * k)}${to2((n & 255) * k)}`
 }
 
-const dimmedOverlayColors = ({ color, symbolColor }) => ({
-  color: dimColor(color),
-  symbolColor: dimColor(symbolColor)
+const dimmedOverlayColors = ({ color, symbolColor }, p) => ({
+  color: dimColor(color, p),
+  symbolColor: dimColor(symbolColor, p)
 })
 
-// 暗化中的窗口：win.id 集合（closed 时随窗口清理，见 setOverlayDimmed）
-const overlayDimmedWins = new Set()
+// 每窗暗化动画状态：id -> { p 当前进度, timer 步进定时器 }
+const overlayDimStates = new Map()
 
-/** 设置/解除窗口按钮条暗化（模态弹窗开/关时渲染端上报），即时刷新 overlay */
+/** 设置/解除窗口按钮条暗化（模态弹窗开/关时渲染端上报），按遮罩节奏步进过渡 */
 export const setOverlayDimmed = (win, on) => {
   if (!win || win.isDestroyed()) return
-  if (on) {
-    overlayDimmedWins.add(win.id)
-    // 每次开启注册一个 once 清理器：多次开关注册多个，均于 closed 触发，
-    // Set.delete 幂等无害；防开着弹窗直接关窗的残留
-    win.once('closed', () => overlayDimmedWins.delete(win.id))
-  } else {
-    overlayDimmedWins.delete(win.id)
+  const id = win.id
+  const prev = overlayDimStates.get(id)
+  if (prev?.timer) clearInterval(prev.timer)
+
+  const from = prev?.p ?? 0
+  const to = on ? 1 : 0
+  if (from === to) {
+    if (to === 0) overlayDimStates.delete(id)
+    applyOverlayToWindow(win)
+    return
   }
-  applyOverlayToWindow(win)
+
+  const startedAt = Date.now()
+  // 中途反向按剩余比例缩短时长，贴近遮罩中断重启的观感
+  const duration = Math.max(DIM_DURATION_MS * Math.abs(to - from), DIM_TICK_MS)
+  const state = { p: from, timer: null }
+  overlayDimStates.set(id, state)
+  state.timer = setInterval(() => {
+    if (win.isDestroyed()) {
+      clearInterval(state.timer)
+      overlayDimStates.delete(id)
+      return
+    }
+    const t = Math.min((Date.now() - startedAt) / duration, 1)
+    state.p = from + (to - from) * t // 线性：对齐 antFadeIn 实测缓动
+    applyOverlayToWindow(win)
+    if (t >= 1) {
+      clearInterval(state.timer)
+      state.timer = null
+      if (to === 0) overlayDimStates.delete(id)
+    }
+  }, DIM_TICK_MS)
+  if (!prev) {
+    // 窗口销毁兜底清状态；每次开关注册的 once 均于 closed 触发，幂等无害
+    win.once('closed', () => {
+      const s = overlayDimStates.get(id)
+      if (s?.timer) clearInterval(s.timer)
+      overlayDimStates.delete(id)
+    })
+  }
+  applyOverlayToWindow(win) // 起始帧
 }
 
 /**
@@ -381,5 +422,6 @@ const overlayColorsFor = (win) => {
       ? OVERLAY_LAYOUT_COLORS
       : OVERLAY_COLORS
   )[lastEffectiveTheme]
-  return overlayDimmedWins.has(win.id) ? dimmedOverlayColors(colors) : colors
+  const p = overlayDimStates.get(win.id)?.p
+  return p ? dimmedOverlayColors(colors, p) : colors
 }

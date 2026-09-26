@@ -20,9 +20,31 @@ import { mode, setMode } from '../store/themeStore.js'
 
 const open = ref(false)
 
-// 模态开/关同步窗口按钮条暗化；卸载兜底还原（开着弹窗切路由的场景）
-watch(open, (v) => window.electronAPI.setOverlayDimmed(v))
-onUnmounted(() => window.electronAPI.setOverlayDimmed(false))
+// 模态开/关同步窗口按钮条暗化。上报时机对齐遮罩动画真实起步：随 open 直接
+// 上报会领先底面——菜单入口的模态挂载比 open 置位慢数十毫秒；改在
+// document 捕获 animationstart（antFadeIn/antFadeOut 命中 fade，排除模态
+// 本体的 antZoom），350ms 兜底防事件缺失。syncRun 令旧一轮的延迟回调失效，
+// 防快速开关时旧值后到覆盖新值
+let syncRun = 0
+watch(open, (v) => {
+  const run = ++syncRun
+  const opts = { capture: true }
+  const fire = () => {
+    if (run !== syncRun) return // 已被更新一轮开关作废
+    document.removeEventListener('animationstart', onAnim, opts)
+    clearTimeout(timer)
+    window.electronAPI.setOverlayDimmed(v)
+  }
+  const onAnim = (e) => {
+    if (String(e.animationName).toLowerCase().includes('fade')) fire()
+  }
+  const timer = setTimeout(fire, 350)
+  document.addEventListener('animationstart', onAnim, opts)
+})
+onUnmounted(() => {
+  syncRun++ // 作废在途等待
+  window.electronAPI.setOverlayDimmed(false)
+})
 
 const onThemeChange = (e) => setMode(e.target.value)
 
