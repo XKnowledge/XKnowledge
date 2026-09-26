@@ -6,17 +6,25 @@ import { IPC } from '../shared/ipc-channels'
 // 会话内最近生效主题：新窗口 backgroundColor 预设依据
 let lastEffectiveTheme = 'light'
 
-/** 深浅两套原生标题栏（Windows titleBarOverlay）配色，浅色套与创建时配置一致 */
+/** 深浅两套原生标题栏（Windows titleBarOverlay）配色：内容底套与布局底套。
+ *  内容底套（--xk-bg）用于首页等窗口，浅色值与创建时配置一致；
+ *  布局底套（--xk-bg-layout，值见 renderer theme.css）用于图表/世界树
+ *  窗口——这两页头部为布局底，用内容底会让右上角按钮条呈异色方块 */
 const OVERLAY_COLORS = {
   light: { color: '#ffffff', symbolColor: '#74b1be' },
   dark: { color: '#141414', symbolColor: '#a1a8b0' }
 }
 
-/** 单窗口应用：换原生标题栏配色；平台不支持时静默 */
-const applyThemeToWindow = (win) => {
+const OVERLAY_LAYOUT_COLORS = {
+  light: { color: '#f5f5f5', symbolColor: '#74b1be' },
+  dark: { color: '#1f1f1f', symbolColor: '#a1a8b0' }
+}
+
+/** 单窗口应用：按主题与窗口所处页面换原生标题栏配色；平台不支持时静默 */
+const applyOverlayToWindow = (win) => {
   if (!win || win.isDestroyed()) return
   try {
-    win.setTitleBarOverlay(OVERLAY_COLORS[lastEffectiveTheme])
+    win.setTitleBarOverlay(overlayColorsFor(win))
   } catch {
     /* Linux 无此 API：渲染层主题不受影响 */
   }
@@ -34,7 +42,7 @@ export const applyTheme = ({ mode: themeMode, effective }) => {
   lastEffectiveTheme = effective === 'dark' ? 'dark' : 'light'
   nativeTheme.themeSource =
     themeMode === 'dark' ? 'dark' : themeMode === 'light' ? 'light' : 'system'
-  for (const win of BrowserWindow.getAllWindows()) applyThemeToWindow(win)
+  for (const win of BrowserWindow.getAllWindows()) applyOverlayToWindow(win)
 }
 
 /**
@@ -254,6 +262,8 @@ export const enterChartMode = (current_window) => {
   })
 
   unlockSizing(current_window)
+  // 图表页头部为布局底，标题栏按钮条同步换布局底配色
+  applyOverlayToWindow(current_window)
   // 进图表页先给默认标题；装载/保存上报路径后由 ipc 层按登记簿覆盖为文件名。
   // 放这里而非渲染端：标题消歧需要跨窗口全局视角
   setWindowTitle(current_window, UNTITLED_TITLE)
@@ -283,6 +293,8 @@ export const exitChartMode = (current_window) => {
   chartModeWindows.delete(id)
 
   lockSizing(current_window)
+  // 与 enterChartMode 对称：离开图表页恢复内容底配色
+  applyOverlayToWindow(current_window)
   // 与 enterChartMode 的标题设置对称：图表页卸载（回首页/关窗）恢复默认标题
   setWindowTitle(current_window, DEFAULT_TITLE)
 }
@@ -303,6 +315,8 @@ export const enterWorldMode = (current_window) => {
   worldModeWindows.set(id, { closedHandler })
   current_window.on('closed', closedHandler)
   unlockSizing(current_window)
+  // 世界树页头部同为布局底，与图表页同步换配色
+  applyOverlayToWindow(current_window)
 }
 
 /**
@@ -317,4 +331,17 @@ export const exitWorldMode = (current_window) => {
   current_window.removeListener('closed', handlers.closedHandler)
   worldModeWindows.delete(id)
   lockSizing(current_window)
+  // 与 enterWorldMode 对称：离开世界树页恢复内容底配色
+  applyOverlayToWindow(current_window)
 }
+
+/**
+ * 按窗口所处页面选 overlay 配色：图表/世界树窗口取布局底套，其余取内容
+ * 底套（两套色值对齐 renderer theme.css 的 --xk-bg-layout / --xk-bg），
+ * 保证按钮条始终与当前页头部同色。enter/exit 图表与世界树模式时及主题
+ * 切换时（applyOverlayToWindow）都经此取色。
+ */
+const overlayColorsFor = (win) =>
+  (chartModeWindows.has(win.id) || worldModeWindows.has(win.id)
+    ? OVERLAY_LAYOUT_COLORS
+    : OVERLAY_COLORS)[lastEffectiveTheme]

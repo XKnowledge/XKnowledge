@@ -211,7 +211,9 @@ describe('applyTheme：主题上报联动', () => {
   })
 
   it('遍历所有窗口，深色换深底原生标题栏', () => {
-    const win = fakeWindow({ setTitleBarOverlay: vi.fn() })
+    // id 独立隔离：默认 id:1 已残留在 chartModeWindows（模块级 Map 跨用例
+    // 存留），按页面选色会被判为图表窗口而取布局底配色
+    const win = fakeWindow({ id: 30, setTitleBarOverlay: vi.fn() })
     BrowserWindow.getAllWindows.mockReturnValue([win])
     applyTheme({ mode: 'dark', effective: 'dark' })
     expect(win.setTitleBarOverlay).toHaveBeenCalledWith({
@@ -221,7 +223,7 @@ describe('applyTheme：主题上报联动', () => {
   })
 
   it('浅色恢复白底标题栏（与创建时配置一致）', () => {
-    const win = fakeWindow({ setTitleBarOverlay: vi.fn() })
+    const win = fakeWindow({ id: 31, setTitleBarOverlay: vi.fn() })
     BrowserWindow.getAllWindows.mockReturnValue([win])
     applyTheme({ mode: 'light', effective: 'light' })
     expect(win.setTitleBarOverlay).toHaveBeenCalledWith({
@@ -248,5 +250,60 @@ describe('applyTheme：主题上报联动', () => {
     BrowserWindow.getAllWindows.mockReturnValue([win])
     applyTheme({ mode: 'dark', effective: 'dark' })
     expect(win.setTitleBarOverlay).not.toHaveBeenCalled()
+  })
+})
+
+describe('标题栏配色随页面切换（图表/世界树页头部为布局底）', () => {
+  // 模块级 Map 与 lastEffectiveTheme 均跨用例存留，用例内先显式定主题；
+  // getAllWindows 复位为空避免遍历到上一组遗留的窗口桩
+  beforeEach(() => {
+    BrowserWindow.getAllWindows.mockReturnValue([])
+  })
+
+  it('enterChartMode 换布局底配色，exitChartMode 恢复内容底配色（浅色）', () => {
+    applyTheme({ mode: 'light', effective: 'light' })
+    const win = fakeWindow({ id: 20, setTitleBarOverlay: vi.fn() })
+    enterChartMode(win)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#f5f5f5',
+      symbolColor: '#74b1be'
+    })
+    exitChartMode(win)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#ffffff',
+      symbolColor: '#74b1be'
+    })
+  })
+
+  it('enterWorldMode / exitWorldMode 同样切换（深色）', () => {
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    const win = fakeWindow({ id: 21, setTitleBarOverlay: vi.fn() })
+    enterWorldMode(win)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#1f1f1f',
+      symbolColor: '#a1a8b0'
+    })
+    exitWorldMode(win)
+    expect(win.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#141414',
+      symbolColor: '#a1a8b0'
+    })
+  })
+
+  it('主题切换时：图表模式窗口用布局底，普通窗口用内容底', () => {
+    applyTheme({ mode: 'light', effective: 'light' })
+    const chartWin = fakeWindow({ id: 22, setTitleBarOverlay: vi.fn() })
+    const homeWin = fakeWindow({ id: 23, setTitleBarOverlay: vi.fn() })
+    enterChartMode(chartWin)
+    BrowserWindow.getAllWindows.mockReturnValue([chartWin, homeWin])
+    applyTheme({ mode: 'dark', effective: 'dark' })
+    expect(chartWin.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#1f1f1f',
+      symbolColor: '#a1a8b0'
+    })
+    expect(homeWin.setTitleBarOverlay).toHaveBeenLastCalledWith({
+      color: '#141414',
+      symbolColor: '#a1a8b0'
+    })
   })
 })

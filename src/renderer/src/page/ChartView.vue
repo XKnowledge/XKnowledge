@@ -986,7 +986,10 @@ const buttonList = ref([
   /* 水平居中 */
   -webkit-app-region: drag;
   /* 可拖动 */
-  background-color: var(--xk-bg-layout);
+  /* 背景 !important：antd 的 .ant-layout .ant-layout-header(#001529 藏青)
+     specificity (0,2,0) 高于单类 (0,1,0)，不压则头部被盖成藏青、右上角
+     titleBarOverlay 按钮条与头部异色（同 BasicLayout .xk-header 的处理） */
+  background-color: var(--xk-bg-layout) !important;
   width: 100%;
   height: 53px !important;
   font: 13px sans-serif;

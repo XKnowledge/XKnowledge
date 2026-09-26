@@ -373,7 +373,10 @@ onUnmounted(() => {
   padding: 0 16px !important;
   height: 53px !important; /* 与图表页头部（.move-show/.move-header）一致 */
   line-height: 53px;
-  background-color: var(--xk-bg-layout);
+  /* 背景 !important：antd 的 .ant-layout .ant-layout-header(#001529 藏青)
+     运行时注入在后，scoped 同优先级时时序决胜会盖掉布局底（同图表页
+     .move-show 的处理） */
+  background-color: var(--xk-bg-layout) !important;
   border-bottom: 1px solid var(--xk-border);
   /* 与图表页头部一致：整条头部为窗口拖动区（titleBarStyle hidden 后拖动
      全靠 CSS 区域声明）；按钮须 no-drag 恢复点击，否则拖动语义吞掉 click */
