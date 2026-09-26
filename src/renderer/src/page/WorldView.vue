@@ -375,6 +375,12 @@ onUnmounted(() => {
   line-height: 53px;
   background-color: var(--xk-bg-layout);
   border-bottom: 1px solid var(--xk-border);
+  /* 与图表页头部一致：整条头部为窗口拖动区（titleBarStyle hidden 后拖动
+     全靠 CSS 区域声明）；按钮须 no-drag 恢复点击，否则拖动语义吞掉 click */
+  -webkit-app-region: drag;
+}
+.world-header .ant-btn {
+  -webkit-app-region: no-drag;
 }
 .world-content {
   position: relative;
