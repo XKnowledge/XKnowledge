@@ -5,9 +5,18 @@
     <a-layout-sider class="xk-sider">
       <div style="height: 50px" />
       <div class="sider-buttons">
-        <a-button id="openWorld" @click="router.push('/world')">世界树</a-button>
-        <a-button id="openSettings" @click="settingsRef?.open()">设置</a-button>
-        <a-button id="uploadFile" @click="openFile">打开本地文件</a-button>
+        <a-button id="openWorld" @click="router.push('/world')">
+          <template #icon><Network :size="16" /></template>
+          世界树
+        </a-button>
+        <a-button id="openSettings" @click="settingsRef?.open()">
+          <template #icon><Settings :size="16" /></template>
+          设置
+        </a-button>
+        <a-button id="uploadFile" @click="openFile">
+          <template #icon><FolderOpen :size="16" /></template>
+          打开本地文件
+        </a-button>
       </div>
       <XkSettings ref="settingsRef" />
     </a-layout-sider>
@@ -27,6 +36,7 @@
 </template>
 
 <script setup>
+import { FolderOpen, Network, Settings } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ref } from 'vue'
@@ -62,16 +72,14 @@ const openFile = async () => {
 </script>
 
 <style>
-/* 侧栏底部按钮组：设置在上、打开本地文件在下，贴 sider 底对齐。
-   左右 padding 27px：flex 列默认 stretch 让两按钮统一拉到内容区宽（146px），
-   与侧栏左右留距对齐旧版「打开本地文件」的内容宽；无 padding 则拉满 200px 贴边 */
+/* 侧栏底部按钮组：贴 sider 底对齐。无左右 padding：flex 列默认 stretch
+   让按钮拉满与 sider 同宽（200px，无左右留距贴边） */
 .sider-buttons {
   position: fixed;
   bottom: 8px;
   width: 200px;
   display: flex;
   flex-direction: column;
-  padding: 0 27px;
   gap: 8px;
 }
 
@@ -79,7 +87,22 @@ const openFile = async () => {
 #openSettings,
 #openWorld {
   height: 30px;
-  padding: 4px 30px;
+  padding: 4px 12px;
+  /* 图标+文字左对齐（antd 按钮默认居中，id 选择器优先级足够覆盖） */
+  text-align: left;
+  /* 去边框去背景：贴侧栏的"裸"导航项观感。antd 默认按钮是白底（深色主题下
+     尤其突兀）。ID 优先级高于 antd 类级 hover/active 规则，交互态背景同样
+     被压住，hover 反馈只剩文字/图标变色（currentColor 跟随） */
+  border: none;
+  background: transparent;
+}
+
+/* lucide 图标入按钮：antd 的 icon-文本 8px 间距规则只认 .anticon 类（lucide
+   的 svg 没有），需自行补间距；svg 默认基线对齐会整体偏上，按图标惯例下移
+   0.125em 与文本光学居中 */
+.sider-buttons .ant-btn > svg.lucide {
+  margin-inline-end: 8px;
+  vertical-align: -0.125em;
 }
 
 .ant-layout-sider {

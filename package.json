@@ -51,6 +51,7 @@
   "dependencies": {
     "3d-force-graph": "^1.80.0",
     "@ant-design/icons-vue": "^7.0.1",
+    "@lucide/vue": "^1.48.0",
     "ant-design-vue": "^4.2.6",
     "d3-force-3d": "^3.0.6",
     "three-spritetext": "^1.10.0",

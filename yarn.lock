@@ -728,6 +728,11 @@
   resolved "https://registry.npmmirror.com/@keyv/serialize/-/serialize-1.1.1.tgz"
   integrity sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==
 
+"@lucide/vue@^1.48.0":
+  version "1.48.0"
+  resolved "https://registry.yarnpkg.com/@lucide/vue/-/vue-1.48.0.tgz#3ab3cfd1b4ba2a4fc1e8dd207f49bca2300d0368"
+  integrity sha512-3/Nwx/RsqQ4ZrrSML1GNsSWCSDyLnBgoF/eEr1q9G6iZymn3+WKtzIj7Dbc/Nxrt9WOPuGrJ58S+CBiamK+36w==
+
 "@malept/cross-spawn-promise@^2.0.0":
   version "2.0.0"
   resolved "https://registry.npmmirror.com/@malept/cross-spawn-promise/-/cross-spawn-promise-2.0.0.tgz"
