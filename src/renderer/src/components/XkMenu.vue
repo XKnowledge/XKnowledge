@@ -1,5 +1,5 @@
 <template>
-  <a-dropdown>
+  <a-dropdown :trigger="menuTrigger">
     <a class="no-move" @click.prevent>
       <img :src="MenuIcon" alt="MenuIcon" :style="{ width: '20px', height: '20px' }" />
     </a>
@@ -54,6 +54,7 @@
 <script setup>
 import MenuIcon from '../assets/menu.png'
 
+const menuTrigger = window.electronAPI.platform === 'darwin' ? ['click'] : ['hover']
 const shortcutActive = defineModel('shortcutActive')
 const shortcutWatch = defineModel('shortcutWatch')
 

@@ -1,13 +1,13 @@
 <template>
   <a-space direction="vertical" :style="{ width: '100%' }" :size="[0, 48]">
     <a-layout :style="{ height: '100vh' }">
-      <a-layout-header class="move-show">
+      <a-layout-header class="move-show" :class="{ 'is-macos': isMacOS }">
         <a-layout>
           <a-layout-sider class="sider-menu-style">
             <XkMenu v-model:shortcutActive="shortcutActive" v-model:shortcutWatch="shortcutWatch" />
           </a-layout-sider>
           <!-- 窗口标题：紧挨菜单图标右侧（与首页标题条共用 XkTitleText，主进程统一推送） -->
-          <XkTitleText class="chart-title" />
+          <XkTitleText class="chart-title" :compact="isMacOS" />
           <a-layout-content class="move-header">
             <a-space size="large" style="margin-top: 5px">
               <a-space
@@ -198,6 +198,7 @@ import CreateEdgeIcon from '../assets/create_edge.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
 import EditIcon from '../assets/edit.png'
 
+const isMacOS = window.electronAPI.platform === 'darwin'
 const router = useRouter()
 
 const xkContext = ref({
@@ -1010,6 +1011,19 @@ const buttonList = ref([
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none; /* 不挡头部 drag 区拖拽窗口 */
+}
+
+/* macOS 原生窗口按钮占据左上角，菜单和标题避开这块区域。 */
+.move-show.is-macos .sider-menu-style {
+  margin-left: 95px;
+  -webkit-app-region: no-drag;
+}
+
+.move-show.is-macos .chart-title {
+  left: 160px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .move-header {
