@@ -79,6 +79,12 @@ defineExpose({ focus: () => inputRef.value?.focus() })
   border: none;
   outline: none;
   font: 13px sans-serif;
+  /* 透明底跟随浮层主题色：不设则 Chromium UA 默认白底，深色主题刺眼 */
+  background: transparent;
+  color: var(--xk-text);
+}
+.world-search-input::placeholder {
+  color: var(--xk-text-secondary);
 }
 .world-search-count {
   color: var(--xk-text-secondary);
