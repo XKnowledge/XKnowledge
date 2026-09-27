@@ -23,13 +23,25 @@
           @node-click="onNodeClick"
           @bg-click="cardOpen = false"
         />
-        <!-- 已展开域浮动列表：逐个收拢 + 全部收拢 -->
-        <div v-if="expandedList.length" class="world-expanded-bar">
+        <!-- 已展开域浮动列表：逐个收拢 + 全部收拢；「−」收成小按钮（同视图面板折叠模式） -->
+        <div v-if="expandedList.length && expandedBarOpen" class="world-expanded-bar">
+          <button class="world-expanded-fold" title="收起" @click="expandedBarOpen = false">
+            −
+          </button>
           <a-tag v-for="g in expandedList" :key="g.id" closable @close="collapse(g.id)">
             {{ g.title }}
           </a-tag>
           <a-button size="small" @click="collapseAll">全部收拢</a-button>
         </div>
+        <!-- 收起态：数量小按钮，点击恢复浮条 -->
+        <a-button
+          v-else-if="expandedList.length"
+          size="small"
+          class="world-expanded-toggle"
+          @click="expandedBarOpen = true"
+        >
+          已展开 {{ expandedList.length }}
+        </a-button>
         <!-- 视图调节：排斥力 + 聚焦模式（会话级浮动卡片，默认收起）。
              data-focus-node/data-focus-mode 是冒烟断言锚点（同图表页 focus-row） -->
         <div
@@ -159,6 +171,9 @@ const expandedList = computed(() =>
     .map((id) => graphsById.value.get(id))
     .filter(Boolean)
 )
+// 已展开浮条折叠开关（会话级，同视图面板 viewPanelOpen 语义）：默认展开，
+// 收起后原位显示「已展开 N」小按钮，点击恢复浮条
+const expandedBarOpen = ref(true)
 
 const graphRef = ref(null)
 const searchRef = ref(null)
@@ -426,6 +441,20 @@ onUnmounted(() => {
   border-radius: 6px;
   padding: 6px 8px;
   font: 13px sans-serif;
+  z-index: 2;
+}
+.world-expanded-fold {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.world-expanded-toggle {
+  position: absolute;
+  top: 52px;
+  right: 12px;
   z-index: 2;
 }
 .world-view-panel {
