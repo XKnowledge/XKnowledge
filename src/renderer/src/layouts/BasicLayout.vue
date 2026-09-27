@@ -1,8 +1,8 @@
 <template>
   <!-- 根节点必须是块级（a-layout），勿再用 a-space 等行内级组件包裹：
        inline-flex 的基线对齐会把行框撑到 100vh 之外，导致页面级滚动条 -->
-  <a-layout style="height: 100vh">
-    <a-layout-sider class="xk-sider">
+  <a-layout class="xk-shell" style="height: 100vh">
+    <a-layout-sider class="xk-sider" :width="184">
       <div style="height: 50px" />
       <div class="sider-buttons">
         <a-button id="openWorld" @click="router.push('/world')">
@@ -72,15 +72,22 @@ const openFile = async () => {
 </script>
 
 <style>
-/* 侧栏底部按钮组：贴 sider 底对齐。无左右 padding：flex 列默认 stretch
-   让按钮拉满与 sider 同宽（200px，无左右留距贴边） */
+/* 侧栏底部按钮组：贴卡底对齐。卡内左右/底各留 10px 不贴卡沿（flex 列
+   默认 stretch 拉满卡内宽）。原 position:fixed 贴的是窗口底，侧栏卡片化
+   留边后固定坐标会压到卡沿，改由 children 的 flex 列 + margin-top:auto 贴底 */
 .sider-buttons {
-  position: fixed;
-  bottom: 8px;
-  width: 200px;
+  margin-top: auto;
+  padding: 0 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* antd 结构 aside > .ant-layout-sider-children 是普通块（antd 只给
+   height:100%）：改 flex 列让 .sider-buttons 的 margin-top:auto 生效 */
+.xk-sider .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
 }
 
 #uploadFile,
@@ -130,9 +137,28 @@ const openFile = async () => {
 }
 
 .xk-sider {
+  /* 卡片样式（同 XkExampleCard 的卡片语言）：四周留 8px 浮起 + 描边 +
+     圆角；底色沿用布局底，与内容区（--xk-bg）保持层次。border 须置于
+     全局 .ant-layout-sider 的 border-inline-end 之后（同优先级源序决胜）。
+     宽度不变量：8 边距 + 184 卡宽 + 8 边距 = 200px，侧栏列占位与
+     卡片化前完全一致——宽度多占会挤压图库列数（900px 窗口下 3 列
+     仅 9px 余量，曾因多占 16px 掉成 2 列） */
+  margin: 8px;
+  border: 1px solid var(--xk-card-border);
+  border-radius: 10px;
+  /* 底部投影增立体感：同浮层搜索框的阴影档位（XkWorldSearch/
+     XkGraphSearch），向下偏移只投底部 */
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
   text-align: center;
   line-height: 120px;
   background-color: var(--xk-bg-layout) !important;
+}
+
+/* 窗口底（卡片四周 gutter 露出的底）：内容底色。antd 给 .ant-layout 涂
+   colorBgLayout（浅 #f5f5f5 / 深 #000）与主题 token 不一致，
+   !important 压之（同 .xk-sider 背景的处理） */
+.xk-shell {
+  background-color: var(--xk-bg) !important;
 }
 
 .ant-layout-header {
