@@ -62,6 +62,8 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
   padding: 14px 12px 10px;
   border: 1px solid var(--xk-card-border);
   border-radius: 10px;
+  /* 浮空感阴影：同首页侧栏卡/浮层搜索框的阴影档位，向下偏移只投底部 */
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -85,7 +87,10 @@ const catColor = (c) => categoryColors.value.get(String(c ?? ''))
 
 .xk-example-card.selected {
   border-color: var(--xk-accent);
-  box-shadow: 0 0 0 1px var(--xk-accent);
+  /* 选中环叠加浮空阴影（box-shadow 单属性整体覆盖，须并列声明防止选中即下沉） */
+  box-shadow:
+    0 0 0 1px var(--xk-accent),
+    0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 .name {
