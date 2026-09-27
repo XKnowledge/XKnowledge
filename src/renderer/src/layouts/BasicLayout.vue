@@ -3,12 +3,14 @@
        inline-flex 的基线对齐会把行框撑到 100vh 之外，导致页面级滚动条 -->
   <a-layout class="xk-shell" style="height: 100vh">
     <a-layout-sider class="xk-sider" :width="184">
-      <div style="height: 50px" />
-      <div class="sider-buttons">
+      <!-- 顶组：世界树（主导航）居卡顶；底组：设置/打开本地文件（工具项）贴卡底 -->
+      <div class="sider-buttons sider-top">
         <a-button id="openWorld" @click="router.push('/world')">
           <template #icon><Network :size="16" /></template>
           世界树
         </a-button>
+      </div>
+      <div class="sider-buttons sider-bottom">
         <a-button id="openSettings" @click="settingsRef?.open()">
           <template #icon><Settings :size="16" /></template>
           设置
@@ -72,15 +74,24 @@ const openFile = async () => {
 </script>
 
 <style>
-/* 侧栏底部按钮组：贴卡底对齐。卡内左右/底各留 10px 不贴卡沿（flex 列
-   默认 stretch 拉满卡内宽）。原 position:fixed 贴的是窗口底，侧栏卡片化
-   留边后固定坐标会压到卡沿，改由 children 的 flex 列 + margin-top:auto 贴底 */
+/* 侧栏按钮组：分顶/底两组——世界树居卡顶（主导航），设置/打开本地文件
+   贴卡底（工具项），children flex 列 + 底组 margin-top:auto 分居两端。
+   卡内左右留 10px 不贴卡沿（flex 列默认 stretch 拉满卡内宽）。原整组
+   position:fixed 贴窗口底，卡片化留边后固定坐标会压到卡沿 */
 .sider-buttons {
-  margin-top: auto;
-  padding: 0 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 0 10px;
+}
+
+.sider-buttons.sider-top {
+  padding-top: 10px;
+}
+
+.sider-buttons.sider-bottom {
+  margin-top: auto;
+  padding-bottom: 10px;
 }
 
 /* antd 结构 aside > .ant-layout-sider-children 是普通块（antd 只给
