@@ -1,9 +1,7 @@
 <template>
   <a-layout style="height: 100vh">
     <a-layout-header class="world-header">
-      <a-button size="small" @click="router.push('/')">关闭</a-button>
-      <a-button size="small" :loading="loading" @click="loadIndex">刷新</a-button>
-      <a-button size="small" :disabled="picking" @click="pickUserDir">图库目录</a-button>
+      <XkWorldMenu :picking="picking" @close="router.push('/')" @refresh="loadIndex" @pick-dir="pickUserDir" />
       <!-- 世界树页经 enterWorldMode 解锁窗口尺寸：最小化/最大化/关闭齐备 -->
       <XkWindowControls sizable />
     </a-layout-header>
@@ -146,6 +144,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import XkWorldGraph from '../components/XkWorldGraph.vue'
+import XkWorldMenu from '../components/XkWorldMenu.vue'
 import XkWorldSearch from '../components/XkWorldSearch.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 import { setPendingChart } from '../store/chartStore'
@@ -397,9 +396,8 @@ onUnmounted(() => {
 .world-header {
   display: flex;
   align-items: center;
-  gap: 12px;
   /* ！important：BasicLayout 全局 .ant-layout-header{padding-inline:0!important}
-     会清掉本页头部左右留白，使「关闭」贴死窗口左缘 */
+     会清掉本页头部左右留白，使菜单图标贴死窗口左缘 */
   padding: 0 16px !important;
   height: 53px !important; /* 与图表页头部（.move-show/.move-header）一致 */
   line-height: 53px;
@@ -411,11 +409,9 @@ onUnmounted(() => {
   background-color: var(--xk-bg-layout) !important;
   border-bottom: 1px solid var(--xk-border);
   /* 与图表页头部一致：整条头部为窗口拖动区（titleBarStyle hidden 后拖动
-     全靠 CSS 区域声明）；按钮须 no-drag 恢复点击，否则拖动语义吞掉 click */
+     全靠 CSS 区域声明）；菜单与窗口控制按钮的 no-drag 由各自组件内置
+     （.no-move / .xk-window-controls），否则拖动语义吞掉 click */
   -webkit-app-region: drag;
-}
-.world-header .ant-btn {
-  -webkit-app-region: no-drag;
 }
 .world-content {
   position: relative;

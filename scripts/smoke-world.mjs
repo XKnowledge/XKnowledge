@@ -73,19 +73,26 @@ expectTrue(
   (await page.evaluate(() => window.__ovfFrames)) === 0,
   `溢出帧 ${await page.evaluate(() => window.__ovfFrames)}`
 )
+// 头部操作已收进左上角菜单（同图表页 XkMenu 模式）：hover 触发器展开下拉，
+// 断言「图库目录」项存在（同 smoke-close-file 的 hover 展开模式）
+await page.locator('.world-header a.no-move').hover()
+await page.waitForTimeout(500) // 等 dropdown 浮层展开
 expectTrue(
-  '世界页头部按钮',
-  (await page.locator('.world-header button', { hasText: '图库目录' }).count()) === 1
+  '世界页头部菜单含增加目录项',
+  (await page.getByText('增加目录', { exact: true }).count()) === 1
 )
+await shot('world-menu')
+await page.keyboard.press('Escape') // 收起下拉，避免浮层拦截后续点击
+await page.waitForTimeout(300)
 // 头部拖动区回归：titleBarStyle hidden 后窗口拖动全靠 CSS 区域声明，曾整页漏配
 // drag 致世界页不可拖（图表页正常）。只断言 CSS 区域——合成鼠标事件触发原生
-// 拖动在 CDP 下不稳定，不做窗口位移断言；按钮 no-drag 保证拖动语义不吞点击
+// 拖动在 CDP 下不稳定，不做窗口位移断言；菜单触发器 no-drag 保证拖动语义不吞点击
 const dragRegions = await page.evaluate(() => ({
   header: getComputedStyle(document.querySelector('.world-header')).webkitAppRegion,
-  button: getComputedStyle(document.querySelector('.world-header .ant-btn')).webkitAppRegion
+  menu: getComputedStyle(document.querySelector('.world-header a.no-move')).webkitAppRegion
 }))
 expectTrue('头部为窗口拖动区', dragRegions.header === 'drag', `实际 ${dragRegions.header}`)
-expectTrue('头部按钮 no-drag 可点击', dragRegions.button === 'no-drag', `实际 ${dragRegions.button}`)
+expectTrue('头部菜单 no-drag 可点击', dragRegions.menu === 'no-drag', `实际 ${dragRegions.menu}`)
 
 // 场景 2：Ctrl+F 全库搜索
 await page.keyboard.press('Control+f')

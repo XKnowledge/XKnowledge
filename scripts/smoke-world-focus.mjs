@@ -167,8 +167,10 @@ expectOk('收拢后焦点回退非空', (await focusNode()).length > 0, `焦点=
 await shot('09-world-deep-collapse-all')
 
 // 场景 9：聚焦开启时刷新世界索引（模式保持、焦点回退、排斥力经 prop 回灌重挂实例）
-// 两字按钮 antdv 自动插空格（「刷 新」），hasText 匹配不可靠，按顺序取第 2 个
-await page.locator('.world-header button').nth(1).click()
+// 刷新已收进左上角菜单：hover 触发器展开下拉后点「刷新视图」（同 smoke-close-file 模式）
+await page.locator('.world-header a.no-move').hover()
+await page.waitForTimeout(500) // 等 dropdown 浮层展开
+await page.getByText('刷新视图', { exact: true }).click()
 await page.waitForTimeout(3_000)
 expectEq('刷新后仍处隐藏模式', await focusMode(), 'deep')
 expectOk('刷新后焦点回退非空', (await focusNode()).length > 0, `焦点=${await focusNode()}`)
