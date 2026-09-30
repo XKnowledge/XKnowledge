@@ -135,7 +135,9 @@ function checkFile(file, fix) {
   })
   const dupNames = [...names.entries()].filter(([, c]) => c > 1).map(([n]) => n)
   if (dupNames.length > 0) {
-    fails.push(`节点重名（name 是全图唯一主键）：${dupNames.slice(0, 5).join('、')}${dupNames.length > 5 ? ' 等' : ''}`)
+    fails.push(
+      `节点重名（name 是全图唯一主键）：${dupNames.slice(0, 5).join('、')}${dupNames.length > 5 ? ' 等' : ''}`
+    )
   }
 
   /* ---- 连接 ---- */
@@ -162,12 +164,20 @@ function checkFile(file, fix) {
       fails.push(`${tag} 自环：source 与 target 都是「${link.source}」`)
     }
     if (
-      typeof link.source === 'string' && typeof link.target === 'string' &&
-      nameSet.has(link.source) && nameSet.has(link.target) && link.source !== link.target
+      typeof link.source === 'string' &&
+      typeof link.target === 'string' &&
+      nameSet.has(link.source) &&
+      nameSet.has(link.target) &&
+      link.source !== link.target
     ) {
-      const key = link.source < link.target ? `${link.source}\u0000${link.target}` : `${link.target}\u0000${link.source}`
+      const key =
+        link.source < link.target
+          ? `${link.source}\u0000${link.target}`
+          : `${link.target}\u0000${link.source}`
       if (seenPair.has(key)) {
-        fails.push(`重复连接：「${link.source}」与「${link.target}」之间已有连接（两点间仅允许一条，无向）`)
+        fails.push(
+          `重复连接：「${link.source}」与「${link.target}」之间已有连接（两点间仅允许一条，无向）`
+        )
       }
       seenPair.add(key)
       degree.set(link.source, degree.get(link.source) + 1)
@@ -206,13 +216,19 @@ function checkFile(file, fix) {
   if (components.length > 1) {
     fails.push(
       `图分裂为 ${components.length} 个连通分量（最大 ${components[0].length} 节点，` +
-        `其余如 ${components.slice(1).map((c) => `「${c[0]}」等 ${c.length} 点`).slice(0, 3).join('、')}）——` +
+        `其余如 ${components
+          .slice(1)
+          .map((c) => `「${c[0]}」等 ${c.length} 点`)
+          .slice(0, 3)
+          .join('、')}）——` +
         `力导向图会飘成几簇，需补跨分量桥接边`
     )
   }
   const isolated = [...degree.entries()].filter(([, d]) => d === 0).map(([n]) => n)
   if (isolated.length > 0) {
-    fails.push(`孤立节点（度 0）：${isolated.slice(0, 5).join('、')}${isolated.length > 5 ? ' 等' : ''}`)
+    fails.push(
+      `孤立节点（度 0）：${isolated.slice(0, 5).join('、')}${isolated.length > 5 ? ' 等' : ''}`
+    )
   }
 
   /* ---- 质量基准 WARN ---- */

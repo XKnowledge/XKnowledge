@@ -22,19 +22,23 @@ fs.mkdirSync(SHOT_DIR, { recursive: true })
 // 自动保存的落盘目标（放截图专属目录内：清场天然覆盖，且已被 gitignore）。
 // 须预创建：FILE_OPEN 的 readChartFile 要真实读它并完成 fileGuard 授权
 const TARGET = path.join(SHOT_DIR, 'autosave-target.xk')
-fs.writeFileSync(TARGET, JSON.stringify({
-  version: 2,
-  description: '自动保存冒烟原始简介',
-  nodes: [
-    { name: '甲', des: '', symbolSize: 40, category: '冒烟' },
-    { name: '乙', des: '', symbolSize: 40, category: '冒烟' },
-    { name: '丙', des: '', symbolSize: 40, category: '冒烟' }
-  ],
-  links: [
-    { source: '甲', target: '乙', name: '相连', des: '' },
-    { source: '乙', target: '丙', name: '相连', des: '' }
-  ]
-}), 'utf-8')
+fs.writeFileSync(
+  TARGET,
+  JSON.stringify({
+    version: 2,
+    description: '自动保存冒烟原始简介',
+    nodes: [
+      { name: '甲', des: '', symbolSize: 40, category: '冒烟' },
+      { name: '乙', des: '', symbolSize: 40, category: '冒烟' },
+      { name: '丙', des: '', symbolSize: 40, category: '冒烟' }
+    ],
+    links: [
+      { source: '甲', target: '乙', name: '相连', des: '' },
+      { source: '乙', target: '丙', name: '相连', des: '' }
+    ]
+  }),
+  'utf-8'
+)
 
 const electronBin = path.join(APP_DIR, 'node_modules', 'electron', 'dist', 'electron.exe')
 if (!fs.existsSync(electronBin)) {
@@ -63,7 +67,9 @@ const shot = async (name) => {
 // 主进程侧枚举全部窗口标题（新窗口标题含目标文件名，脏圆点在任务栏标题前缀）
 const titleOf = async () => {
   const titles = await app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed()).map((w) => w.getTitle())
+    BrowserWindow.getAllWindows()
+      .filter((w) => !w.isDestroyed())
+      .map((w) => w.getTitle())
   )
   return titles
 }
@@ -157,10 +163,7 @@ expectOk(
 )
 const keptName = await page2.locator('.sider-style form textarea').first().inputValue()
 expectOk('半成品节点名未被清空', keptName === '冒烟半成品节点', keptName)
-expectOk(
-  '侧边栏未跳回属性面板',
-  !(await page2.locator('.attr-panel').isVisible())
-)
+expectOk('侧边栏未跳回属性面板', !(await page2.locator('.attr-panel').isVisible()))
 
 // 7. 落盘验证：目标文件存在，简介为新值，未提交的表单节点没有入库
 let savedChart = null
@@ -171,7 +174,11 @@ try {
 }
 expectOk('自动保存已落盘（目标文件存在且可解析）', !!savedChart)
 if (savedChart) {
-  expectOk('落盘简介为新值', savedChart.description === '自动保存冒烟：简介已修改', savedChart.description)
+  expectOk(
+    '落盘简介为新值',
+    savedChart.description === '自动保存冒烟：简介已修改',
+    savedChart.description
+  )
   expectOk(
     '未提交的表单节点未入库（仍 3 节点）',
     Array.isArray(savedChart.nodes) && savedChart.nodes.length === 3,

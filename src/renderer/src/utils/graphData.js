@@ -254,13 +254,19 @@ export const planHighlightRepaint = ({
  * @returns {Array} 命中节点数组；空关键词返回 []
  */
 export const searchGraphNodes = (nodes, keyword, hiddenCategories) => {
-  const kw = String(keyword ?? '').trim().toLowerCase()
+  const kw = String(keyword ?? '')
+    .trim()
+    .toLowerCase()
   if (!kw) return []
   return (nodes ?? []).filter((n) => {
     if (hiddenCategories?.has(n.category)) return false
     return (
-      String(n.name ?? '').toLowerCase().includes(kw) ||
-      String(n.des ?? '').toLowerCase().includes(kw)
+      String(n.name ?? '')
+        .toLowerCase()
+        .includes(kw) ||
+      String(n.des ?? '')
+        .toLowerCase()
+        .includes(kw)
     )
   })
 }

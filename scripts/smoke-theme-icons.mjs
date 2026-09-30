@@ -100,7 +100,11 @@ await page.waitForTimeout(300)
 // 5. 浅色断言：filter 复原 none，反色规则不再命中
 s = await iconState()
 expectOk('浅色主题生效', s.theme === 'light', `data-theme=${s.theme}`)
-expectOk('浅色下图标不反色', s.filters.length === 1 && s.filters[0] === 'none', JSON.stringify(s.filters))
+expectOk(
+  '浅色下图标不反色',
+  s.filters.length === 1 && s.filters[0] === 'none',
+  JSON.stringify(s.filters)
+)
 await shotHeader('03-light-header')
 
 console.log('renderer-errors:', errors.length === 0 ? 'none (ok)' : JSON.stringify(errors, null, 2))

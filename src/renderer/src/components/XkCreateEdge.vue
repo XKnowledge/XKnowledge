@@ -15,10 +15,10 @@
 <script setup>
 import { addHistory, jsonReactive, resetEdgeRef } from '../utils/XkUtils'
 
-const newEdge = defineModel('newEdge')
-const highlightNodeList = defineModel('highlightNodeList')
+const newEdge = defineModel('newEdge', { type: Object })
+const highlightNodeList = defineModel('highlightNodeList', { type: Array })
 
-const xkContext = defineModel('xkContext')
+const xkContext = defineModel('xkContext', { type: Object })
 
 const createEdgeSubmit = () => {
   /**

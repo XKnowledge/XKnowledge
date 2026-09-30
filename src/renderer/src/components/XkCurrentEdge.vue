@@ -15,10 +15,10 @@
 <script setup>
 import { addHistory, jsonReactive } from '../utils/XkUtils'
 
-const currentEdge = defineModel('currentEdge')
-const currentEdgeDataIndex = defineModel('currentEdgeDataIndex')
+const currentEdge = defineModel('currentEdge', { type: Object })
+const currentEdgeDataIndex = defineModel('currentEdgeDataIndex', { type: Number })
 
-const xkContext = defineModel('xkContext')
+const xkContext = defineModel('xkContext', { type: Object })
 
 const currentEdgeSubmit = () => {
   /**

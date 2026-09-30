@@ -66,13 +66,10 @@ const wrapWriteError = (err, filePath) =>
  */
 const assertNotExample = (filePath) => {
   if (!isExamplePath(filePath)) return
-  throw Object.assign(
-    new Error('[EXAMPLE_PROTECTED] 示例文件不允许修改，请保存到其他位置'),
-    {
-      code: 'EXAMPLE_PROTECTED',
-      path: filePath
-    }
-  )
+  throw Object.assign(new Error('[EXAMPLE_PROTECTED] 示例文件不允许修改，请保存到其他位置'), {
+    code: 'EXAMPLE_PROTECTED',
+    path: filePath
+  })
 }
 
 /**

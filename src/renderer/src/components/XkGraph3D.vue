@@ -108,9 +108,7 @@ const searchActiveName = computed(() => searchHitNodes.value[searchActiveIdx.val
  *  （不飞相机），不在了重置到第 1 个（也不飞：飞行只由显式动作触发） */
 const recomputeSearch = (prevActiveName = null) => {
   searchHitNodes.value = searchGraphNodes(props.nodes, searchKeyword.value, hiddenCategories.value)
-  const idx = prevActiveName
-    ? searchHitNodes.value.findIndex((n) => n.name === prevActiveName)
-    : -1
+  const idx = prevActiveName ? searchHitNodes.value.findIndex((n) => n.name === prevActiveName) : -1
   searchActiveIdx.value = idx > -1 ? idx : 0
   applyHighlight()
   // 深度聚焦：命中豁免的可见性实时跟随搜索结果（命中集变化→邻域外节点显隐翻转）
@@ -447,9 +445,7 @@ let preFocusCamera = null // { x, y, z, lookAt: { x, y, z } }
  *  由库的数据装载粗取景兜底 */
 const focusCamera = (names) => {
   if (!graph) return
-  const pts = graph
-    .graphData()
-    .nodes.filter((n) => names.has(n.name) && Number.isFinite(n.x))
+  const pts = graph.graphData().nodes.filter((n) => names.has(n.name) && Number.isFinite(n.x))
   if (!pts.length) return
   const c = { x: 0, y: 0, z: 0 }
   for (const p of pts) {

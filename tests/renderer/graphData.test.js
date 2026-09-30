@@ -252,7 +252,12 @@ describe('defaultFocusNode：默认焦点三级规则', () => {
     expect(defaultFocusNode([{ name: 'X' }, { name: 'Y' }], [])).toBe('X')
   })
   it('自环计入度数', () => {
-    expect(defaultFocusNode(nodes, [{ source: 'A', target: 'A' }, { source: 'B', target: 'C' }])).toBe('A')
+    expect(
+      defaultFocusNode(nodes, [
+        { source: 'A', target: 'A' },
+        { source: 'B', target: 'C' }
+      ])
+    ).toBe('A')
   })
   it('空图返回空串', () => {
     expect(defaultFocusNode([], [])).toBe('')

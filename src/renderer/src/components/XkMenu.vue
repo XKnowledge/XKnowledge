@@ -55,8 +55,8 @@
 import MenuIcon from '../assets/menu.png'
 
 const menuTrigger = window.electronAPI.platform === 'darwin' ? ['click'] : ['hover']
-const shortcutActive = defineModel('shortcutActive')
-const shortcutWatch = defineModel('shortcutWatch')
+const shortcutActive = defineModel('shortcutActive', { type: String })
+const shortcutWatch = defineModel('shortcutWatch', { type: Boolean })
 
 const createNewFile = () => {
   shortcutActive.value = 'create_new_file'

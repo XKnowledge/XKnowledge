@@ -27,9 +27,7 @@ if (!fs.existsSync(electronBin)) {
 // 排序规则若改动须两边同步
 const firstExample = () => {
   const dir = path.join(APP_DIR, 'examples')
-  const items = JSON.parse(
-    fs.readFileSync(path.join(dir, 'examples.manifest.json'), 'utf-8')
-  ).items
+  const items = JSON.parse(fs.readFileSync(path.join(dir, 'examples.manifest.json'), 'utf-8')).items
   if (!Array.isArray(items) || !items.length) {
     throw new Error('示例清单缺失或为空（先 npm run build 生成）')
   }
@@ -96,7 +94,9 @@ const expectOk = (label, ok, detail = '') => {
 
 const example = firstExample()
 const expectedHub = expectedFocusName(example)
-console.log(`首个示例: ${example.fileName}（${example.nodes.length} 节点），期望默认焦点: ${expectedHub}`)
+console.log(
+  `首个示例: ${example.fileName}（${example.nodes.length} 节点），期望默认焦点: ${expectedHub}`
+)
 
 // 1. 首页 → 双击第一张示例卡同窗口进入图表页
 await page.waitForSelector('.xk-example-card', { timeout: 15_000 })
@@ -123,7 +123,10 @@ expectEq(
   await focusRow.locator('.focus-mode-select .ant-select-selection-item').textContent(),
   '关闭'
 )
-expectOk('开启前跳数下拉禁用', (await focusRow.locator('.focus-hops-select.ant-select-disabled').count()) === 1)
+expectOk(
+  '开启前跳数下拉禁用',
+  (await focusRow.locator('.focus-hops-select.ant-select-disabled').count()) === 1
+)
 expectEq('开启前焦点为空', await focusRow.getAttribute('data-focus-node'), '')
 
 // 4. 模式切「灰化」→ 自动聚焦默认焦点
@@ -132,8 +135,15 @@ await dropdownOption('灰化').click()
 await page.waitForTimeout(800) // 等取景动画（600ms）
 expectEq('默认焦点=度数最高节点', await focusRow.getAttribute('data-focus-node'), expectedHub)
 expectEq('模式锚点=focus', await focusRow.getAttribute('data-focus-mode'), 'focus')
-expectOk('开启后跳数下拉可用', (await focusRow.locator('.focus-hops-select.ant-select-disabled').count()) === 0)
-expectEq('跳数默认 2', await focusRow.locator('.focus-hops-select .ant-select-selection-item').textContent(), '2')
+expectOk(
+  '开启后跳数下拉可用',
+  (await focusRow.locator('.focus-hops-select.ant-select-disabled').count()) === 0
+)
+expectEq(
+  '跳数默认 2',
+  await focusRow.locator('.focus-hops-select .ant-select-selection-item').textContent(),
+  '2'
+)
 await shot('01-focus-on')
 
 // 5. 聚焦不置脏：窗口标题不得出现未保存圆点
@@ -154,7 +164,11 @@ if (!(await focusRow.isVisible())) {
 await focusRow.locator('.focus-hops-select').click()
 await dropdownOption('1').click()
 await page.waitForTimeout(500)
-expectEq('跳数切换为 1', (await focusRow.locator('.focus-hops-select .ant-select-selection-item').textContent()), '1')
+expectEq(
+  '跳数切换为 1',
+  await focusRow.locator('.focus-hops-select .ant-select-selection-item').textContent(),
+  '1'
+)
 await shot('02-hops-1')
 
 // 8. 切「隐藏」：邻域外由灰化改隐藏（视觉以截图人工复核），焦点保持
@@ -173,7 +187,10 @@ await dropdownOption('关闭').click()
 await page.waitForTimeout(600) // 等相机恢复动画（400ms）
 expectEq('关闭后焦点清空', await focusRow.getAttribute('data-focus-node'), '')
 expectEq('关闭后模式锚点', await focusRow.getAttribute('data-focus-mode'), 'off')
-expectOk('关闭后跳数下拉禁用', (await focusRow.locator('.focus-hops-select.ant-select-disabled').count()) === 1)
+expectOk(
+  '关闭后跳数下拉禁用',
+  (await focusRow.locator('.focus-hops-select.ant-select-disabled').count()) === 1
+)
 await shot('04-focus-off')
 
 console.log('renderer-errors:', errors.length === 0 ? 'none (ok)' : JSON.stringify(errors, null, 2))

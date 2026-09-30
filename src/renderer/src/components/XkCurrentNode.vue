@@ -40,12 +40,12 @@
 import { defineComponent, ref } from 'vue'
 import { addHistory, jsonReactive } from '../utils/XkUtils'
 
-const currentNode = defineModel('currentNode')
-const categoryItems = defineModel('categoryItems')
-const categoryName = defineModel('categoryName')
-const currentNodeDataIndex = defineModel('currentNodeDataIndex')
+const currentNode = defineModel('currentNode', { type: Object })
+const categoryItems = defineModel('categoryItems', { type: Array })
+const categoryName = defineModel('categoryName', { type: String })
+const currentNodeDataIndex = defineModel('currentNodeDataIndex', { type: Number })
 
-const xkContext = defineModel('xkContext')
+const xkContext = defineModel('xkContext', { type: Object })
 
 const inputRef = ref()
 

@@ -1,7 +1,12 @@
 <template>
   <a-layout style="height: 100vh">
     <a-layout-header class="world-header">
-      <XkWorldMenu :picking="picking" @close="router.push('/')" @refresh="loadIndex" @pick-dir="pickUserDir" />
+      <XkWorldMenu
+        :picking="picking"
+        @close="router.push('/')"
+        @refresh="loadIndex"
+        @pick-dir="pickUserDir"
+      />
       <!-- 世界树页经 enterWorldMode 解锁窗口尺寸：最小化/最大化/关闭齐备 -->
       <XkWindowControls sizable />
     </a-layout-header>

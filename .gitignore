@@ -26,3 +26,6 @@ docs/superpowers/
 # 冒烟脚本截图输出（各脚本专属目录如 .smoke-shots-search/ 一并忽略）
 .smoke-shots*/
 
+# 未来开发计划
+docs/future-features.md
+docs/roadmap.md

@@ -41,8 +41,8 @@
             :highlight-link="highlightEdgeObj"
             :show-link-name="showLinkName"
             :show-small-labels="showSmallLabels"
-             :focus-node-names="focusNodeNames"
-             :focus-deep="focusMode === 'deep'"
+            :focus-node-names="focusNodeNames"
+            :focus-deep="focusMode === 'deep'"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
           />
@@ -55,7 +55,11 @@
           <!-- 属性面板用普通块级容器：a-checkbox-group 是 inline-flex，
                divider/按钮行嵌在里面会被当 flex 子项挤到侧边栏外（按钮不可见） -->
           <div v-show="attributeVisible" class="attr-panel">
-            <a-checkbox-group class="attr-checkboxes" v-model:value="checkedValues" @change="onChangeAttr">
+            <a-checkbox-group
+              v-model:value="checkedValues"
+              class="attr-checkboxes"
+              @change="onChangeAttr"
+            >
               <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
               <a-checkbox value="showSmallLabels"> 显示小节点名称 </a-checkbox>
             </a-checkbox-group>
@@ -123,11 +127,7 @@
             <a-divider orientation="left">图谱简介</a-divider>
             <!-- 图表级元数据：即时写入 chartData.description 并置脏（同复选框/
                  滑块），不进 undo/redo；绑定经 computed 兜底，见脚本区注释 -->
-            <a-textarea
-              v-model:value="chartDescription"
-              :rows="4"
-              @change="onDescriptionChange"
-            />
+            <a-textarea v-model:value="chartDescription" :rows="4" @change="onDescriptionChange" />
             <a-divider orientation="left">视图</a-divider>
             <!-- space-evenly：2 个 flex 项产生 3 段等宽空隙（左边缘/按钮间/右边缘） -->
             <a-row justify="space-evenly">
@@ -270,12 +270,7 @@ const focusNodeNames = computed(() => {
   if (focusMode.value === 'off' || !focusNodeId.value) return []
   const chart = xkContext.value.chartData
   return [
-    ...focusNeighborhood(
-      chart?.nodes ?? [],
-      chart?.links ?? [],
-      focusNodeId.value,
-      focusHops.value
-    )
+    ...focusNeighborhood(chart?.nodes ?? [], chart?.links ?? [], focusNodeId.value, focusHops.value)
   ]
 })
 const highlightNodeList = ref([]) // 高亮节点 index 记录（最多 2 个，逻辑照旧）
@@ -452,8 +447,7 @@ const loadChartData = (data) => {
   graph3dRef.value?.closeSearch()
   // 聚焦模式跨图保持：开着时装载即聚焦默认焦点（第一眼是子图不是纹理）；
   // 没开则置空，防旧图 name 泄漏进新图邻域计算
-  focusNodeId.value =
-    focusMode.value !== 'off' ? defaultFocusNode(chart.nodes, chart.links) : ''
+  focusNodeId.value = focusMode.value !== 'off' ? defaultFocusNode(chart.nodes, chart.links) : ''
   if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
   xkContext.value.updateChart = !xkContext.value.updateChart
   nextTick(() => {

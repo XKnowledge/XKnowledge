@@ -314,4 +314,3 @@ export const exitWorldMode = (current_window) => {
   worldModeWindows.delete(id)
   lockSizing(current_window)
 }
-

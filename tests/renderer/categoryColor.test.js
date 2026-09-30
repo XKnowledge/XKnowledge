@@ -17,10 +17,25 @@ describe('assignCategoryColors：类型集合顺延分配', () => {
 
   it('19 个类型（饮食与风味规模）零撞色', () => {
     const names = [
-      '中餐技法谱系', '产区与名茶', '产地风土', '六大茶类谱系', '冲煮与品鉴',
-      '制茶工艺链', '发酵与保存', '品鉴与风味', '器具与冲泡', '处理与发酵',
-      '总览', '植物与品种', '母酱与乳化', '源流与传播', '火候与热',
-      '烘焙与火候', '起源与传播', '风味的化学', '食材搭配网络'
+      '中餐技法谱系',
+      '产区与名茶',
+      '产地风土',
+      '六大茶类谱系',
+      '冲煮与品鉴',
+      '制茶工艺链',
+      '发酵与保存',
+      '品鉴与风味',
+      '器具与冲泡',
+      '处理与发酵',
+      '总览',
+      '植物与品种',
+      '母酱与乳化',
+      '源流与传播',
+      '火候与热',
+      '烘焙与火候',
+      '起源与传播',
+      '风味的化学',
+      '食材搭配网络'
     ]
     const colors = [...assignCategoryColors(names).values()]
     expect(colors).toHaveLength(19)
@@ -45,6 +60,7 @@ describe('assignCategoryColors：类型集合顺延分配', () => {
     expect(m.size).toBe(1)
     expect(m.get('')).toBeTruthy()
     // 查询端约定：get(String(cat ?? '')) —— undefined 归一后能查到同一色
-    expect(m.get(String(undefined ?? ''))).toBe(m.get(''))
+    const cat = undefined
+    expect(m.get(String(cat ?? ''))).toBe(m.get(''))
   })
 })

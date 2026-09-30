@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('electron', () => ({
   BrowserWindow: Object.assign(vi.fn(), { getAllWindows: vi.fn(() => []) }),

@@ -16,7 +16,9 @@ const searchableText = (ex) =>
  * @returns {Array} 命中的原数组元素引用（不复制，卡片渲染直接复用）
  */
 export const filterExamples = (examples, keyword) => {
-  const kw = String(keyword ?? '').trim().toLowerCase()
+  const kw = String(keyword ?? '')
+    .trim()
+    .toLowerCase()
   if (!kw) return examples
   return examples.filter((ex) => searchableText(ex).includes(kw))
 }

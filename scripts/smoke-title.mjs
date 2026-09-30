@@ -46,7 +46,8 @@ const shot = async (name) => {
   console.log(`shot: ${name}`)
 }
 const titleText = () => page.locator('.xk-title-text').first().innerText()
-const nativeTitle = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getTitle())
+const nativeTitle = () =>
+  app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getTitle())
 const expectEq = (label, actual, expected) => {
   const pass = actual === expected
   console.log(`${pass ? 'PASS' : 'FAIL'} ${label}: ${actual}${pass ? '' : `（期望 ${expected}）`}`)
@@ -89,9 +90,7 @@ if (!nearMenu) failures++
 // 6. 按钮组容器从菜单右侧起（x≈53），证明标题绝对定位未挤偏其居中
 const toolbarBox = await page.locator('.move-header').boundingBox()
 const toolbarIntact = toolbarBox && Math.abs(toolbarBox.x - 53) < 5
-console.log(
-  `${toolbarIntact ? 'PASS' : 'FAIL'} 按钮组容器未被挤偏: x=${toolbarBox?.x}（应≈53）`
-)
+console.log(`${toolbarIntact ? 'PASS' : 'FAIL'} 按钮组容器未被挤偏: x=${toolbarBox?.x}（应≈53）`)
 if (!toolbarIntact) failures++
 
 console.log(errors.length ? `渲染错误 ${errors.length} 条:` : '渲染无错误', errors)

@@ -66,7 +66,9 @@ defineExpose({ focus: () => inputRef.value?.focus() })
 
 /** 文本按关键词切分段（命中段标橙）：大小写不敏感，keyword 为空时整段返回 */
 const segments = (text) => {
-  const kw = String(props.keyword ?? '').trim().toLowerCase()
+  const kw = String(props.keyword ?? '')
+    .trim()
+    .toLowerCase()
   const s = String(text ?? '')
   if (!kw || !s) return [{ text: s, hit: false }]
   const out = []

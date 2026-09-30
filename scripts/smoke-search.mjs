@@ -63,9 +63,9 @@ const cardCount = () => page.locator('.xk-example-card').count()
 // 标题读取用 textContent：卡片有 content-visibility:auto（视口外跳过渲染），
 // innerText 走布局树会为视口外卡片返回空串，textContent 不依赖渲染、稳定
 const cardTitles = async () =>
-  (
-    await page.$$eval('.xk-example-card .name', (els) => els.map((e) => e.textContent))
-  ).map((s) => s.trim())
+  (await page.$$eval('.xk-example-card .name', (els) => els.map((e) => e.textContent))).map((s) =>
+    s.trim()
+  )
 // 分帧渲染下卡片逐帧铺开（AddView 每 +64）：读数连续两次一致视为铺完
 const stableCount = async () => {
   let prev = -1
@@ -85,8 +85,14 @@ expectTrue('示例卡加载', total > 100, `共 ${total} 张`)
 const titleBox = await page.locator('.gallery-header h2').boundingBox()
 const searchBox = await page.locator('.gallery-search').boundingBox()
 const sameRow =
-  titleBox && searchBox && Math.abs(titleBox.y + titleBox.height / 2 - (searchBox.y + searchBox.height / 2)) < 25
-expectTrue('搜索框与标题同行', sameRow, `title y=${titleBox?.y?.toFixed(0)} search y=${searchBox?.y?.toFixed(0)}`)
+  titleBox &&
+  searchBox &&
+  Math.abs(titleBox.y + titleBox.height / 2 - (searchBox.y + searchBox.height / 2)) < 25
+expectTrue(
+  '搜索框与标题同行',
+  sameRow,
+  `title y=${titleBox?.y?.toFixed(0)} search y=${searchBox?.y?.toFixed(0)}`
+)
 await shot('01-home')
 
 // 1.5 色点封顶：最大分类卡「茶」（17 分类，饮食与风味拆分后居首）点数与类目数

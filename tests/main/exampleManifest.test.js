@@ -191,9 +191,9 @@ describe('listExamplesFrom', () => {
 
     const list = await listExamplesFrom(examples)
     expect(list.map((i) => i.fileName)).toEqual(['a.xk'])
-    expect(parseManifest(await fs.promises.readFile(join(examples, MANIFEST_NAME), 'utf-8'))).toEqual(
-      list
-    )
+    expect(
+      parseManifest(await fs.promises.readFile(join(examples, MANIFEST_NAME), 'utf-8'))
+    ).toEqual(list)
   })
 
   it('目录不存在返回空数组且不写清单', async () => {

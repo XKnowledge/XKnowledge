@@ -35,11 +35,11 @@
 import { addHistory, jsonReactive, resetNodeRef } from '../utils/XkUtils'
 import { defineComponent, ref } from 'vue'
 
-const newNode = defineModel('newNode')
-const categoryItems = defineModel('categoryItems')
-const categoryName = defineModel('categoryName')
+const newNode = defineModel('newNode', { type: Object })
+const categoryItems = defineModel('categoryItems', { type: Array })
+const categoryName = defineModel('categoryName', { type: String })
 
-const xkContext = defineModel('xkContext')
+const xkContext = defineModel('xkContext', { type: Object })
 
 const inputRef = ref()
 

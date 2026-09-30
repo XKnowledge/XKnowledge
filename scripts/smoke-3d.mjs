@@ -41,8 +41,13 @@ await shot('01-home')
 
 // 1.1 首页不应出现页面级滚动条（html 溢出即回归：
 // 曾因布局根为 inline-flex 的 a-space，基线对齐使行框高出视口 ~2px）
-const pageScrollbar = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth)
-console.log('page-scrollbar:', pageScrollbar === 0 ? 'absent (ok)' : `PRESENT ${pageScrollbar}px (FAIL)`)
+const pageScrollbar = await page.evaluate(
+  () => window.innerWidth - document.documentElement.clientWidth
+)
+console.log(
+  'page-scrollbar:',
+  pageScrollbar === 0 ? 'absent (ok)' : `PRESENT ${pageScrollbar}px (FAIL)`
+)
 
 // 2. 双击第一张示例卡 → 同窗口跳转图表页
 await page.locator('.xk-example-card').first().dblclick()
