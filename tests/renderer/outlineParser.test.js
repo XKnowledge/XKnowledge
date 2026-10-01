@@ -78,4 +78,10 @@ describe('parseOutline', () => {
     expect(parseOutline('')).toEqual({ nodes: [], links: [] })
     expect(parseOutline('\n\n  \n')).toEqual({ nodes: [], links: [] })
   })
+
+  it('CRLF 行尾（Windows 粘贴）与 LF 解析等价', () => {
+    const lf = parseOutline('# 数学\n## 代数\n研究数量与结构')
+    const crlf = parseOutline('# 数学\r\n## 代数\r\n研究数量与结构')
+    expect(crlf).toEqual(lf)
+  })
 })
