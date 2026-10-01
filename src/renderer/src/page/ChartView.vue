@@ -618,8 +618,13 @@ const resetSider = () => {
 
 // 画布直操：就地编辑器提交 → 共享数据操作（校验/历史/刷新与表单路径同源）；
 // 错误走全局 message（侧栏此刻未必展开）。建点成功后回填落点坐标。
-const onCanvasCreateNode = ({ name, category, world }) => {
-  const result = createNodeInChart(xkContext, { name, des: '', symbolSize: 50, category })
+const onCanvasCreateNode = ({ name, category, symbolSize, world }) => {
+  const result = createNodeInChart(xkContext, {
+    name,
+    des: '',
+    symbolSize: symbolSize ?? 50,
+    category
+  })
   if (!result.ok) {
     message.error(result.error)
     return

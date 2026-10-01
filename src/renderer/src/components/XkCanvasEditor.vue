@@ -48,6 +48,16 @@
           </a-space>
         </template>
       </a-select>
+      <a-radio-group
+        v-model:value="sizeTier"
+        size="small"
+        button-style="solid"
+        class="xk-canvas-editor-size"
+      >
+        <a-radio-button :value="30"><i class="xk-size-dot xk-dot-s" />小</a-radio-button>
+        <a-radio-button :value="50"><i class="xk-size-dot xk-dot-m" />中</a-radio-button>
+        <a-radio-button :value="80"><i class="xk-size-dot xk-dot-l" />大</a-radio-button>
+      </a-radio-group>
     </template>
     <a-input
       v-else
@@ -82,6 +92,10 @@ const category = ref(undefined)
 const catOpen = ref(false)
 const newCategory = ref('')
 
+// 大小档位：30/50/80 映射 symbolSize，默认中=50（与历史固定值一致）。纯参数
+// 不参与提交流——类目选定即整单提交的节奏不变，不碰档位即零打扰
+const sizeTier = ref(50)
+
 // 就地新增的类目先记本地（节点落库后 updateChart watch 会从节点重算 categoryItems）
 const addedCategories = ref([])
 const localCategories = computed(() => [
@@ -97,6 +111,7 @@ watch(
     edgeName.value = ''
     category.value = undefined
     newCategory.value = ''
+    sizeTier.value = 50
     catOpen.value = false
     nextTick(() => nameRef.value?.focus())
   }
@@ -164,7 +179,7 @@ const addCategory = () => {
 const submitNode = () => {
   const name = nodeName.value.trim()
   if (!name || !category.value) return
-  emit('create-node', { name, category: category.value })
+  emit('create-node', { name, category: category.value, symbolSize: sizeTier.value })
 }
 
 const submitEdge = () => {
@@ -203,5 +218,28 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
 
 .xk-canvas-editor-cat {
   width: 130px;
+}
+
+/* 档位圆点示意 3D 球体大小：直径 6/9/12px，色随文字（未选中主题色/选中反白） */
+.xk-size-dot {
+  display: inline-block;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 4px;
+}
+
+.xk-dot-s {
+  width: 6px;
+  height: 6px;
+}
+
+.xk-dot-m {
+  width: 9px;
+  height: 9px;
+}
+
+.xk-dot-l {
+  width: 12px;
+  height: 12px;
 }
 </style>
