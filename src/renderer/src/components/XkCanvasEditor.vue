@@ -29,6 +29,7 @@
         size="small"
         :options="localCategories.map((c) => ({ value: c }))"
         :dropdown-match-select-width="false"
+        @keydown.enter.capture="onCatEnter"
         @dropdownVisibleChange="onCatOpenChange"
         @change="submitNode"
       >
@@ -148,6 +149,20 @@ const onNewCatEnter = (e) => {
 const onEdgeEnter = (e) => {
   if (isComposingEnter(e)) return
   submitEdge()
+}
+
+/** select 上的回车守卫：下拉未展开时不得替用户选中——antd 开拉即高亮
+ *  activeIndex 第一项，回车径直选中触发 change→submitNode，Tab 过来的
+ *  用户没看见下拉就被替选类目建成（类目必选形同虚设）。未展开态回车
+ *  只转为展开下拉（选项可见后回车才是确认，合法键盘流不变）；展开态
+ *  放行交 antd 选高亮项。capture+stopPropagation 抢在 vc-select 的
+ *  input handler 之前拦截 */
+const onCatEnter = (e) => {
+  if (isComposingEnter(e)) return
+  if (catOpen.value) return
+  e.preventDefault()
+  e.stopPropagation()
+  catOpen.value = true
 }
 
 /** 键盘流第一步完成：名称回车 → 展开类目下拉并聚焦（方向键选、回车定） */

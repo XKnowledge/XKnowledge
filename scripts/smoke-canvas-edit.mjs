@@ -322,6 +322,30 @@ expectEq('先选类目后输名字回车直接建成', await awaitNodeCount('2')
 expectEq('大档建成的大小落库', await wrap.getAttribute('data-last-node-size'), '80')
 await shot('085-gamma-mouseflow')
 
+// 6.6 Tab 流回归（类目必选语义）：输名字 → Tab 到类目 select（下拉未开）→
+//     回车——antd 开拉即高亮 activeIndex 第一项，回车径直选中触发 change→
+//     submitNode，用户没看见下拉就被替选了类目建成（必选形同虚设）。现
+//     未展开态的回车只转为展开下拉，选项可见后回车才算确认
+await settleMouse(E1.x, E1.y)
+await page.mouse.dblclick(E1.x, E1.y)
+expectTrue('Tab 流双击出现建点编辑器', await waitEditorCount('node', 1))
+await awaitEditorFocus()
+await page.keyboard.type('TabNode')
+await page.keyboard.press('Tab')
+await page.keyboard.press('Enter')
+await page.waitForTimeout(300)
+expectEq('未选类目 Tab 回车不建点（节点计数）', await nodeCount(), '2')
+let tabOpenedDropdown = true
+try {
+  await dropdown.waitFor({ state: 'visible', timeout: 3_000 })
+} catch {
+  tabOpenedDropdown = false
+}
+expectTrue('未选类目回车转为展开下拉', tabOpenedDropdown)
+await page.keyboard.press('Escape') // 下拉展开态一次 Esc 取消整单（4.5 已测路径）
+expectTrue('Tab 流 Esc 后编辑器消失', await waitEditorCount('node', 0))
+await shot('086-tab-enter-guard')
+
 // 7. 画布右缘双击：编辑器出现且右边界不溢出容器（clampEditorPos 钳制兑现）。
 //    box 重量化：途中若有节点点击误开侧栏，画布已缩窄，旧坐标会落进侧栏
 const box2 = await page.locator('.graph3d-container').boundingBox()
