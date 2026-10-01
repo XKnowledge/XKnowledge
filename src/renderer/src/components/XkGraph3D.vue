@@ -246,8 +246,10 @@ const closeEditor = () => {
 }
 
 /** editor 打开期间挂 window Esc（bubble）：焦点不在编辑器内也能取消。
- *  bubble 而非 capture——antd 下拉展开时 vc-select 对 Esc stopPropagation，
- *  capture 会越过它把整个编辑器误关；bubble 收不到被拦的事件，分层正确 */
+ *  编辑器内（含类目下拉展开态）的 Esc 由 XkCanvasEditor 根 div 的
+ *  esc.capture 承接（vc-select 对 Esc stopPropagation 拦 bubble，capture
+ *  抢先——一次 Esc 取消整单）；这里保持 bubble 只兜编辑器外的场景，
+ *  不抢编辑器自己的取消链 */
 const onWindowEsc = (e) => {
   if (e.key !== 'Escape') return
   closeEditor()

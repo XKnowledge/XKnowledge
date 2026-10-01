@@ -225,6 +225,23 @@ expectTrue('Esc 后编辑器消失', await waitEditorCount('node', 0))
 expectEq('Esc 取消不建点（节点计数）', await nodeCount(), '1')
 await shot('06-esc-cancelled')
 
+// 4.5 下拉展开态 Esc 回归：输名回车展开类目下拉后按 Esc——下拉展开时
+//     vc-select 对 Esc stopPropagation（bubble 到不了编辑器根 div），曾只关
+//     下拉留下半死编辑器，滞留态里 Enter 会选中高亮项直接建点（实测用户
+//     "Esc 后节点仍被创建、类目疑似随机"）；现根 div 以 esc.capture 承接，
+//     一次 Esc 取消整单
+await settleMouse(E1.x, E1.y)
+await page.mouse.dblclick(E1.x, E1.y)
+expectTrue('下拉态双击出现建点编辑器', await waitEditorCount('node', 1))
+await awaitEditorFocus()
+await page.keyboard.type('EscCat')
+await page.keyboard.press('Enter')
+await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
+await page.keyboard.press('Escape')
+expectTrue('下拉展开态 Esc 关闭编辑器', await waitEditorCount('node', 0))
+expectEq('下拉态 Esc 取消不建点（节点计数）', await nodeCount(), '1')
+await shot('065-esc-with-dropdown')
+
 // 5. 再建 Beta：下拉此时已有「核心」，方向键+回车选定（键盘流全程不落鼠标）
 await settleMouse(PB.x, PB.y)
 await page.mouse.dblclick(PB.x, PB.y)

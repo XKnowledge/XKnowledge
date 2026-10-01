@@ -1,12 +1,15 @@
 <template>
   <!-- 就地编辑覆盖层：双击建点（名称+类目）/ 拖拽连边输名。
        放 .graph3d-container 外面（同图例/搜索，3D 库冷启动会清空容器） -->
+  <!-- esc.capture：类目下拉展开时 vc-select 对 Esc stopPropagation（bubble 到不了
+       本层）——曾只关下拉留下半死编辑器，滞留态里 Enter 仍会选中高亮项提交建点；
+       capture 先于它拿到事件，一次 Esc 取消整单 -->
   <div
     v-if="mode"
     class="xk-canvas-editor"
     :style="{ left: `${x}px`, top: `${y}px` }"
     :data-canvas-edit-mode="mode"
-    @keydown.esc="close"
+    @keydown.esc.capture="close"
   >
     <template v-if="mode === 'node'">
       <a-input
