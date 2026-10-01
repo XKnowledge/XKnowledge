@@ -159,7 +159,7 @@ await shot('03-alpha-created')
 //    从中心按下 → 拖出 +200px → 预览线出现 → 松开在空白处 → 静默放弃
 await settleMouse(C.x, C.y)
 await page.mouse.down()
-await page.waitForTimeout(100)
+await page.waitForTimeout(100) // 等 pointerdown/pointer capture 就位再拖，防首段 move 丢失
 await page.mouse.move(C.x + 200, C.y, { steps: 8 })
 await page.waitForTimeout(150) // 等悬停轮询跟进到空点，松开不误派发节点点击
 expectTrue('拖拽中预览线出现', (await page.locator('[data-link-preview]').count()) === 1)
@@ -220,9 +220,13 @@ await settleMouse(edgeX, C.y)
 await page.mouse.dblclick(edgeX, C.y)
 expectTrue('右缘双击出现建点编辑器', await waitEditorCount('node', 1))
 const edBox = await page.locator('[data-canvas-edit-mode="node"]').boundingBox()
-const overflow = edBox.x + edBox.width - (box2.x + box2.width)
-expectTrue('右缘编辑器不溢出容器右缘', overflow <= 1.5, `右溢出 ${overflow.toFixed(1)}px`)
-expectTrue('右缘编辑器不越容器左缘', edBox.x >= box2.x - 1.5)
+// 上步软失败时 boundingBox 为 null：跳过几何断言（failures 已计数，exit 仍非零），
+// 但继续走 Esc/收尾，避免裸解引用炸在 destroy 之前遗留孤儿 Electron 进程
+if (edBox) {
+  const overflow = edBox.x + edBox.width - (box2.x + box2.width)
+  expectTrue('右缘编辑器不溢出容器右缘', overflow <= 1.5, `右溢出 ${overflow.toFixed(1)}px`)
+  expectTrue('右缘编辑器不越容器左缘', edBox.x >= box2.x - 1.5)
+}
 await shot('09-right-edge-editor')
 await page.keyboard.press('Escape')
 
