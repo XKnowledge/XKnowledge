@@ -45,6 +45,7 @@
         </a-menu-item>
         <a-menu-item key="11" @click="saveAs"> 另存为... </a-menu-item>
         <a-menu-divider />
+        <a-menu-item key="14" @click="importOutline"> 从大纲导入... </a-menu-item>
         <a-menu-item key="13" @click="openSettings"> 设置 </a-menu-item>
       </a-menu>
     </template>
@@ -115,6 +116,11 @@ const saveAs = () => {
 
 const openSettings = () => {
   shortcutActive.value = 'open_settings'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const importOutline = () => {
+  shortcutActive.value = 'import_outline'
   shortcutWatch.value = !shortcutWatch.value
 }
 </script>

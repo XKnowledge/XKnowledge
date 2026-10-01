@@ -172,6 +172,7 @@
       </a-layout>
     </a-layout>
     <XkSettings ref="settingsRef" />
+    <XkOutlineImport ref="outlineImportRef" @import="onOutlineImport" />
   </a-space>
 </template>
 
@@ -199,6 +200,7 @@ import XkMenu from '../components/XkMenu.vue'
 import XkGraph3D from '../components/XkGraph3D.vue'
 import XkTitleText from '../components/XkTitleText.vue'
 import XkSettings from '../components/XkSettings.vue'
+import XkOutlineImport from '../components/XkOutlineImport.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 
 import CreateNodeIcon from '../assets/create_node.png'
@@ -266,6 +268,7 @@ const categoryName = ref()
 
 const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
 const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「设置」入口
+const outlineImportRef = ref(null) // XkOutlineImport 实例（expose open/close）
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
 const showSmallLabels = ref(true) // 会话级渲染设置：是否常显小节点名称（默认开，全显）
 // 聚焦模式（会话级，不写盘、不置脏、不进 initAttr——用户开着探照灯换图，
@@ -597,7 +600,8 @@ watch(shortcutWatch, () => {
     delete_edge: deleteEdge,
     undo: undo,
     redo: redo,
-    open_settings: () => settingsRef.value?.open()
+    open_settings: () => settingsRef.value?.open(),
+    import_outline: () => outlineImportRef.value?.open()
   }
 
   const actionName = shortcutActive.value
@@ -655,6 +659,39 @@ const onCanvasCreateNode = ({ name, category, world }) => {
 const onCanvasCreateEdge = ({ source, target, name }) => {
   const result = createEdgeInChart(xkContext, { source, target, name: name ?? '', des: '' })
   if (!result.ok) message.error(result.error)
+}
+
+/** 大纲导入：追加合并进当前图（同名节点跳过、边按无向端点对去重且端点须在
+ *  图内），整批一条 importOutline 历史（一步撤销）。history.data 持有 push 进
+ *  chartData 的同一批对象引用——undo 按引用移除，redo 按 push 复原 */
+const onOutlineImport = ({ nodes, links }) => {
+  const chart = xkContext.value.chartData
+  const existing = new Set(chart.nodes.map((n) => n.name))
+  const addedNodes = nodes.filter((n) => !existing.has(n.name))
+  const nameSet = new Set([...existing, ...addedNodes.map((n) => n.name)])
+  const pairKey = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`)
+  const existingPairs = new Set(chart.links.map((l) => pairKey(l.source, l.target)))
+  const addedLinks = links.filter(
+    (l) =>
+      nameSet.has(l.source) &&
+      nameSet.has(l.target) &&
+      !existingPairs.has(pairKey(l.source, l.target))
+  )
+
+  if (!addedNodes.length && !addedLinks.length) {
+    message.info('没有可导入的内容（节点均已存在且无新连接）')
+    return
+  }
+
+  const batch = {
+    nodes: jsonReactive(addedNodes),
+    links: jsonReactive(addedLinks.filter((l) => nameSet.has(l.source) && nameSet.has(l.target)))
+  }
+  chart.nodes.push(...batch.nodes)
+  chart.links.push(...batch.links)
+  addHistory(xkContext, { act: 'importOutline', data: batch })
+  xkContext.value.updateChart = !xkContext.value.updateChart
+  outlineImportRef.value?.close()
 }
 
 const onGraphNodeClick = (nodeData, index) => {
