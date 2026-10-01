@@ -542,7 +542,12 @@ onMounted(() => {
     .onNodeClick((n) => {
       // 就地编辑器与侧栏选中互斥：编辑器开着时点节点＝放弃编辑去看属性
       if (editor.value.mode) closeEditor()
-      emit('node-click', pureNode(n), n.__idx)
+      // 场景 datum 是喂给 3D 库的拷贝，极端时序下可能滞后/丢字段于 chartData
+      //（曾出现双击建点后点击该节点侧栏类目为空）。以 chartData 为准按名回查，
+      // 侧栏永远拿真实数据；索引同步取自源数组，顺带消除 __idx 陈旧时
+      // 「修改节点」按旧索引改错节点的隐患
+      const idx = props.nodes.findIndex((p) => p.name === n?.name)
+      emit('node-click', pureNode(idx > -1 ? props.nodes[idx] : n), idx > -1 ? idx : n.__idx)
     })
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
     // 节点拖动手势让位给「拖节点到节点连线」（坐标本就不落盘，拖节点无产出）
