@@ -43,6 +43,10 @@
       @create-edge="onEditorCreateEdge"
       @close="closeEditor"
     />
+    <!-- 连线拖拽预览：SVG 覆盖层跟随鼠标，pointer-events 穿透 -->
+    <svg v-if="linkDrag" class="graph3d-link-preview" data-link-preview>
+      <line :x1="linkDrag.sx" :y1="linkDrag.sy" :x2="linkDrag.cx" :y2="linkDrag.cy" />
+    </svg>
     <!-- WebGL 失败提示条 -->
     <div v-if="initFailed" class="graph3d-fallback">
       3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用
@@ -216,6 +220,21 @@ const closeEditor = () => {
   pendingLinkEnds = null
 }
 
+/** editor 打开期间挂 window Esc（bubble）：焦点不在编辑器内也能取消。
+ *  bubble 而非 capture——antd 下拉展开时 vc-select 对 Esc stopPropagation，
+ *  capture 会越过它把整个编辑器误关；bubble 收不到被拦的事件，分层正确 */
+const onWindowEsc = (e) => {
+  if (e.key !== 'Escape') return
+  closeEditor()
+}
+watch(
+  () => editor.value.mode,
+  (m) => {
+    if (m) window.addEventListener('keydown', onWindowEsc)
+    else window.removeEventListener('keydown', onWindowEsc)
+  }
+)
+
 const onEditorCreateNode = ({ name, category }) => {
   const world = pendingWorldPos
   closeEditor()
@@ -241,6 +260,48 @@ const onCanvasDblClick = (e) => {
   if (pickNearestNode(projectAllNodes(), cx, cy)) return
   pendingWorldPos = screenToWorldOnFocusPlane(cx, cy)
   openEditor('node', cx, cy)
+}
+
+// 连线拖拽状态：source 起点（实时重投影，力模拟未稳时起点跟随节点），cx/cy 鼠标
+const linkDrag = ref(null) // { source, sx, sy, cx, cy } | null
+
+const onCanvasPointerDown = (e) => {
+  if (!graph || initFailed.value || editor.value.mode || e.button !== 0) return
+  const { x: cx, y: cy } = toLocal(e)
+  const hit = pickNearestNode(projectAllNodes(), cx, cy)
+  if (!hit) return // 空白按下：交给 OrbitControls 旋转
+  // 命中节点：接管手势并禁相机（OrbitControls 的 move/up 处理会检查 enabled，
+  // 同一轮 pointerdown 里它在先注册会先启动，这里置 false 足以拦住后续 move）
+  graph.controls().enabled = false
+  linkDrag.value = { source: hit.name, sx: cx, sy: cy, cx, cy }
+  graph.renderer().domElement.setPointerCapture(e.pointerId)
+}
+
+const onCanvasPointerMove = (e) => {
+  if (!linkDrag.value) return
+  const { x: cx, y: cy } = toLocal(e)
+  // 起点实时重投影：布局未稳/节点在漂移时预览线不脱钩
+  const src = graph.graphData().nodes.find((n) => n.name === linkDrag.value.source)
+  if (src && Number.isFinite(src.x)) {
+    const p = graph.graph2ScreenCoords(src.x, src.y, src.z)
+    linkDrag.value.sx = p.x
+    linkDrag.value.sy = p.y
+  }
+  linkDrag.value.cx = cx
+  linkDrag.value.cy = cy
+}
+
+const onCanvasPointerUp = () => {
+  if (!linkDrag.value) return
+  const drag = linkDrag.value
+  linkDrag.value = null
+  graph.controls().enabled = true
+  const hit = pickNearestNode(projectAllNodes(), drag.cx, drag.cy)
+  if (hit && hit.name !== drag.source) {
+    pendingLinkEnds = { source: drag.source, target: hit.name }
+    openEditor('edge', drag.cx, drag.cy)
+  }
+  // 松在空白/原节点：静默取消，不建边
 }
 
 /** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
@@ -461,7 +522,11 @@ onMounted(() => {
     // symbolSize 线性成正比（40/50/70 → 2.9/3.7/5.2），与 2D 图 symbolSize 语义一致
     .nodeVal((n) => Math.pow(n.symbolSize ?? 50, 3) / 2500)
     .nodeRelSize(1)
-    .onNodeClick((n) => emit('node-click', pureNode(n), n.__idx))
+    .onNodeClick((n) => {
+      // 就地编辑器与侧栏选中互斥：编辑器开着时点节点＝放弃编辑去看属性
+      if (editor.value.mode) closeEditor()
+      emit('node-click', pureNode(n), n.__idx)
+    })
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
     // 节点拖动手势让位给「拖节点到节点连线」（坐标本就不落盘，拖节点无产出）
     .enableNodeDrag(false)
@@ -494,16 +559,25 @@ onMounted(() => {
   applyInteraction()
   setRepulsion(100)
 
-  // 画布直操手势：dblclick 在 canvas DOM 上（库不提供双击回调）
+  // 画布直操手势：dblclick 在 canvas DOM 上（库不提供双击回调）；
+  // pointer 三件套做「按住节点拖出连线」（DragControls 已禁用，手势空间空闲）
   const canvasEl = graph.renderer().domElement
   canvasEl.addEventListener('dblclick', onCanvasDblClick)
+  canvasEl.addEventListener('pointerdown', onCanvasPointerDown)
+  canvasEl.addEventListener('pointermove', onCanvasPointerMove)
+  canvasEl.addEventListener('pointerup', onCanvasPointerUp)
 })
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
+  // editor 仍开着时销毁组件：卸 window Esc 防监听泄漏
+  window.removeEventListener('keydown', onWindowEsc)
   if (graph) {
     const canvasEl = graph.renderer().domElement
     canvasEl.removeEventListener('dblclick', onCanvasDblClick)
+    canvasEl.removeEventListener('pointerdown', onCanvasPointerDown)
+    canvasEl.removeEventListener('pointermove', onCanvasPointerMove)
+    canvasEl.removeEventListener('pointerup', onCanvasPointerUp)
     graph._destructor()
     graph = null
   }
@@ -725,5 +799,21 @@ defineExpose({
   padding: 16px 24px;
   font: 14px sans-serif;
   z-index: 3;
+}
+
+.graph3d-link-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.graph3d-link-preview line {
+  stroke: var(--xk-text);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  opacity: 0.7;
 }
 </style>

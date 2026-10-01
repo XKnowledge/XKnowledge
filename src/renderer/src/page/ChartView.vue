@@ -45,6 +45,8 @@
             :focus-deep="focusMode === 'deep'"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
+            @canvas-create-node="onCanvasCreateNode"
+            @canvas-create-edge="onCanvasCreateEdge"
           />
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
@@ -177,7 +179,14 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { addHistory, jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
+import {
+  addHistory,
+  createEdgeInChart,
+  createNodeInChart,
+  jsonReactive,
+  resetEdgeRef,
+  resetNodeRef
+} from '../utils/XkUtils'
 import { applyUndo, applyRedo } from '../utils/historyActions'
 import { defaultFocusNode, focusNeighborhood } from '../utils/graphData.js'
 import { takePendingChart } from '../store/chartStore'
@@ -630,6 +639,22 @@ const resetSider = () => {
   currentNodeVisible.value = false
   createEdgeVisible.value = false
   currentEdgeVisible.value = false
+}
+
+// 画布直操：就地编辑器提交 → 共享数据操作（校验/历史/刷新与表单路径同源）；
+// 错误走全局 message（侧栏此刻未必展开）。建点成功后回填落点坐标。
+const onCanvasCreateNode = ({ name, category, world }) => {
+  const result = createNodeInChart(xkContext, { name, des: '', symbolSize: 50, category })
+  if (!result.ok) {
+    message.error(result.error)
+    return
+  }
+  if (world) graph3dRef.value?.notifyNodeDropPos(result.data.name, world)
+}
+
+const onCanvasCreateEdge = ({ source, target, name }) => {
+  const result = createEdgeInChart(xkContext, { source, target, name: name ?? '', des: '' })
+  if (!result.ok) message.error(result.error)
 }
 
 const onGraphNodeClick = (nodeData, index) => {
