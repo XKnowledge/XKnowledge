@@ -183,15 +183,41 @@ let pendingLinkEnds = null // 拖拽连线的两端点名：输名提交时随�
  *  用后即删——力模拟接手后同名合并走旧坐标通道（mergeGraphNodes） */
 const pendingDropPos = new Map()
 
-/** 全节点屏幕投影（拾取用；连线手势期间相机被禁不会动，双击时瞬时拾取） */
-const projectAllNodes = () =>
-  graph
+/** 节点可见性谓词（按名）：applyVisibility 的 accessor 与画布手势拾取共用同一
+ *  判定——图例隐藏/深度聚焦隐藏的节点既不渲染也不参与拖拽/双击命中，看得见
+ *  才摸得着。深度聚焦：邻域外节点直接隐藏；图内搜索命中的豁免（找到了就该
+ *  看见，否则跳转命中项时相机飞到空处） */
+const buildNodeVisible = () => {
+  const hidden = hiddenCategories.value
+  const deepDim =
+    props.focusDeep && props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
+  const searchNames =
+    searchOpen.value || searchKeyword.value
+      ? new Set(searchHitNodes.value.map((n) => n.name))
+      : null
+  // 类目按名索引：库对每条边调用 linkVisibility，find 是 O(n²)——万级节点图
+  // （世界树 23k 边 × 16k 节点）同步跑数亿次比较，直接卡死
+  const categoryByName = new Map(props.nodes.map((n) => [n.name, n.category]))
+  return (name) => {
+    const cat = categoryByName.get(name)
+    if (cat !== undefined && hidden.has(cat)) return false
+    if (deepDim && !(deepDim.has(name) || searchNames?.has(name))) return false
+    return true
+  }
+}
+
+/** 全节点屏幕投影（拾取用；连线手势期间相机被禁不会动，双击时瞬时拾取）；
+ *  只投可见节点——隐形节点被命中会凭空起拖、建出看不见的边、吞双击 */
+const projectAllNodes = () => {
+  const nodeVisible = buildNodeVisible()
+  return graph
     .graphData()
-    .nodes.filter((n) => Number.isFinite(n.x))
+    .nodes.filter((n) => Number.isFinite(n.x) && nodeVisible(n.name))
     .map((n) => {
       const p = graph.graph2ScreenCoords(n.x, n.y, n.z)
       return { name: n.name, x: p.x, y: p.y }
     })
+}
 
 /** 双击落点：视线在相机注视平面上的交点（screen2GraphCoords 的 distance
  *  参数沿射线取相机到 lookAt 的距离，落点贴着用户正看的深度） */
@@ -270,8 +296,8 @@ const onCanvasPointerDown = (e) => {
   const { x: cx, y: cy } = toLocal(e)
   const hit = pickNearestNode(projectAllNodes(), cx, cy)
   if (!hit) return // 空白按下：交给 OrbitControls 旋转
-  // 命中节点：接管手势并禁相机（OrbitControls 的 move/up 处理会检查 enabled，
-  // 同一轮 pointerdown 里它在先注册会先启动，这里置 false 足以拦住后续 move）
+  // 命中节点：接管手势并禁相机（对齐 OrbitControls 源码：move 处理检查
+  // enabled——置 false 拦住旋转；up 无条件清理自身状态，不查 enabled）
   graph.controls().enabled = false
   linkDrag.value = { source: hit.name, sx: cx, sy: cy, cx, cy }
   graph.renderer().domElement.setPointerCapture(e.pointerId)
@@ -302,6 +328,14 @@ const onCanvasPointerUp = () => {
     openEditor('edge', drag.cx, drag.cy)
   }
   // 松在空白/原节点：静默取消，不建边
+}
+
+// pointercancel（浏览器接管手势，如 alt-tab/触控边缘手势）：只清态与复位相机，
+// 不做拾取——复用 pointerUp 的拾取会在恰有节点处误弹编辑器
+const onCanvasPointerCancel = () => {
+  if (!linkDrag.value) return
+  linkDrag.value = null
+  graph.controls().enabled = true
 }
 
 /** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
@@ -338,24 +372,7 @@ const pureLink = (l) => ({
 
 const applyVisibility = () => {
   if (!graph) return
-  const hidden = hiddenCategories.value
-  // 深度聚焦：邻域外节点直接隐藏；图内搜索命中的豁免（找到了就该看见，
-  // 否则跳转命中项时相机飞到空处）
-  const deepDim =
-    props.focusDeep && props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
-  const searchNames =
-    searchOpen.value || searchKeyword.value
-      ? new Set(searchHitNodes.value.map((n) => n.name))
-      : null
-  // 端点类目按名索引：库对每条边调用 linkVisibility，find 是 O(n²)——
-  // 万级节点图（世界树 23k 边 × 16k 节点）同步跑数亿次比较，直接卡死
-  const categoryByName = new Map(props.nodes.map((n) => [n.name, n.category]))
-  const nodeVisible = (name) => {
-    const cat = categoryByName.get(name)
-    if (cat !== undefined && hidden.has(cat)) return false
-    if (deepDim && !(deepDim.has(name) || searchNames?.has(name))) return false
-    return true
-  }
+  const nodeVisible = buildNodeVisible()
   graph
     .nodeVisibility((n) => nodeVisible(n.name))
     // 两端任一不可见（类目隐藏/深度聚焦），边随之隐藏
@@ -566,6 +583,7 @@ onMounted(() => {
   canvasEl.addEventListener('pointerdown', onCanvasPointerDown)
   canvasEl.addEventListener('pointermove', onCanvasPointerMove)
   canvasEl.addEventListener('pointerup', onCanvasPointerUp)
+  canvasEl.addEventListener('pointercancel', onCanvasPointerCancel)
 })
 
 onUnmounted(() => {
@@ -578,6 +596,7 @@ onUnmounted(() => {
     canvasEl.removeEventListener('pointerdown', onCanvasPointerDown)
     canvasEl.removeEventListener('pointermove', onCanvasPointerMove)
     canvasEl.removeEventListener('pointerup', onCanvasPointerUp)
+    canvasEl.removeEventListener('pointercancel', onCanvasPointerCancel)
     graph._destructor()
     graph = null
   }
