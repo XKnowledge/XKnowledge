@@ -5,6 +5,10 @@
 // 编辑器不溢出容器。连边的数据链路由 xkUtils 单测覆盖，这里只防手势层回归。
 // 新建空白图起步：空图无默认类目，首个类目只能走下拉内即时新增——正是该
 // 路径的被测价值。
+// 6.5 鼠标流回归：类目 select 必须能被鼠标点开（曾用 v-model:open——antd
+// Select 不发 update:open，受控 open 吞掉内部开关请求：点选框无反应、键盘
+// 打开后也关不掉）；且「先鼠标点选既有类目 → 输名字 → 回车」应直接建成
+// （antd change 只在值变化时发射，同值重选不触发，曾卡死建不出）。
 // 两个时序坑（脚本侧规避，产品行为另行报告）：
 // a) three-render-objects 的 click 派发用的是悬停轮询对象 state.hoverObj
 //    （rAF 异步、pointerRaycasterThrottleMs=50ms 节流），而 pointerPos 只被
@@ -133,6 +137,7 @@ const C = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 // 投影与中心重合），其余交互点离中心 200px 以上（远超 16px 拾取阈值）
 const E1 = { x: box.x + box.width * 0.2, y: box.y + box.height * 0.75 } // Esc 取消路径用
 const PB = { x: box.x + box.width * 0.22, y: box.y + box.height * 0.25 } // Beta 落点
+const PG = { x: box.x + box.width * 0.62, y: box.y + box.height * 0.75 } // Gamma 落点（鼠标流）
 
 // 2. 画布中心双击 → 建点编辑器出现，输入 Alpha 回车 → 类目下拉展开，
 //    下拉内新增类目「核心」（空图起步的唯一类目路径）→ 选定即建成
@@ -146,6 +151,17 @@ await page.keyboard.press('Enter')
 // antd 下拉 teleport 到 body；排除收起态残留（ant-select-dropdown-hidden）
 const dropdown = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
 await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
+// 下拉宽不钳到 select 宽（dropdownMatchSelectWidth=false）：新增按钮须完整
+// 可见——曾随 select 定宽 130px 被 overflow 裁掉大半（输入框 100 + 按钮要 ~172px）
+expectTrue(
+  '下拉内新增按钮完整可见',
+  await page.evaluate(() => {
+    const dd = document.querySelector('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
+    const btn = dd?.querySelector('button')
+    if (!dd || !btn) return false
+    return btn.getBoundingClientRect().right <= dd.getBoundingClientRect().right + 0.5
+  })
+)
 await dropdown.locator('input').fill('核心')
 await dropdown.locator('button', { hasText: '新增' }).click()
 expectEq('Alpha 建成（节点计数）', await awaitNodeCount('1'), '1')
@@ -211,6 +227,43 @@ await shot('07-beta-created')
 await page.keyboard.press('Control+z')
 expectEq('Ctrl+Z 后节点计数回落', await awaitNodeCount('1'), '1')
 await shot('08-after-undo')
+
+// 6.5 鼠标流回归（见文件头）：鼠标点开类目下拉 → 点选既有类目「核心」→
+//     下拉应收起 → 输名字 Gamma 回车 → 直接建成（不再重开下拉重选）
+await settleMouse(PG.x, PG.y)
+await page.mouse.dblclick(PG.x, PG.y)
+expectTrue('鼠标流双击出现建点编辑器', await waitEditorCount('node', 1))
+await awaitEditorFocus()
+await page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-cat').click()
+let mouseOpened = true
+try {
+  await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
+} catch {
+  mouseOpened = false
+}
+expectTrue('鼠标点击类目 select 下拉展开', mouseOpened)
+await dropdown.locator('.ant-select-item-option', { hasText: '核心' }).click()
+expectTrue(
+  '选项点选后下拉自动收起',
+  await page
+    .waitForFunction(
+      () => {
+        const d = document.querySelector(
+          '.ant-select-dropdown:not(.ant-select-dropdown-hidden)'
+        )
+        return !d || getComputedStyle(d).display === 'none'
+      },
+      null,
+      { timeout: 2_000 }
+    )
+    .then(() => true)
+    .catch(() => false)
+)
+await page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-name').click()
+await page.keyboard.type('Gamma')
+await page.keyboard.press('Enter')
+expectEq('先选类目后输名字回车直接建成', await awaitNodeCount('2'), '2')
+await shot('085-gamma-mouseflow')
 
 // 7. 画布右缘双击：编辑器出现且右边界不溢出容器（clampEditorPos 钳制兑现）。
 //    box 重量化：途中若有节点点击误开侧栏，画布已缩窄，旧坐标会落进侧栏
