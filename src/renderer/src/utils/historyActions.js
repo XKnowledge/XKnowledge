@@ -65,6 +65,18 @@ export const applyUndo = (chartData, currentHistory) => {
 
     deleteEdge: () => {
       chartData.links.push(currentHistory.data)
+    },
+
+    // 大纲导入的整批撤销：边按对象引用移除，不用端点对+边名三元组——
+    // 导入入口建历史时 data 持有的就是 push 进 chartData 的同一批对象
+    // （jsonReactive 产物），引用比对天然只命中本批；按三元组/端点对
+    // 匹配会误删用户手工建的同端点边。节点按本批名字集合移除；引用
+    // 本批节点的悬空边是既有数据，保留不动（与 createNode 撤销对齐）。
+    importOutline: () => {
+      const names = new Set(currentHistory.data.nodes.map((n) => n.name))
+      chartData.nodes = chartData.nodes.filter((n) => !names.has(n.name))
+      const own = new Set(currentHistory.data.links)
+      chartData.links = chartData.links.filter((l) => !own.has(l))
     }
   }
 
@@ -120,7 +132,13 @@ export const applyRedo = (chartData, currentHistory) => {
       }
     },
 
-    deleteEdge: () => removeOneEdge(chartData, currentHistory.data)
+    deleteEdge: () => removeOneEdge(chartData, currentHistory.data),
+
+    // importOutline 重做：把本批节点与边原样 push 回（与撤销的引用移除对称）
+    importOutline: () => {
+      chartData.nodes.push(...currentHistory.data.nodes)
+      chartData.links.push(...currentHistory.data.links)
+    }
   }
 
   const handler = actionHandlers[currentHistory.act]

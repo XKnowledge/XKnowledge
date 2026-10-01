@@ -174,3 +174,43 @@ describe('常规序列回归：单边/节点操作行为不变', () => {
     expect(JSON.stringify(chart)).toBe(before)
   })
 })
+
+describe('importOutline', () => {
+  const entry = {
+    act: 'importOutline',
+    data: {
+      nodes: [
+        { name: 'A', des: '', category: 'A', symbolSize: 70 },
+        { name: 'B', des: '', category: 'A', symbolSize: 50 }
+      ],
+      links: [{ source: 'A', target: 'B', name: '', des: '' }]
+    }
+  }
+
+  it('undo 移除本批新增的节点与边，不动既有数据', () => {
+    const chartData = {
+      nodes: [{ name: '旧', des: '', category: 'x', symbolSize: 50 }, ...entry.data.nodes],
+      links: [{ source: '旧', target: 'A', name: '既有边', des: '' }, ...entry.data.links]
+    }
+    expect(applyUndo(chartData, entry)).toBe(true)
+    expect(chartData.nodes.map((n) => n.name)).toEqual(['旧'])
+    expect(chartData.links).toEqual([{ source: '旧', target: 'A', name: '既有边', des: '' }])
+  })
+
+  it('undo 时同端点的既有边不被误删（按无向端点对且限本批）', () => {
+    const chartData = {
+      nodes: [{ name: 'A', des: '', category: 'A', symbolSize: 70 }],
+      links: [{ source: 'A', target: 'B', name: '手工建的', des: '' }]
+    }
+    applyUndo(chartData, entry)
+    expect(chartData.links).toEqual([{ source: 'A', target: 'B', name: '手工建的', des: '' }])
+    expect(chartData.nodes).toEqual([])
+  })
+
+  it('redo 把本批节点与边原样加回', () => {
+    const chartData = { nodes: [], links: [] }
+    expect(applyRedo(chartData, entry)).toBe(true)
+    expect(chartData.nodes).toEqual(entry.data.nodes)
+    expect(chartData.links).toEqual(entry.data.links)
+  })
+})
