@@ -32,7 +32,7 @@
 </template>
 
 <script setup>
-import { addHistory, jsonReactive, resetNodeRef } from '../utils/XkUtils'
+import { resetNodeRef, createNodeInChart } from '../utils/XkUtils'
 import { defineComponent, ref } from 'vue'
 
 const newNode = defineModel('newNode', { type: Object })
@@ -73,33 +73,14 @@ const addCategory = (e) => {
 
 const createNodeSubmit = () => {
   /**
-   * 响应创建新节点的提交
+   * 响应创建新节点的提交：校验与数据操作走共享 createNodeInChart，
+   * 组件只负责侧栏错误文案与表单重置
    */
-  // 使用可选链和空值合并简化判断
-  if (!newNode.value.category?.trim()) {
-    xkContext.value.errorMessage = '请选择/创建节点所属类目'
+  const result = createNodeInChart(xkContext, newNode.value)
+  if (!result.ok) {
+    xkContext.value.errorMessage = result.error
     return
   }
-
-  const { nodes: data } = xkContext.value.chartData
-  const newName = newNode.value.name
-  const hasDuplicate = data.some((node) => node.name === newName)
-
-  if (hasDuplicate) {
-    xkContext.value.errorMessage = '不能创建同名节点'
-    return
-  }
-
-  const newNodeJson = jsonReactive(newNode.value)
-  data.push(newNodeJson)
-
-  // 统一走addHistory：截断废弃的redo分支后追加，并同步移动当前序号
-  addHistory(xkContext, {
-    act: 'createNode',
-    data: newNodeJson
-  })
-
-  xkContext.value.updateChart = !xkContext.value.updateChart
   xkContext.value.errorMessage = ''
   resetNodeRef(newNode)
 }

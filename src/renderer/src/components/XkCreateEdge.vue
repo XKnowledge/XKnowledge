@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { addHistory, jsonReactive, resetEdgeRef } from '../utils/XkUtils'
+import { resetEdgeRef, createEdgeInChart } from '../utils/XkUtils'
 
 const newEdge = defineModel('newEdge', { type: Object })
 const highlightNodeList = defineModel('highlightNodeList', { type: Array })
@@ -22,45 +22,26 @@ const xkContext = defineModel('xkContext', { type: Object })
 
 const createEdgeSubmit = () => {
   /**
-   * 响应创建新连接的提交
+   * 响应创建新连接的提交：选中数前置校验与端点回填留组件，
+   * 重复边校验与数据操作走共享 createEdgeInChart
    */
   const { value: ctx } = xkContext
-  ctx.errorMessage = '' // 清空旧错误信息
+  ctx.errorMessage = ''
 
   if (highlightNodeList.value.length !== 2) {
     ctx.errorMessage = '请选中2个节点'
     return
   }
 
-  const { nodes: data, links } = xkContext.value.chartData
   const [sourceIndex, targetIndex] = highlightNodeList.value
-  const newSource = data[sourceIndex].name
-  const newTarget = data[targetIndex].name
+  newEdge.value.source = ctx.chartData.nodes[sourceIndex].name
+  newEdge.value.target = ctx.chartData.nodes[targetIndex].name
 
-  const isDuplicate = links.some(
-    (link) =>
-      (link.source === newSource && link.target === newTarget) ||
-      (link.source === newTarget && link.target === newSource)
-  )
-
-  if (isDuplicate) {
-    ctx.errorMessage = '两个节点间连接已存在'
+  const result = createEdgeInChart(xkContext, newEdge.value)
+  if (!result.ok) {
+    ctx.errorMessage = result.error
     return
   }
-
-  newEdge.value.source = newSource
-  newEdge.value.target = newTarget
-
-  const newEdgeJson = jsonReactive(newEdge.value)
-
-  // 封装历史记录操作
-  addHistory(xkContext, {
-    act: 'createEdge',
-    data: newEdgeJson
-  })
-
-  links.push(newEdgeJson)
-  ctx.updateChart = !ctx.updateChart
   resetEdgeRef(newEdge)
 }
 </script>
