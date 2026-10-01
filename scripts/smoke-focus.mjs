@@ -151,13 +151,27 @@ expectOk('聚焦开启不置脏（标题无圆点）', !((await nativeTitle()) ?
 
 // 6. 画布单击换焦点：3D 坐标命中不可控，软观察（打印实际值，不计失败）；
 //    点击本身不应抛错。命中节点/边会切到对应表单、隐藏属性面板——检测到
-//    隐藏就点一次工具栏「编辑栏」复原（toggleSider 从表单态回到属性页）
+//    隐藏就点一次工具栏「编辑栏」复原（toggleSider 从表单态回到属性页）。
+//    注：画布直操手势层的 down/up 同步投影会拉长 click 间隔，悬停轮询得以
+//    跟上——这里的单击比旧版更容易真命中节点（命中即换焦点）
 await page.locator('.graph3d-container').click({ position: { x: 300, y: 250 } })
 await page.waitForTimeout(300)
 console.log(`observe: 单击画布后焦点 = ${await focusRow.getAttribute('data-focus-node')}`)
 if (!(await focusRow.isVisible())) {
   await page.locator('.no-move-button').last().click()
   await focusRow.waitFor({ state: 'visible', timeout: 5_000 })
+}
+// 6.5 命中节点时焦点已被换走，且「编辑栏」复原会清选中态——后续「切模式焦点
+// 保持」的断言基线须为确定值：焦点偏离默认焦点就重开一次聚焦回基线（selected
+// 为空时产品按度数最高兜底，与默认焦点一致）
+if ((await focusRow.getAttribute('data-focus-node')) !== expectedHub) {
+  await focusRow.locator('.focus-mode-select').click()
+  await dropdownOption('关闭').click()
+  await page.waitForTimeout(600)
+  await focusRow.locator('.focus-mode-select').click()
+  await dropdownOption('灰化').click()
+  await page.waitForTimeout(800)
+  expectEq('单击命中后重开聚焦回默认基线', await focusRow.getAttribute('data-focus-node'), expectedHub)
 }
 
 // 7. 跳数 2 → 1
