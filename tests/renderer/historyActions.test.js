@@ -197,7 +197,7 @@ describe('importOutline', () => {
     expect(chartData.links).toEqual([{ source: '旧', target: 'A', name: '既有边', des: '' }])
   })
 
-  it('undo 时同端点的既有边不被误删（按无向端点对且限本批）', () => {
+  it('undo 时同端点的既有边不被误删（边按对象引用移除，天然只命中本批）', () => {
     const chartData = {
       nodes: [{ name: 'A', des: '', category: 'A', symbolSize: 70 }],
       links: [{ source: 'A', target: 'B', name: '手工建的', des: '' }]
