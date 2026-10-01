@@ -15,7 +15,7 @@
         class="xk-canvas-editor-name"
         placeholder="节点名称"
         size="small"
-        @keyup.enter="openCategory"
+        @keydown.enter="onNameEnter"
       />
       <a-select
         ref="catRef"
@@ -37,7 +37,7 @@
               placeholder="新类目"
               size="small"
               style="width: 100px"
-              @keyup.enter="addCategory"
+              @keydown.enter="onNewCatEnter"
             />
             <a-button type="text" size="small" @click="addCategory">新增</a-button>
           </a-space>
@@ -51,7 +51,7 @@
       class="xk-canvas-editor-name"
       placeholder="连接名称（留空建无名边），回车确认"
       size="small"
-      @keyup.enter="submitEdge"
+      @keydown.enter="onEdgeEnter"
     />
   </div>
 </template>
@@ -96,6 +96,25 @@ watch(
     nextTick(() => nameRef.value?.focus())
   }
 )
+
+/** IME 组合中的回车不提交：Windows 上屏那次 isComposing=true，macOS 上 compositionend 先行
+ *  导致 isComposing=false 但 keyCode=229 —— 双保险防跨平台差异（同 XkGraphSearch 键盘流约定） */
+const isComposingEnter = (e) => e.isComposing || e.keyCode === 229
+
+const onNameEnter = (e) => {
+  if (isComposingEnter(e)) return
+  openCategory()
+}
+
+const onNewCatEnter = (e) => {
+  if (isComposingEnter(e)) return
+  addCategory()
+}
+
+const onEdgeEnter = (e) => {
+  if (isComposingEnter(e)) return
+  submitEdge()
+}
 
 /** 键盘流第一步完成：名称回车 → 展开类目下拉并聚焦（方向键选、回车定） */
 const openCategory = () => {
