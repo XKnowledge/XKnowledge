@@ -1,5 +1,5 @@
 <template>
-  <div class="graph3d-wrap">
+  <div class="graph3d-wrap" :data-node-count="nodes.length" :data-link-count="links.length">
     <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
          Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
          "开发时正常、打包后消失"的假象） -->
@@ -32,6 +32,17 @@
       @select="goToHit"
       @close="closeSearch"
     />
+    <!-- 就地编辑覆盖层：手势状态由本组件持有，编辑器纯展示 -->
+    <XkCanvasEditor
+      ref="canvasEditorRef"
+      :mode="editor.mode"
+      :x="editor.x"
+      :y="editor.y"
+      :categories="categories"
+      @create-node="onEditorCreateNode"
+      @create-edge="onEditorCreateEdge"
+      @close="closeEditor"
+    />
     <!-- WebGL 失败提示条 -->
     <div v-if="initFailed" class="graph3d-fallback">
       3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用
@@ -46,6 +57,8 @@ import SpriteText from 'three-spritetext'
 import { assignCategoryColors } from '../utils/categoryColor.js'
 import { effective } from '../store/themeStore.js'
 import XkGraphSearch from './XkGraphSearch.vue'
+import XkCanvasEditor from './XkCanvasEditor.vue'
+import { clampEditorPos, pickNearestNode } from '../utils/canvasEdit.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
@@ -68,7 +81,13 @@ const props = defineProps({
   focusDeep: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['node-click', 'link-click', 'init-failed'])
+const emit = defineEmits([
+  'node-click',
+  'link-click',
+  'init-failed',
+  'canvas-create-node',
+  'canvas-create-edge'
+])
 
 const containerRef = ref(null)
 const initFailed = ref(false)
@@ -148,9 +167,98 @@ const closeSearch = () => {
   recomputeSearch()
 }
 
+// ---- 画布直操手势层 ----
+// 双击空白：建点；按住节点拖到另一节点：连边（Task 5）。editor 状态由本组件
+// 持有（XkCanvasEditor 纯展示）；提交经 emit 交给 ChartView 走共享数据操作。
+const canvasEditorRef = ref(null)
+const editor = ref({ mode: '', x: 0, y: 0 })
+let pendingWorldPos = null // 双击落点（世界坐标）：提交时随事件带出，不进 chartData
+let pendingLinkEnds = null // 拖拽连线的两端点名：输名提交时随事件带出
+
+/** 待落点节点：name → 世界坐标。新节点（无旧坐标）首次重灌时作初始位置，
+ *  用后即删——力模拟接手后同名合并走旧坐标通道（mergeGraphNodes） */
+const pendingDropPos = new Map()
+
+/** 全节点屏幕投影（拾取用；连线手势期间相机被禁不会动，双击时瞬时拾取） */
+const projectAllNodes = () =>
+  graph
+    .graphData()
+    .nodes.filter((n) => Number.isFinite(n.x))
+    .map((n) => {
+      const p = graph.graph2ScreenCoords(n.x, n.y, n.z)
+      return { name: n.name, x: p.x, y: p.y }
+    })
+
+/** 双击落点：视线在相机注视平面上的交点（screen2GraphCoords 的 distance
+ *  参数沿射线取相机到 lookAt 的距离，落点贴着用户正看的深度） */
+const screenToWorldOnFocusPlane = (cx, cy) => {
+  const cam = graph.cameraPosition()
+  const look = cam.lookAt ?? { x: 0, y: 0, z: 0 }
+  const dist = Math.hypot(cam.x - look.x, cam.y - look.y, cam.z - look.z)
+  return graph.screen2GraphCoords(cx, cy, dist)
+}
+
+/** 相对画布容器的坐标（canvas 填满容器，两者坐标系一致） */
+const toLocal = (e) => {
+  const rect = containerRef.value.getBoundingClientRect()
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+}
+
+const openEditor = (mode, cx, cy) => {
+  const el = containerRef.value
+  const pos = clampEditorPos(el.clientWidth, el.clientHeight, cx, cy)
+  editor.value = { mode, x: pos.x, y: pos.y }
+}
+
+const closeEditor = () => {
+  editor.value = { mode: '', x: 0, y: 0 }
+  pendingWorldPos = null
+  pendingLinkEnds = null
+}
+
+const onEditorCreateNode = ({ name, category }) => {
+  const world = pendingWorldPos
+  closeEditor()
+  emit('canvas-create-node', { name, category, world })
+}
+
+const onEditorCreateEdge = ({ name }) => {
+  const ends = pendingLinkEnds
+  closeEditor()
+  emit('canvas-create-edge', { ...ends, name })
+}
+
+/** ChartView 建点成功后回填落点（expose；updateChart 的 watch 异步于本轮，
+ *  此调用先于重灌执行，时序安全） */
+const notifyNodeDropPos = (name, pos) => {
+  if (name && pos) pendingDropPos.set(name, pos)
+}
+
+const onCanvasDblClick = (e) => {
+  if (!graph || initFailed.value || editor.value.mode) return
+  const { x: cx, y: cy } = toLocal(e)
+  // 双击空白才建点；双击节点暂无语义（单击选中语义照旧）
+  if (pickNearestNode(projectAllNodes(), cx, cy)) return
+  pendingWorldPos = screenToWorldOnFocusPlane(cx, cy)
+  openEditor('node', cx, cy)
+}
+
 /** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
  *  同名节点保留旧坐标（编辑刷新后已布局的图不跳），按 name 建 Map 索引 O(n) 合并 */
-const toGraphNodes = () => mergeGraphNodes(props.nodes, graph?.graphData().nodes)
+const toGraphNodes = () => {
+  const merged = mergeGraphNodes(props.nodes, graph?.graphData().nodes)
+  // 画布建点落点：只对无旧坐标的新节点生效（d3 以 datum 上的 x/y/z 为初始位置）
+  for (const n of merged) {
+    const drop = pendingDropPos.get(n.name)
+    if (drop && n.x === undefined) {
+      n.x = drop.x
+      n.y = drop.y
+      n.z = drop.z
+      pendingDropPos.delete(n.name)
+    }
+  }
+  return merged
+}
 const toGraphLinks = () => props.links.map((l, i) => ({ ...l, __idx: i }))
 
 /** 剥离内部字段的纯数据，发给父组件 */
@@ -355,6 +463,8 @@ onMounted(() => {
     .nodeRelSize(1)
     .onNodeClick((n) => emit('node-click', pureNode(n), n.__idx))
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
+    // 节点拖动手势让位给「拖节点到节点连线」（坐标本就不落盘，拖节点无产出）
+    .enableNodeDrag(false)
     // 不做引擎停止后的自动取景：库的 cooldownTime 默认 15s，届时自动
     // zoomToFit 会把用户已拖动过的视角抢回去。取景/复位只由「复位视图」
     // 按钮手动触发；打开图的初始距离由库自带的数据装载粗取景兜底
@@ -369,7 +479,8 @@ onMounted(() => {
   // 底部导航提示文案在 three-render-objects 内硬编码为英文且无配置项，
   // 这里替换为中文；类名随库版本锁定（^1.80）
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
-  if (navInfo) navInfo.textContent = '左键：旋转　滚轮/中键：缩放　右键：平移'
+  if (navInfo)
+    navInfo.textContent = '左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点到节点：连线'
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
@@ -382,11 +493,17 @@ onMounted(() => {
   applyLabels()
   applyInteraction()
   setRepulsion(100)
+
+  // 画布直操手势：dblclick 在 canvas DOM 上（库不提供双击回调）
+  const canvasEl = graph.renderer().domElement
+  canvasEl.addEventListener('dblclick', onCanvasDblClick)
 })
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
   if (graph) {
+    const canvasEl = graph.renderer().domElement
+    canvasEl.removeEventListener('dblclick', onCanvasDblClick)
     graph._destructor()
     graph = null
   }
@@ -536,7 +653,15 @@ const resetView = () => {
   graph.zoomToFit(600, 80)
 }
 
-defineExpose({ setRepulsion, exportPng, resetView, focusCamera, openSearch, closeSearch })
+defineExpose({
+  setRepulsion,
+  exportPng,
+  resetView,
+  focusCamera,
+  openSearch,
+  closeSearch,
+  notifyNodeDropPos
+})
 </script>
 
 <style scoped>
