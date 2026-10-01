@@ -1,5 +1,6 @@
 // 冒烟驱动：画布直操编辑——双击空白建点（就地输入名称回车 → 类目下拉内新增
-// 「核心」→ 选定即建成：data-node-count/图例断言）、Ctrl+按住节点拖出连线的
+// 「核心」→ 选定即建成：data-node-count/图例断言；大小档位默认「中」，Gamma
+// 轮走「大」档）、Ctrl+按住节点拖出连线的
 // 确定性部分（预览线出现 → 松开空白处静默放弃、预览消失）、无 Ctrl 普通拖
 // 不劫持为连线（DragControls 移动节点，预览/编辑器均不出现）、Esc 取消路径、
 // 再建 Beta（下拉此时已有类目，方向键+回车选定）、Ctrl+Z 撤销计数回落、
@@ -146,6 +147,15 @@ const PG = { x: box.x + box.width * 0.62, y: box.y + box.height * 0.75 } // Gamm
 await settleMouse(C.x, C.y)
 await page.mouse.dblclick(C.x, C.y)
 expectTrue('双击空白出现建点编辑器', await waitEditorCount('node', 1))
+expectTrue(
+  '档位控件存在且默认选中「中」',
+  await page.evaluate(() => {
+    const g = document.querySelector('[data-canvas-edit-mode="node"] .ant-radio-group')
+    if (!g) return false
+    const checked = g.querySelector('.ant-radio-button-wrapper-checked')
+    return !!checked && checked.textContent.includes('中')
+  })
+)
 await awaitEditorFocus()
 await shot('02-node-editor-open')
 await page.keyboard.type('Alpha')
@@ -273,6 +283,11 @@ await settleMouse(PG.x, PG.y)
 await page.mouse.dblclick(PG.x, PG.y)
 expectTrue('鼠标流双击出现建点编辑器', await waitEditorCount('node', 1))
 await awaitEditorFocus()
+// 大档位建成路径：档位是纯参数，选定后流程照旧（大小的数值生效属
+// createNodeInChart 数据链路，DOM 无锚点，由单测与实机观感覆盖）
+await page
+  .locator('[data-canvas-edit-mode="node"] .ant-radio-button-wrapper', { hasText: '大' })
+  .click()
 await page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-cat').click()
 let mouseOpened = true
 try {
