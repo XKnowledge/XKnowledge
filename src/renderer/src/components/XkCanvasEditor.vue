@@ -20,11 +20,13 @@
       <a-select
         ref="catRef"
         v-model:value="category"
-        v-model:open="catOpen"
+        :open="catOpen"
         class="xk-canvas-editor-cat"
         placeholder="类目"
         size="small"
         :options="localCategories.map((c) => ({ value: c }))"
+        :dropdown-match-select-width="false"
+        @dropdownVisibleChange="onCatOpenChange"
         @change="submitNode"
       >
         <template #dropdownRender="{ menuNode: menu }">
@@ -101,8 +103,22 @@ watch(
  *  导致 isComposing=false 但 keyCode=229 —— 双保险防跨平台差异（同 XkGraphSearch 键盘流约定） */
 const isComposingEnter = (e) => e.isComposing || e.keyCode === 229
 
+/** antd Select 不发 update:open（v-model:open 形同虚设）：受控 open prop 会吞掉
+ *  组件内部的开关请求——鼠标点选框打不开下拉（建点编辑器里"点类目没反应"），
+ *  键盘流打开后 antd 也关不掉。开关请求只有经 dropdownVisibleChange 回流到
+ *  catOpen 才真正生效 */
+const onCatOpenChange = (v) => {
+  catOpen.value = v
+}
+
 const onNameEnter = (e) => {
   if (isComposingEnter(e)) return
+  // 已选过类目：直接提交。antd 的 change 只在值变化时发射，重选同一项
+  // 不会再触发——"先选类目再输名字"的流会卡死在选了却建不出
+  if (category.value) {
+    submitNode()
+    return
+  }
   openCategory()
 }
 
