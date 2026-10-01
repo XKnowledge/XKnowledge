@@ -171,7 +171,11 @@ if ((await focusRow.getAttribute('data-focus-node')) !== expectedHub) {
   await focusRow.locator('.focus-mode-select').click()
   await dropdownOption('灰化').click()
   await page.waitForTimeout(800)
-  expectEq('单击命中后重开聚焦回默认基线', await focusRow.getAttribute('data-focus-node'), expectedHub)
+  expectEq(
+    '单击命中后重开聚焦回默认基线',
+    await focusRow.getAttribute('data-focus-node'),
+    expectedHub
+  )
 }
 
 // 7. 跳数 2 → 1
