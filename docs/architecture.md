@@ -91,7 +91,6 @@ XKnowledge/
 │        │  ├─ XkMenu.vue           # 图表页左上角下拉菜单
 │        │  ├─ XkCreateNode.vue     # 侧边栏：创建节点表单
 │        │  ├─ XkCurrentNode.vue    # 侧边栏：修改节点表单
-│        │  ├─ XkCreateEdge.vue     # 侧边栏：创建连接表单
 │        │  └─ XkCurrentEdge.vue    # 侧边栏：修改连接表单
 │        ├─ store/chartStore.js     # 同窗口「首页 → 图表页」的一次性数据传递
 │        ├─ utils/
@@ -304,8 +303,8 @@ vitest、生成脚本三方直接 import 同一份逻辑；`exampleService.js` �
 `updateChart` 触发派生计算（类目列表、未保存标记）与 `XkGraph3D` 的增量刷新
 （`watch [props.nodes, props.links]`，deep）。
 
-侧边栏以 `xxxVisible` 布尔族互斥切换显示：属性面板 / 创建节点 / 修改节点 / 创建连接 /
-修改连接五选一；图表点击节点/边时自动切换到对应表单并记录高亮。
+侧边栏以 `xxxVisible` 布尔族互斥切换显示：属性面板 / 创建节点 / 修改节点 /
+修改连接四选一；图表点击节点/边时自动切换到对应表单（点击边同时记录高亮索引）。
 
 ### 6.3 操作触发的统一分发
 
@@ -322,12 +321,12 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 
 ### 6.4 侧边栏表单组件
 
-四个表单（XkCreateNode / XkCurrentNode / XkCreateEdge / XkCurrentEdge）均通过
+三个表单（XkCreateNode / XkCurrentNode / XkCurrentEdge）均通过
 `defineModel` 双向绑定 ChartView 的 ref，只负责校验与提交，不做 I/O：
 
 - 节点表单支持在类目下拉中**即时新增类目**（`dropdownRender` 自定义下拉脚）；
 - 创建节点校验：必须有类目、不允许与现有节点同名（节点 name 即主键）；
-- 创建连接校验：必须恰好选中 2 个高亮节点、两点间不允许重复连接（无向判定）；
+- 创建连接（画布拖拽直操，见 §8）校验：两点间不允许重复连接（无向判定）；
 - 修改节点改名时，同步改写所有引用旧名的边的 source/target；
 - 提交成功统一走 `addHistory` 记录历史。
 

@@ -75,7 +75,6 @@ import {
 const props = defineProps({
   nodes: { type: Array, default: () => [] },
   links: { type: Array, default: () => [] },
-  highlightNodes: { type: Array, default: () => [] },
   highlightLink: { type: Object, default: null },
   showLinkName: { type: Boolean, default: false },
   showSmallLabels: { type: Boolean, default: false },
@@ -380,7 +379,6 @@ const applyVisibility = () => {
 }
 
 /** 上一次应用的高亮/聚焦状态：增量重着色只处理组合色翻转的对象 */
-let prevHlNodes = new Set()
 let prevHlLink = null
 let prevHlDim = null // Set<string>|null：上一次应用的聚焦邻域
 let prevHlSearch = new Set() // Set<string>：上一次应用的搜索命中集合
@@ -388,7 +386,6 @@ let prevHlSearchActive = null // string|null：上一次应用的搜索当前项
 
 const applyHighlight = () => {
   if (!graph) return
-  const hl = new Set(props.highlightNodes)
   const le = props.highlightLink
   const dim = props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
   // 搜索集合：open 或残留关键词时按当前命中集合着色
@@ -397,19 +394,17 @@ const applyHighlight = () => {
       ? new Set(searchHitNodes.value.map((n) => n.name))
       : new Set()
   const active = searchActiveName.value
-  // accessor 描述"正确颜色"（高亮 > 搜索当前项 > 搜索命中 > 聚焦外灰 > 类目/底色）：
+  // accessor 描述"正确颜色"（搜索当前项 > 搜索命中 > 聚焦外灰 > 类目/底色）：
   // graphData 重灌或 refresh 时库按它重建材质
   graph
     .nodeColor((n) =>
-      hl.has(n.name)
-        ? sceneColors.value.hl
-        : active && n.name === active
-          ? sceneColors.value.active
-          : search.has(n.name)
-            ? sceneColors.value.hit
-            : dim && !dim.has(n.name)
-              ? sceneColors.value.dim
-              : catColor(n.category)
+      active && n.name === active
+        ? sceneColors.value.active
+        : search.has(n.name)
+          ? sceneColors.value.hit
+          : dim && !dim.has(n.name)
+            ? sceneColors.value.dim
+            : catColor(n.category)
     )
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
@@ -425,9 +420,7 @@ const applyHighlight = () => {
   const { nodeRepaints, linkRepaints } = planHighlightRepaint({
     nodes: graph.graphData().nodes,
     links: graph.graphData().links,
-    prevNodes: prevHlNodes,
     prevLink: prevHlLink,
-    nextNodes: hl,
     nextLink: le,
     prevDimNodes: prevHlDim,
     nextDimNodes: dim,
@@ -458,7 +451,6 @@ const applyHighlight = () => {
     }
   }
   if (repaints.length > 0 && painted === 0) graph.refresh()
-  prevHlNodes = hl
   prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
   prevHlDim = dim
   prevHlSearch = search
@@ -622,7 +614,6 @@ watch(
   { deep: true }
 )
 
-watch(() => props.highlightNodes, applyHighlight, { deep: true })
 watch(() => props.highlightLink, applyHighlight, { deep: true })
 // 聚焦邻域变化同样要走重着色：灰化/还原是增量材质色更新，只挂相机会
 // 出现「状态对、视觉没变」（冒烟截图已踩过）；深度聚焦开着时邻域还

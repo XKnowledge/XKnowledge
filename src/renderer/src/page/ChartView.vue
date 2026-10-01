@@ -37,7 +37,6 @@
             class="echarts-style"
             :nodes="xkContext.chartData?.nodes ?? []"
             :links="xkContext.chartData?.links ?? []"
-            :highlight-nodes="highlightNodeNames"
             :highlight-link="highlightEdgeObj"
             :show-link-name="showLinkName"
             :show-small-labels="showSmallLabels"
@@ -155,13 +154,6 @@
             v-model:xkContext="xkContext"
           ></XkCurrentNode>
 
-          <XkCreateEdge
-            v-show="createEdgeVisible"
-            v-model:newEdge="newEdge"
-            v-model:highlightNodeList="highlightNodeList"
-            v-model:xkContext="xkContext"
-          ></XkCreateEdge>
-
           <XkCurrentEdge
             v-show="currentEdgeVisible"
             v-model:currentEdge="currentEdge"
@@ -194,7 +186,6 @@ import { takePendingChart } from '../store/chartStore'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
 import XkCurrentNode from '../components/XkCurrentNode.vue'
-import XkCreateEdge from '../components/XkCreateEdge.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
 import XkMenu from '../components/XkMenu.vue'
 import XkGraph3D from '../components/XkGraph3D.vue'
@@ -205,7 +196,6 @@ import XkWindowControls from '../components/XkWindowControls.vue'
 
 import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
-import CreateEdgeIcon from '../assets/create_edge.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
 import EditIcon from '../assets/edit.png'
 
@@ -243,15 +233,7 @@ const currentNode = ref({
   symbolSize: 50,
   category: ''
 })
-const currentNodeDataIndex = ref(-1) // todo 这块有一个优化，可以和highlightNodeList合并，相当于highlightNodeList的最后一个值，不确定能不能替换，替换之后如果highlightNodeList中没有节点，会有问题？
-
-const createEdgeVisible = ref(false)
-const newEdge = ref({
-  source: '',
-  target: '',
-  name: '',
-  des: ''
-})
+const currentNodeDataIndex = ref(-1)
 
 const currentEdgeVisible = ref(false)
 const currentEdge = ref({
@@ -285,10 +267,6 @@ const focusNodeNames = computed(() => {
     ...focusNeighborhood(chart?.nodes ?? [], chart?.links ?? [], focusNodeId.value, focusHops.value)
   ]
 })
-const highlightNodeList = ref([]) // 高亮节点 index 记录（最多 2 个，逻辑照旧）
-const highlightNodeNames = computed(() =>
-  highlightNodeList.value.map((i) => xkContext.value.chartData?.nodes?.[i]?.name).filter(Boolean)
-)
 // 高亮边 index（-1 表示无）；原 `let highlightEdge` 变量由此 ref 替代
 const highlightEdgeIndex = ref(-1)
 const highlightEdgeObj = computed(() => {
@@ -596,7 +574,6 @@ watch(shortcutWatch, () => {
     open_file: openFile,
     create_node: createNode,
     delete_node: deleteNode,
-    create_edge: createEdge,
     delete_edge: deleteEdge,
     undo: undo,
     redo: redo,
@@ -613,7 +590,6 @@ watch(shortcutWatch, () => {
 })
 
 const downplayAllHightlight = () => {
-  highlightNodeList.value = []
   highlightEdgeIndex.value = -1
 }
 
@@ -622,11 +598,7 @@ const resetRefData = () => {
    * 重置各种ref，配合侧边栏显示一块用
    */
   downplayAllHightlight()
-  // 高亮索引在节点/边增删后随数组前移而失效，必须连同清空，
-  // 否则“创建连接”会按陈旧索引连到错误节点
-  highlightNodeList.value = []
   resetNodeRef(newNode)
-  resetEdgeRef(newEdge)
   currentNodeDataIndex.value = -1
   resetNodeRef(currentNode)
   currentEdgeDataIndex.value = -1
@@ -641,7 +613,6 @@ const resetSider = () => {
   attributeVisible.value = true
   createNodeVisible.value = false
   currentNodeVisible.value = false
-  createEdgeVisible.value = false
   currentEdgeVisible.value = false
 }
 
@@ -706,15 +677,6 @@ const onGraphNodeClick = (nodeData, index) => {
   currentEdgeDataIndex.value = -1
   // 聚焦/深度聚焦开着时单击即换焦点（与「选中看属性」一次点击两个语义，不冲突）
   if (focusMode.value !== 'off' && nodeData?.name) focusNodeId.value = nodeData.name
-
-  const currentIndex = highlightNodeList.value.indexOf(index)
-  if (currentIndex !== -1) {
-    highlightNodeList.value.splice(currentIndex, 1)
-  } else if (highlightNodeList.value.length < 2) {
-    highlightNodeList.value.push(index)
-  } else {
-    highlightNodeList.value = [highlightNodeList.value[1], index]
-  }
 
   if (!siderVisible.value) switchSider()
 }
@@ -990,16 +952,6 @@ const deleteNode = () => {
   resetRefData()
 }
 
-const createEdge = () => {
-  /**
-   * 创建新连接
-   */
-  resetSider()
-  attributeVisible.value = false
-  siderVisible.value = true // 切换侧边栏的显示状态
-  createEdgeVisible.value = true
-}
-
 const deleteEdge = () => {
   /**
    * 删除连接
@@ -1023,7 +975,6 @@ const deleteEdge = () => {
 const buttonList = ref([
   { src: CreateNodeIcon, name: '创建节点', click: createNode },
   { src: DeleteNodeIcon, name: '删除节点', click: deleteNode },
-  { src: CreateEdgeIcon, name: '创建连接', click: createEdge },
   { src: DeleteEdgeIcon, name: '删除连接', click: deleteEdge },
   { src: EditIcon, name: '编辑栏', click: toggleSider }
 ])

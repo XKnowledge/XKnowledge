@@ -34,7 +34,6 @@
             <a-col flex="auto">Delete</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="8" @click="createEdge"> 创建连接 </a-menu-item>
         <a-menu-item key="9" @click="deleteEdge"> 删除连接 </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="10" @click="saveFile">
@@ -91,11 +90,6 @@ const createNode = () => {
 
 const deleteNode = () => {
   shortcutActive.value = 'delete_node'
-  shortcutWatch.value = !shortcutWatch.value
-}
-
-const createEdge = () => {
-  shortcutActive.value = 'create_edge'
   shortcutWatch.value = !shortcutWatch.value
 }
 
