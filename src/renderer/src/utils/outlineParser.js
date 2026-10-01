@@ -57,10 +57,8 @@ export const parseOutline = (text) => {
   let current = null // 最近的结构行节点（段落归属）
 
   for (const raw of String(text ?? '').split('\n')) {
-    if (!raw.trim()) {
-      current = null // 空行结束段落
-      continue
-    }
+    if (!raw.trim()) continue // 空行跳过：段落归属跨空行延续（标准 markdown
+    // 标题与正文常隔空行），段落只在遇到下一个结构行时结束
     const struct = parseLine(raw, baseDepth)
     if (!struct) {
       // 段落行 → 最近节点的 des（[[双链]] 同样剥离标记并连边，规则与结构行一致）

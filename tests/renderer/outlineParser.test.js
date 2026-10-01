@@ -39,6 +39,12 @@ describe('parseOutline', () => {
     expect(r.nodes[1].des).toBe('')
   })
 
+  it('标题与段落间隔空行：des 归属跨空行延续', () => {
+    const r = parseOutline('# 数学\n\n研究数量与结构的学科\n\n## 代数')
+    expect(r.nodes[0].des).toBe('研究数量与结构的学科')
+    expect(r.nodes[1].des).toBe('')
+  })
+
   it('[[双链]]：剥离标记、连边、目标不存在则建未分类节点', () => {
     const r = parseOutline('# 数学\n## 代数\n# 物理\n## 量子力学\n与 [[代数]] 相关')
     const target = r.nodes.find((n) => n.name === '量子力学')
