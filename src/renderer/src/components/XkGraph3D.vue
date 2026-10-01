@@ -62,7 +62,7 @@ import { assignCategoryColors } from '../utils/categoryColor.js'
 import { effective } from '../store/themeStore.js'
 import XkGraphSearch from './XkGraphSearch.vue'
 import XkCanvasEditor from './XkCanvasEditor.vue'
-import { clampEditorPos, pickNearestNode } from '../utils/canvasEdit.js'
+import { clampEditorPos, pickNearestNode, focusPlaneDistance } from '../utils/canvasEdit.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
@@ -218,12 +218,18 @@ const projectAllNodes = () => {
     })
 }
 
-/** 双击落点：视线在相机注视平面上的交点（screen2GraphCoords 的 distance
- *  参数沿射线取相机到 lookAt 的距离，落点贴着用户正看的深度） */
+/** 双击落点：视线在「节点质心平面」上的交点——落点与已有节点同深度。
+ *  深度取 focusPlaneDistance（质心沿视线投影），不能用相机-lookAt 距离：
+ *  库装载取景把相机拉近后 lookAt 是 getter 合成的相机前方 1000 单位点，
+ *  按它取深度会把新点放到远处，d3 center 力把混合深度节点群沿深度弹开，
+ *  一侧节点飞越相机被近裁面裁掉（建第二个点后第一个点消失的根因） */
 const screenToWorldOnFocusPlane = (cx, cy) => {
   const cam = graph.cameraPosition()
-  const look = cam.lookAt ?? { x: 0, y: 0, z: 0 }
-  const dist = Math.hypot(cam.x - look.x, cam.y - look.y, cam.z - look.z)
+  const dist = focusPlaneDistance(
+    { x: cam.x, y: cam.y, z: cam.z },
+    cam.lookAt ?? { x: 0, y: 0, z: 0 },
+    graph.graphData().nodes
+  )
   return graph.screen2GraphCoords(cx, cy, dist)
 }
 

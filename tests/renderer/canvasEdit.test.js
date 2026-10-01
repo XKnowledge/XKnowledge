@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { clampEditorPos, pickNearestNode } from '../../src/renderer/src/utils/canvasEdit'
+import { clampEditorPos, pickNearestNode, focusPlaneDistance } from '../../src/renderer/src/utils/canvasEdit'
 
 describe('clampEditorPos', () => {
   it('位置在安全区内原样返回', () => {
@@ -47,5 +47,58 @@ describe('pickNearestNode', () => {
 
   it('空数组返回 null', () => {
     expect(pickNearestNode([], 100, 100, 16)).toBeNull()
+  })
+})
+
+describe('focusPlaneDistance', () => {
+  it('空图回退相机-lookAt 距离', () => {
+    expect(focusPlaneDistance({ x: 0, y: 0, z: 1000 }, { x: 0, y: 0, z: 0 }, [])).toBe(1000)
+  })
+
+  it('单节点在原点、相机沿 -z 看：距离=相机到质心（库装载取景后相机 z=170 的场景）', () => {
+    // lookAt 是 getter 合成的相机前方 1000 单位点，视线仍沿 -z
+    expect(
+      focusPlaneDistance({ x: 0, y: 0, z: 170 }, { x: 0, y: 0, z: -830 }, [{ x: 0, y: 0, z: 0 }])
+    ).toBeCloseTo(170, 5)
+  })
+
+  it('多节点取质心：两节点对称分布时距离=相机到中点', () => {
+    const nodes = [
+      { x: 174, y: -107, z: 371 },
+      { x: -174, y: 107, z: -371 }
+    ]
+    // 质心 (0,0,0)，相机 (0,0,214) 沿 -z 看
+    expect(focusPlaneDistance({ x: 0, y: 0, z: 214 }, { x: 0, y: 0, z: -786 }, nodes)).toBeCloseTo(
+      214,
+      5
+    )
+  })
+
+  it('斜视线：距离取质心在视线方向的投影', () => {
+    // 相机 (100,0,100) 看向 (0,0,0)：单位视线 (-0.707,0,-0.707)；
+    // 质心 (0,0,0) 投影 = 141.42
+    expect(
+      focusPlaneDistance({ x: 100, y: 0, z: 100 }, { x: 0, y: 0, z: 0 }, [{ x: 0, y: 0, z: 0 }])
+    ).toBeCloseTo(141.4214, 3)
+  })
+
+  it('质心在相机侧后（投影非正）兜底为 1，防 screen2GraphCoords 拿到非正距离', () => {
+    // 质心在相机背后 +z 方向，视线沿 -z → 投影为负
+    expect(
+      focusPlaneDistance({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -100 }, [{ x: 0, y: 0, z: 50 }])
+    ).toBe(1)
+  })
+
+  it('非有限坐标节点被忽略', () => {
+    expect(
+      focusPlaneDistance(
+        { x: 0, y: 0, z: 100 },
+        { x: 0, y: 0, z: 0 },
+        [
+          { x: NaN, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 }
+        ]
+      )
+    ).toBeCloseTo(100, 5)
   })
 })
