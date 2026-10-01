@@ -292,12 +292,16 @@ const linkDrag = ref(null) // { source, sx, sy, cx, cy } | null
 
 const onCanvasPointerDown = (e) => {
   if (!graph || initFailed.value || editor.value.mode || e.button !== 0) return
+  // 普通拖让位 DragControls（移动节点）；Ctrl+拖才是连线
+  if (!e.ctrlKey) return
   const { x: cx, y: cy } = toLocal(e)
   const hit = pickNearestNode(projectAllNodes(), cx, cy)
-  if (!hit) return // 空白按下：交给 OrbitControls 旋转
-  // 命中节点：接管手势并禁相机（对齐 OrbitControls 源码：move 处理检查
-  // enabled——置 false 拦住旋转；up 无条件清理自身状态，不查 enabled）
-  graph.controls().enabled = false
+  if (!hit) return // Ctrl+空白按下：交给 OrbitControls 旋转
+  // Ctrl+命中节点：截断传播即独占手势——DragControls/OrbitControls 的
+  // pointerdown 均为 bubble 且先于本组件注册，同为 bubble 拦不住它们抢拖；
+  // 故本监听挂 capture 阶段（见 onMounted），stopPropagation 后二者收不到
+  // pointerdown 不会启动，也无需再切换 controls().enabled
+  e.stopPropagation()
   linkDrag.value = { source: hit.name, sx: cx, sy: cy, cx, cy }
   graph.renderer().domElement.setPointerCapture(e.pointerId)
 }
@@ -320,7 +324,6 @@ const onCanvasPointerUp = () => {
   if (!linkDrag.value) return
   const drag = linkDrag.value
   linkDrag.value = null
-  graph.controls().enabled = true
   const hit = pickNearestNode(projectAllNodes(), drag.cx, drag.cy)
   if (hit && hit.name !== drag.source) {
     pendingLinkEnds = { source: drag.source, target: hit.name }
@@ -329,12 +332,11 @@ const onCanvasPointerUp = () => {
   // 松在空白/原节点：静默取消，不建边
 }
 
-// pointercancel（浏览器接管手势，如 alt-tab/触控边缘手势）：只清态与复位相机，
+// pointercancel（浏览器接管手势，如 alt-tab/触控边缘手势）：只清态，
 // 不做拾取——复用 pointerUp 的拾取会在恰有节点处误弹编辑器
 const onCanvasPointerCancel = () => {
   if (!linkDrag.value) return
   linkDrag.value = null
-  graph.controls().enabled = true
 }
 
 /** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
@@ -542,8 +544,9 @@ onMounted(() => {
       emit('node-click', pureNode(idx > -1 ? props.nodes[idx] : n), idx > -1 ? idx : n.__idx)
     })
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
-    // 节点拖动手势让位给「拖节点到节点连线」（坐标本就不落盘，拖节点无产出）
-    .enableNodeDrag(false)
+    // 普通拖动=移动节点（库 DragControls；坐标不落盘仅会话内整理，编辑刷新
+    // 经 mergeGraphNodes 保留同名旧坐标）；Ctrl+拖=连线（onCanvasPointerDown）
+    .enableNodeDrag(true)
     // 不做引擎停止后的自动取景：库的 cooldownTime 默认 15s，届时自动
     // zoomToFit 会把用户已拖动过的视角抢回去。取景/复位只由「复位视图」
     // 按钮手动触发；打开图的初始距离由库自带的数据装载粗取景兜底
@@ -559,7 +562,8 @@ onMounted(() => {
   // 这里替换为中文；类名随库版本锁定（^1.80）
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
   if (navInfo)
-    navInfo.textContent = '左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点到节点：连线'
+    navInfo.textContent =
+      '左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　Ctrl+拖到节点：连线'
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
@@ -574,10 +578,11 @@ onMounted(() => {
   setRepulsion(100)
 
   // 画布直操手势：dblclick 在 canvas DOM 上（库不提供双击回调）；
-  // pointer 三件套做「按住节点拖出连线」（DragControls 已禁用，手势空间空闲）
+  // pointerdown 挂 capture（Ctrl+拖连线时截断传播，抢在先注册的 DragControls/
+  // OrbitControls 之前——见 onCanvasPointerDown），move/up/cancel 常规 bubble
   const canvasEl = graph.renderer().domElement
   canvasEl.addEventListener('dblclick', onCanvasDblClick)
-  canvasEl.addEventListener('pointerdown', onCanvasPointerDown)
+  canvasEl.addEventListener('pointerdown', onCanvasPointerDown, true)
   canvasEl.addEventListener('pointermove', onCanvasPointerMove)
   canvasEl.addEventListener('pointerup', onCanvasPointerUp)
   canvasEl.addEventListener('pointercancel', onCanvasPointerCancel)
@@ -590,7 +595,7 @@ onUnmounted(() => {
   if (graph) {
     const canvasEl = graph.renderer().domElement
     canvasEl.removeEventListener('dblclick', onCanvasDblClick)
-    canvasEl.removeEventListener('pointerdown', onCanvasPointerDown)
+    canvasEl.removeEventListener('pointerdown', onCanvasPointerDown, true)
     canvasEl.removeEventListener('pointermove', onCanvasPointerMove)
     canvasEl.removeEventListener('pointerup', onCanvasPointerUp)
     canvasEl.removeEventListener('pointercancel', onCanvasPointerCancel)

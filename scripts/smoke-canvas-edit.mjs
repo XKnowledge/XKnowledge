@@ -1,8 +1,10 @@
 // 冒烟驱动：画布直操编辑——双击空白建点（就地输入名称回车 → 类目下拉内新增
-// 「核心」→ 选定即建成：data-node-count/图例断言）、按住节点拖出连线的确定性
-// 部分（预览线出现 → 松开空白处静默放弃、预览消失）、Esc 取消路径、再建 Beta
-// （下拉此时已有类目，方向键+回车选定）、Ctrl+Z 撤销计数回落、画布右缘双击
-// 编辑器不溢出容器。连边的数据链路由 xkUtils 单测覆盖，这里只防手势层回归。
+// 「核心」→ 选定即建成：data-node-count/图例断言）、Ctrl+按住节点拖出连线的
+// 确定性部分（预览线出现 → 松开空白处静默放弃、预览消失）、无 Ctrl 普通拖
+// 不劫持为连线（DragControls 移动节点，预览/编辑器均不出现）、Esc 取消路径、
+// 再建 Beta（下拉此时已有类目，方向键+回车选定）、Ctrl+Z 撤销计数回落、
+// 画布右缘双击编辑器不溢出容器。连边的数据链路由 xkUtils 单测覆盖，这里只
+// 防手势层回归。
 // 新建空白图起步：空图无默认类目，首个类目只能走下拉内即时新增——正是该
 // 路径的被测价值。
 // 6.5 鼠标流回归：类目 select 必须能被鼠标点开（曾用 v-model:open——antd
@@ -171,16 +173,19 @@ expectTrue(
 )
 await shot('03-alpha-created')
 
-// 3. 拖拽手势确定性部分（此时全图只有 Alpha、位于画布中心，落点即投影）：
-//    从中心按下 → 拖出 +200px → 预览线出现 → 松开在空白处 → 静默放弃
+// 3. 连线拖拽手势确定性部分（此时全图只有 Alpha、位于画布中心，落点即投影）：
+//    Ctrl 从中心按下 → 拖出 +200px → 预览线出现 → 松开在空白处 → 静默放弃
+//    （连线已改 Ctrl+拖：普通拖归 DragControls 移动节点，无 Ctrl 拖不出预览线）
 await settleMouse(C.x, C.y)
+await page.keyboard.down('Control')
 await page.mouse.down()
 await page.waitForTimeout(100) // 等 pointerdown/pointer capture 就位再拖，防首段 move 丢失
 await page.mouse.move(C.x + 200, C.y, { steps: 8 })
 await page.waitForTimeout(150) // 等悬停轮询跟进到空点，松开不误派发节点点击
-expectTrue('拖拽中预览线出现', (await page.locator('[data-link-preview]').count()) === 1)
+expectTrue('Ctrl 拖拽中预览线出现', (await page.locator('[data-link-preview]').count()) === 1)
 await shot('04-drag-preview')
 await page.mouse.up()
+await page.keyboard.up('Control')
 expectTrue('松开后预览线消失', (await page.locator('[data-link-preview]').count()) === 0)
 const edgeEditors = await page.locator('[data-canvas-edit-mode="edge"]').count()
 if (edgeEditors === 1) {
@@ -193,6 +198,23 @@ if (edgeEditors === 1) {
 expectEq('放弃连线不建边（节点计数）', await nodeCount(), '1')
 expectEq('放弃连线不建边（连接计数）', await wrap.getAttribute('data-link-count'), '0')
 await shot('05-release-cancelled')
+
+// 3.5 普通拖回归（无 Ctrl）：从中心按住 Alpha 拖出——归 DragControls 移动节点，
+//     不得出现连线预览/边编辑器（手势分流：曾 enableNodeDrag(false) 整体让位
+//     连线导致节点不可拖）。拖向右上，远离后续双击取点 E1/PB；Alpha 拖离后
+//     center 力会缓慢回拉，不影响后续步骤（它们的取点均离中心 200px+）
+await settleMouse(C.x, C.y)
+await page.mouse.down()
+await page.waitForTimeout(100)
+await page.mouse.move(C.x + 150, C.y - 120, { steps: 8 })
+expectTrue('普通拖不出现连线预览', (await page.locator('[data-link-preview]').count()) === 0)
+await shot('045-plain-drag-move')
+await page.mouse.up()
+await page.waitForTimeout(150) // 悬停轮询跟进，松手不误派发
+expectTrue(
+  '普通拖不弹边编辑器',
+  (await page.locator('[data-canvas-edit-mode="edge"]').count()) === 0
+)
 
 // 4. Esc 取消路径：再双击空白 → 编辑器出现 → Esc 关闭，不建点
 await settleMouse(E1.x, E1.y)
