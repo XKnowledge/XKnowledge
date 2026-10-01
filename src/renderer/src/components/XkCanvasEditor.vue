@@ -50,7 +50,7 @@
       v-else
       ref="nameRef"
       v-model:value="edgeName"
-      class="xk-canvas-editor-name"
+      class="xk-canvas-editor-edge"
       placeholder="连接名称（留空建无名边），回车确认"
       size="small"
       @keydown.enter="onEdgeEnter"
@@ -145,6 +145,15 @@ const addCategory = () => {
   if (!c) return
   if (!localCategories.value.includes(c)) addedCategories.value.push(c)
   category.value = c
+  newCategory.value = ''
+  // 名称未输时 submitNode 发不出去（编辑器留在原地）：清输入之外还要收起
+  // 下拉并把焦点让给名称框引导补齐，否则困在已选类目的下拉里；
+  // 名称已输则提交后整个编辑器随 emit 卸载，走不到这里
+  if (!nodeName.value.trim()) {
+    catOpen.value = false
+    nextTick(() => nameRef.value?.focus())
+    return
+  }
   submitNode()
 }
 
@@ -180,6 +189,13 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
 
 .xk-canvas-editor-name {
   width: 150px;
+}
+
+/* 连边态单框独占一行：加宽到整句提示可见（14px 字号、17 个全角字符最坏
+   238px + 14px 内边距，取 260）；仍窄于建点态 ~303px，右缘钳制 EDITOR_W
+   按宽态估计不受影响 */
+.xk-canvas-editor-edge {
+  width: 260px;
 }
 
 .xk-canvas-editor-cat {
