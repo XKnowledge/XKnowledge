@@ -22,6 +22,12 @@ describe('clampEditorPos', () => {
     expect(r.x).toBe(8)
     expect(r.y).toBe(8)
   })
+
+  it('容器小于编辑器占位时钳制上限退化为边距（防倒挂甩出左上）', () => {
+    const r = clampEditorPos(100, 50, 500, 500)
+    expect(r.x).toBe(8)
+    expect(r.y).toBe(8)
+  })
 })
 
 describe('pickNearestNode', () => {
