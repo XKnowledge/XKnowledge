@@ -1,5 +1,10 @@
 <template>
-  <div class="graph3d-wrap" :data-node-count="nodes.length" :data-link-count="links.length">
+  <div
+    class="graph3d-wrap"
+    :data-node-count="nodes.length"
+    :data-link-count="links.length"
+    :data-last-node-size="nodes.length ? nodes[nodes.length - 1].symbolSize : ''"
+  >
     <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
          Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
          "开发时正常、打包后消失"的假象） -->
@@ -268,10 +273,12 @@ watch(
   }
 )
 
-const onEditorCreateNode = ({ name, category }) => {
+const onEditorCreateNode = ({ name, category, symbolSize }) => {
   const world = pendingWorldPos
   closeEditor()
-  emit('canvas-create-node', { name, category, world })
+  // symbolSize 须显式透传：这里重建 payload，漏挑字段会被 ChartView 的
+  // `?? 50` 兜底吞成默认档（曾整批节点侧栏大小恒 50 的断点就在这层转发）
+  emit('canvas-create-node', { name, category, symbolSize, world })
 }
 
 const onEditorCreateEdge = ({ name }) => {

@@ -317,6 +317,9 @@ await page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-name').clic
 await page.keyboard.type('Gamma')
 await page.keyboard.press('Enter')
 expectEq('先选类目后输名字回车直接建成', await awaitNodeCount('2'), '2')
+// 大档数值落库硬断言（防转发层再丢字段：曾 XkGraph3D 重建 payload 漏挑
+// symbolSize，整批节点侧栏大小恒 50，控件与建成断言全绿也查不出）
+expectEq('大档建成的大小落库', await wrap.getAttribute('data-last-node-size'), '80')
 await shot('085-gamma-mouseflow')
 
 // 7. 画布右缘双击：编辑器出现且右边界不溢出容器（clampEditorPos 钳制兑现）。
