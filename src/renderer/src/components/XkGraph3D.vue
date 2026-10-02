@@ -947,10 +947,7 @@ const exportVideo = async (durationMs = 10000) => {
   controls.autoRotateSpeed = 6
   for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.addEventListener(ev, blockCanvasInput, true)
   window.addEventListener('keydown', onOrbitEsc)
-  const { canvas: recCanvas, draw } = createRecordingCanvas(
-    canvasEl,
-    sceneColors.value.watermark
-  )
+  const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
   const rec = createRecorder({ canvas: recCanvas, mimeType })
   let raf = requestAnimationFrame(function loop() {
     draw()

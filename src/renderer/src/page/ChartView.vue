@@ -138,11 +138,28 @@
                  滑块），不进 undo/redo；绑定经 computed 兜底，见脚本区注释 -->
             <a-textarea v-model:value="chartDescription" :rows="4" @change="onDescriptionChange" />
             <a-divider orientation="left">{{ $t('chart.view') }}</a-divider>
-            <!-- space-evenly：2 个 flex 项产生 3 段等宽空隙（左边缘/按钮间/右边缘） -->
+            <!-- space-evenly：flex 项间等宽空隙（左边缘/按钮间/右边缘） -->
             <a-row justify="space-evenly">
               <a-button size="small" @click="graph3dRef?.exportPng()">{{
                 $t('chart.exportPng')
               }}</a-button>
+              <a-button
+                size="small"
+                data-export-video
+                :disabled="exportingVideo || screenRecording"
+                @click="onExportVideo"
+              >
+                {{ exportingVideo ? $t('chart.recording') : $t('chart.exportVideo') }}
+              </a-button>
+              <a-button
+                size="small"
+                data-screen-record
+                :danger="screenRecording"
+                :disabled="exportingVideo"
+                @click="onToggleScreenRecord"
+              >
+                {{ screenRecording ? $t('chart.stopRecord') : $t('chart.screenRecord') }}
+              </a-button>
               <a-button size="small" @click="graph3dRef?.resetView()">{{
                 $t('chart.resetView')
               }}</a-button>
@@ -223,6 +240,31 @@ const saveNodeVisible = ref(false)
 const attributeVisible = ref(true)
 const checkedValues = ref([])
 const repulsion = ref(100)
+
+// 视频导出/录屏状态（ChartView 单一来源）：互斥由按钮 disabled 表达，
+// 组件层仅兜底
+const exportingVideo = ref(false)
+const screenRecording = ref(false)
+
+const onExportVideo = async () => {
+  if (exportingVideo.value || screenRecording.value) return
+  exportingVideo.value = true
+  try {
+    await graph3dRef.value?.exportVideo()
+  } finally {
+    exportingVideo.value = false
+  }
+}
+
+const onToggleScreenRecord = async () => {
+  if (screenRecording.value) {
+    await graph3dRef.value?.stopScreenRecording()
+    screenRecording.value = false
+    return
+  }
+  if (exportingVideo.value) return
+  screenRecording.value = graph3dRef.value?.startScreenRecording() ?? false
+}
 
 const currentNodeVisible = ref(false)
 const currentNode = ref({
