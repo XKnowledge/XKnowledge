@@ -4,7 +4,10 @@
       <a-layout-header class="move-show" :class="{ 'is-macos': isMacOS }">
         <a-layout>
           <a-layout-sider class="sider-menu-style">
-            <XkMenu v-model:shortcutActive="shortcutActive" v-model:shortcutWatch="shortcutWatch" />
+            <XkMenu
+              v-model:shortcut-active="shortcutActive"
+              v-model:shortcut-watch="shortcutWatch"
+            />
           </a-layout-sider>
           <!-- 窗口标题：紧挨菜单图标右侧（与首页标题条共用 XkTitleText，主进程统一推送） -->
           <XkTitleText class="chart-title" :compact="isMacOS" />
@@ -38,12 +41,14 @@
             :nodes="xkContext.chartData?.nodes ?? []"
             :links="xkContext.chartData?.links ?? []"
             :highlight-link="highlightEdgeObj"
+            :highlight-node="highlightNodeName"
             :show-link-name="showLinkName"
             :show-small-labels="showSmallLabels"
             :focus-node-names="focusNodeNames"
             :focus-deep="focusMode === 'deep'"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
+            @background-click="onGraphBackgroundClick"
             @canvas-create-node="onCanvasCreateNode"
             @canvas-create-edge="onCanvasCreateEdge"
           />
@@ -139,26 +144,26 @@
 
           <XkCreateNode
             v-show="createNodeVisible"
-            v-model:newNode="newNode"
-            v-model:categoryItems="categoryItems"
-            v-model:categoryName="categoryName"
-            v-model:xkContext="xkContext"
+            v-model:new-node="newNode"
+            v-model:category-items="categoryItems"
+            v-model:category-name="categoryName"
+            v-model:xk-context="xkContext"
           ></XkCreateNode>
 
           <XkCurrentNode
             v-show="currentNodeVisible"
-            v-model:currentNode="currentNode"
-            v-model:categoryItems="categoryItems"
-            v-model:categoryName="categoryName"
-            v-model:currentNodeDataIndex="currentNodeDataIndex"
-            v-model:xkContext="xkContext"
+            v-model:current-node="currentNode"
+            v-model:category-items="categoryItems"
+            v-model:category-name="categoryName"
+            v-model:current-node-data-index="currentNodeDataIndex"
+            v-model:xk-context="xkContext"
           ></XkCurrentNode>
 
           <XkCurrentEdge
             v-show="currentEdgeVisible"
-            v-model:currentEdge="currentEdge"
-            v-model:currentEdgeDataIndex="currentEdgeDataIndex"
-            v-model:xkContext="xkContext"
+            v-model:current-edge="currentEdge"
+            v-model:current-edge-data-index="currentEdgeDataIndex"
+            v-model:xk-context="xkContext"
           ></XkCurrentEdge>
         </a-layout-sider>
       </a-layout>
@@ -181,7 +186,7 @@ import {
   resetNodeRef
 } from '../utils/XkUtils'
 import { applyUndo, applyRedo } from '../utils/historyActions'
-import { defaultFocusNode, focusNeighborhood } from '../utils/graphData.js'
+import { defaultFocusNode, focusNeighborhood, reconcileNodeHighlight } from '../utils/graphData.js'
 import { takePendingChart } from '../store/chartStore'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
@@ -269,6 +274,9 @@ const focusNodeNames = computed(() => {
 })
 // 高亮边 index（-1 表示无）；原 `let highlightEdge` 变量由此 ref 替代
 const highlightEdgeIndex = ref(-1)
+// 选中高亮节点名（''=无）。name 键：增删后 index 漂移，name 全图唯一稳定；
+// 与 highlightEdgeIndex 互斥——同一时刻图上最多一个高亮对象
+const highlightNodeName = ref('')
 const highlightEdgeObj = computed(() => {
   const i = highlightEdgeIndex.value
   const links = xkContext.value.chartData?.links
@@ -459,6 +467,14 @@ watch(
     const categories = [...new Set(xkContext.value.chartData.nodes.map((x) => x.category))]
     categoryItems.value = categories
     saveNodeVisible.value = true
+    // 改名校准：改名提交在子组件内翻转 updateChart，父层只能在此校准——
+    // 高亮名消失时跟随侧栏索引的新名，其余结构变更不动既有高亮（删除/撤销
+    // 已由 resetRefData→downplayAllHightlight 清理）
+    highlightNodeName.value = reconcileNodeHighlight(
+      xkContext.value.chartData.nodes,
+      highlightNodeName.value,
+      currentNodeDataIndex.value
+    )
   }
 )
 
@@ -591,6 +607,7 @@ watch(shortcutWatch, () => {
 
 const downplayAllHightlight = () => {
   highlightEdgeIndex.value = -1
+  highlightNodeName.value = ''
 }
 
 const resetRefData = () => {
@@ -677,6 +694,10 @@ const onGraphNodeClick = (nodeData, index) => {
   currentNode.value = jsonReactive(nodeData)
   newNode.value.symbolSize = currentNode.value.symbolSize
   currentNodeDataIndex.value = index
+  // 选中高亮 toggle：再点同一个取消；换点直接换亮。边高亮同步清——
+  // 图面高亮与侧栏显示对象必须一一对应（点节点不清边高亮的错位在此修正）
+  highlightNodeName.value = highlightNodeName.value === nodeData.name ? '' : nodeData.name
+  highlightEdgeIndex.value = -1
   // 对称清对方的选中态：Delete 删「最后一个点击的对象」，选中节点后
   // 旧边选中态作废（防菜单「删除连接」误删旧边）
   currentEdgeDataIndex.value = -1
@@ -695,9 +716,17 @@ const onGraphLinkClick = (linkData, index) => {
   // 对称清节点选中态：点边后按 Delete 删的是这条边，而非之前点的节点
   // （否则「点节点 A → 点边 → Delete」会把 A 及其相连边全部误删）
   currentNodeDataIndex.value = -1
+  highlightNodeName.value = ''
   highlightEdgeIndex.value = highlightEdgeIndex.value === index ? -1 : index
 
   if (!siderVisible.value) switchSider()
+}
+
+/** 点空白＝完整取消选中：清高亮与 Delete 对象、面板回默认属性页；侧栏
+ *  本身不强制收起（收起动静大，留给出侧栏按钮） */
+const onGraphBackgroundClick = () => {
+  resetSider()
+  resetRefData()
 }
 
 const switchSider = () => {

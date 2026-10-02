@@ -246,6 +246,22 @@ export const planHighlightRepaint = ({
 }
 
 /**
+ * 结构性变更（updateChart 翻转）后校准节点选中高亮名：
+ * - 高亮名仍在图中 → 原样返回（普通建删不动既有高亮）
+ * - 高亮名已消失 → 索引有效且指向新名时跟随（改名提交场景），否则清空
+ * @param {Array} nodes chartData 当前节点（纯数据）
+ * @param {string} current 校准前的选中高亮名（'' = 未选中，直通）
+ * @param {number} selectedIndex 侧栏选中索引（currentNodeDataIndex，-1 = 无）
+ * @returns {string} 校准后的高亮名
+ */
+export const reconcileNodeHighlight = (nodes, current, selectedIndex) => {
+  if (!current) return ''
+  if ((nodes ?? []).some((n) => n.name === current)) return current
+  const renamed = selectedIndex > -1 ? nodes?.[selectedIndex]?.name : ''
+  return renamed ?? ''
+}
+
+/**
  * 图内搜索过滤：name/des 大小写不敏感子串匹配，排除隐藏类目节点。
  * 命中按 nodes 原始顺序稳定返回（列表展示顺序与图数据一致）。
  * @param {Array} nodes chartData 的节点（纯数据）

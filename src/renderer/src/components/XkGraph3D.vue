@@ -4,6 +4,8 @@
     :data-node-count="nodes.length"
     :data-link-count="links.length"
     :data-last-node-size="nodes.length ? nodes[nodes.length - 1].symbolSize : ''"
+    :data-highlight-node="highlightNode"
+    :data-highlight-edge="highlightLink?.name ?? ''"
   >
     <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
          Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
@@ -81,6 +83,8 @@ const props = defineProps({
   nodes: { type: Array, default: () => [] },
   links: { type: Array, default: () => [] },
   highlightLink: { type: Object, default: null },
+  // 选中高亮的节点名（'' = 无）；与 highlightLink 互斥由 ChartView 保证
+  highlightNode: { type: String, default: '' },
   showLinkName: { type: Boolean, default: false },
   showSmallLabels: { type: Boolean, default: false },
   // 聚焦模式邻域节点名（空数组 = 聚焦未开启；邻域为空同样以空数组表达）
@@ -92,6 +96,7 @@ const props = defineProps({
 const emit = defineEmits([
   'node-click',
   'link-click',
+  'background-click',
   'init-failed',
   'canvas-create-node',
   'canvas-create-edge'
@@ -400,6 +405,7 @@ let prevHlLink = null
 let prevHlDim = null // Set<string>|null：上一次应用的聚焦邻域
 let prevHlSearch = new Set() // Set<string>：上一次应用的搜索命中集合
 let prevHlSearchActive = null // string|null：上一次应用的搜索当前项名
+let prevHlNodes = null // string[]|null：上一次应用的选中高亮节点（单元素或 null）
 
 const applyHighlight = () => {
   if (!graph) return
@@ -411,17 +417,19 @@ const applyHighlight = () => {
       ? new Set(searchHitNodes.value.map((n) => n.name))
       : new Set()
   const active = searchActiveName.value
-  // accessor 描述"正确颜色"（搜索当前项 > 搜索命中 > 聚焦外灰 > 类目/底色）：
-  // graphData 重灌或 refresh 时库按它重建材质
+  // accessor 描述"正确颜色"（选中 > 搜索当前项 > 搜索命中 > 聚焦外灰 >
+  // 类目/底色）：graphData 重灌或 refresh 时库按它重建材质
   graph
     .nodeColor((n) =>
-      active && n.name === active
-        ? sceneColors.value.active
-        : search.has(n.name)
-          ? sceneColors.value.hit
-          : dim && !dim.has(n.name)
-            ? sceneColors.value.dim
-            : catColor(n.category)
+      props.highlightNode && n.name === props.highlightNode
+        ? sceneColors.value.hl
+        : active && n.name === active
+          ? sceneColors.value.active
+          : search.has(n.name)
+            ? sceneColors.value.hit
+            : dim && !dim.has(n.name)
+              ? sceneColors.value.dim
+              : catColor(n.category)
     )
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
@@ -437,6 +445,8 @@ const applyHighlight = () => {
   const { nodeRepaints, linkRepaints } = planHighlightRepaint({
     nodes: graph.graphData().nodes,
     links: graph.graphData().links,
+    prevNodes: prevHlNodes,
+    nextNodes: props.highlightNode ? [props.highlightNode] : [],
     prevLink: prevHlLink,
     nextLink: le,
     prevDimNodes: prevHlDim,
@@ -469,6 +479,7 @@ const applyHighlight = () => {
   }
   if (repaints.length > 0 && painted === 0) graph.refresh()
   prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
+  prevHlNodes = props.highlightNode ? [props.highlightNode] : null
   prevHlDim = dim
   prevHlSearch = search
   prevHlSearchActive = active
@@ -559,6 +570,7 @@ onMounted(() => {
       emit('node-click', pureNode(idx > -1 ? props.nodes[idx] : n), idx > -1 ? idx : n.__idx)
     })
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
+    .onBackgroundClick(() => emit('background-click'))
     // 普通拖动=移动节点（库 DragControls；坐标不落盘仅会话内整理，编辑刷新
     // 经 mergeGraphNodes 保留同名旧坐标）；Ctrl+拖=连线（onCanvasPointerDown）
     .enableNodeDrag(true)
@@ -635,6 +647,7 @@ watch(
 )
 
 watch(() => props.highlightLink, applyHighlight, { deep: true })
+watch(() => props.highlightNode, applyHighlight)
 // 聚焦邻域变化同样要走重着色：灰化/还原是增量材质色更新，只挂相机会
 // 出现「状态对、视觉没变」（冒烟截图已踩过）；深度聚焦开着时邻域还
 // 决定可见性，须一并刷新

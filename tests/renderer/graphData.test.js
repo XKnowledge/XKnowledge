@@ -3,6 +3,7 @@ import {
   mergeGraphNodes,
   linkEnd,
   planHighlightRepaint,
+  reconcileNodeHighlight,
   labelThreshold,
   defaultFocusNode,
   focusNeighborhood,
@@ -223,6 +224,85 @@ describe('planHighlightRepaint：高亮变化的增量重着色计划', () => {
       nextLink: null
     })
     expect(plan).toEqual({ nodeRepaints: [], linkRepaints: [] })
+  })
+})
+
+describe('reconcileNodeHighlight：结构性变更后选中高亮名的校准', () => {
+  const nodes = [
+    { name: 'Alpha', category: 'x' },
+    { name: 'Beta', category: 'y' },
+    { name: 'Gamma', category: 'x' }
+  ]
+
+  it('高亮名仍在图中：原样返回（普通变更不动既有高亮）', () => {
+    expect(reconcileNodeHighlight(nodes, 'Beta', 0)).toBe('Beta')
+  })
+
+  it('高亮名消失且索引有效：跟随索引指向的新名（改名提交）', () => {
+    expect(reconcileNodeHighlight(nodes, 'Old', 1)).toBe('Beta')
+  })
+
+  it('高亮名消失且索引无效：清空（删除/撤销路径）', () => {
+    expect(reconcileNodeHighlight(nodes, 'Old', -1)).toBe('')
+  })
+
+  it('高亮名消失且索引越界：清空（防御）', () => {
+    expect(reconcileNodeHighlight(nodes, 'Old', 99)).toBe('')
+  })
+
+  it('空高亮名直通（未选中时零开销）', () => {
+    expect(reconcileNodeHighlight(nodes, '', 0)).toBe('')
+  })
+})
+
+describe('planHighlightRepaint：选中高亮与其他状态的组合', () => {
+  const nodes = [
+    { name: 'A', category: 'x' },
+    { name: 'B', category: 'y' },
+    { name: 'C', category: 'x' }
+  ]
+
+  it('选中与搜索当前项同节点：选中（hl）最高优先', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      prevNodes: [],
+      nextNodes: ['A'],
+      prevSearchActive: 'A',
+      nextSearchActive: 'A',
+      prevSearchNodes: ['A'],
+      nextSearchNodes: ['A']
+    })
+    expect(nodeRepaints).toEqual([[nodes[0], HL_COLOR]])
+  })
+
+  it('选中节点不被聚焦灰化压住（邻域外照常灰化）', () => {
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      prevNodes: [],
+      nextNodes: ['B'],
+      prevDimNodes: null,
+      nextDimNodes: new Set(['B'])
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], FOCUS_DIM_COLOR],
+      [nodes[1], HL_COLOR],
+      [nodes[2], FOCUS_DIM_COLOR]
+    ])
+  })
+
+  it('换选：旧节点还原类目色、新节点上 hl（与边高亮并存）', async () => {
+    const { assignCategoryColors } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const categoryColors = assignCategoryColors(['x', 'y'])
+    const { nodeRepaints } = planHighlightRepaint({
+      nodes,
+      prevNodes: ['A'],
+      nextNodes: ['C'],
+      categoryColors
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], categoryColors.get('x')],
+      [nodes[2], HL_COLOR]
+    ])
   })
 })
 
