@@ -8,14 +8,16 @@ vi.mock('electron', () => ({
   app: { getLocale: vi.fn(() => 'zh-CN') }
 }))
 
-import { nativeTheme } from 'electron'
+import { nativeTheme, BrowserWindow } from 'electron'
 import {
   applyTheme,
   enterChartMode,
   exitChartMode,
   enterWorldMode,
   exitWorldMode,
-  setWindowTitle
+  setWindowTitle,
+  createChartWindow,
+  takePendingChart
 } from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
 
@@ -213,4 +215,78 @@ describe('applyTheme：主题上报联动', () => {
   })
   // 注：原生标题栏配色随主题/页面切换的联动测试已随 titleBarOverlay
   // 机制移除（窗口控制按钮改由渲染层自绘，主题随 CSS 变量自动切换）
+})
+
+describe('createChartWindow / takePendingChart：新窗口图表暂存', () => {
+  /** 造一个能走完 createWindow 全流程的独立 fake（含 setWindowOpenHandler 等缺省方法） */
+  const makeChartWindow = (id) => ({
+    id,
+    on: vi.fn(),
+    isDestroyed: vi.fn(() => false),
+    show: vi.fn(),
+    loadFile: vi.fn(),
+    loadURL: vi.fn(),
+    webContents: {
+      id,
+      send: vi.fn(),
+      isDestroyed: vi.fn(() => false),
+      on: vi.fn(),
+      setWindowOpenHandler: vi.fn(),
+      openDevTools: vi.fn()
+    }
+  })
+
+  it('未知 webContentsId 取值为 null（不抛错）', () => {
+    expect(takePendingChart(99999)).toBeNull()
+  })
+
+  it('创建即暂存，渲染端取后即清；生产模式 loadFile + hash 直达图表页', () => {
+    // createWindow 走 new BrowserWindow()：mock 须是可 new 的构造器
+    // （构造函数返回对象时 new 表达式取该对象）
+    BrowserWindow.mockImplementation(function () {
+      return makeChartWindow(101)
+    })
+    const win = createChartWindow({ content: '{"nodes":[]}', path: 'C:/a.xk' })
+
+    expect(win.webContents.id).toBe(101)
+    // 测试进程无 ELECTRON_RENDERER_URL → 走 loadFile + { hash: 'chart' }
+    expect(win.loadFile).toHaveBeenCalledWith(expect.stringContaining('index.html'), {
+      hash: 'chart'
+    })
+    expect(takePendingChart(101)).toEqual({ content: '{"nodes":[]}', path: 'C:/a.xk' })
+    expect(takePendingChart(101)).toBeNull() // 取后即清：ChartView 挂载只装一次
+  })
+
+  it('缺省 path 为空串（新图表走另存为）', () => {
+    BrowserWindow.mockImplementation(function () {
+      return makeChartWindow(102)
+    })
+    createChartWindow({ content: '{}' })
+    expect(takePendingChart(102)).toEqual({ content: '{}', path: '' })
+  })
+
+  it('窗口 closed 即清暂存（防 Map 泄漏），其他窗口暂存不受影响', () => {
+    const closedHandlers = []
+    const withClosedCapture = (id) => {
+      const win = makeChartWindow(id)
+      win.on = vi.fn((evt, h) => {
+        if (evt === 'closed') closedHandlers.push(h)
+      })
+      return win
+    }
+
+    BrowserWindow.mockImplementation(function () {
+      return withClosedCapture(201)
+    })
+    createChartWindow({ content: 'a', path: 'a.xk' })
+    BrowserWindow.mockImplementation(function () {
+      return withClosedCapture(202)
+    })
+    createChartWindow({ content: 'b', path: 'b.xk' })
+
+    // 窗口 201 销毁：只清自己的暂存
+    closedHandlers[0]()
+    expect(takePendingChart(201)).toBeNull()
+    expect(takePendingChart(202)).toEqual({ content: 'b', path: 'b.xk' })
+  })
 })

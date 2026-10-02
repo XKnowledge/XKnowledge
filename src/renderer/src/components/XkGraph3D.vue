@@ -93,6 +93,7 @@ import {
   modifierKeyLabel
 } from '../utils/platformModifier.js'
 import {
+  composeFileName,
   createRecordingCanvas,
   createRecorder,
   saveVideoBlob,
@@ -892,7 +893,7 @@ const setRepulsion = (value) => {
   graph.d3ReheatSimulation()
 }
 
-/** 导出当前视图为 PNG 并触发下载；水印经 videoExport 的合成 canvas 单源
+/** 导出当前视图为 PNG 并触发下载；水印与文件名均经 videoExport 单源
  *  （与视频导出同一条管线），画布上不显示、只合成进导出产物 */
 const exportPng = () => {
   if (!graph) return
@@ -902,7 +903,7 @@ const exportPng = () => {
   const url = canvas.toDataURL('image/png')
   const a = document.createElement('a')
   a.href = url
-  a.download = `xknowledge-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`
+  a.download = composeFileName('png')
   a.click()
 }
 

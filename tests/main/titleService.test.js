@@ -3,7 +3,13 @@ import { describe, it, expect, vi } from 'vitest'
 // titleService → i18nMain 在模块加载期读 app.getLocale()
 vi.mock('electron', () => ({ app: { getLocale: vi.fn(() => 'zh-CN') } }))
 import { sep } from 'path'
-import { computeTitles, composeWindowTitles } from '../../src/main/titleService'
+import {
+  DEFAULT_TITLE,
+  untitledTitle,
+  computeTitles,
+  composeWindowTitles
+} from '../../src/main/titleService'
+import { setCurrentLocale } from '../../src/main/i18nMain'
 
 const entry = (path, webContentsId) => ({ path, webContentsId })
 
@@ -102,5 +108,18 @@ describe('composeWindowTitles：纯函数', () => {
 
   it('dirty 为 undefined 时按干净处理', () => {
     expect(composeWindowTitles('金融').display).toBe('金融 — XKnowledge')
+  })
+})
+
+describe('DEFAULT_TITLE / untitledTitle', () => {
+  it('默认标题常量固定 XKnowledge（各处标题拼接的单源）', () => {
+    expect(DEFAULT_TITLE).toBe('XKnowledge')
+  })
+
+  it('未命名标题随主进程语言切换（app:locale-applied 联动）', () => {
+    expect(untitledTitle()).toBe('未命名 — XKnowledge')
+    setCurrentLocale('en-US')
+    expect(untitledTitle()).toBe('Untitled — XKnowledge')
+    setCurrentLocale('zh-CN') // 还原，避免影响本文件其他用例的中文断言
   })
 })

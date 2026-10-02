@@ -19,9 +19,23 @@ export const pickMimeType = (
   return MIME_CANDIDATES.find(([mime]) => isSupported(mime)) ?? null
 }
 
-/** 导出文件名：与 exportPng 的 PNG 命名同构 */
-export const composeFileName = (ext) =>
-  `xknowledge-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`
+/** 本地时间戳（YYYY-MM-DD-HH-MM-SS）：toISOString 恒为 UTC，东八区下文件名
+ *  会比实际慢 8 小时（凌晨导出显示前一天 17 点）——取本机本地时间分量拼装，
+ *  全球用户各自得到电脑当前时区的时间。date 参数化注入便于单测 */
+export const formatLocalTimestamp = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds())
+  ].join('-')
+}
+
+/** 导出文件名：PNG（exportPng）与视频共用同一命名单源 */
+export const composeFileName = (ext) => `xknowledge-${formatLocalTimestamp()}.${ext}`
 
 /** 水印样式纯计算（PNG 导出与视频合成共用单源）：粗体、水平居中、底部约
  *  5% 处；字号下限 18 防小画布看不见 */

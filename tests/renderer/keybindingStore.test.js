@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   STORAGE_KEY,
   loadOverrides,
@@ -7,7 +7,8 @@ import {
   setBinding,
   resetBinding,
   resetAll,
-  isCustomized
+  isCustomized,
+  initKeybindingSync
 } from '../../src/renderer/src/store/keybindingStore'
 import { DEFAULT_BINDINGS } from '../../src/renderer/src/utils/keybindings'
 
@@ -74,5 +75,42 @@ describe('store 单例（内存态；node 环境持久化被吞不影响）', ()
 describe('STORAGE_KEY', () => {
   it('固定为 xk-keybindings', () => {
     expect(STORAGE_KEY).toBe('xk-keybindings')
+  })
+})
+
+describe('initKeybindingSync：跨窗口 storage 跟随', () => {
+  it('其他窗口改键本窗口跟随（key 匹配才应用、坏值回落默认），幂等不叠加监听', () => {
+    const handlers = {}
+    const windowAdd = vi.fn((type, h) => (handlers[type] = h))
+    vi.stubGlobal('window', { addEventListener: windowAdd })
+
+    initKeybindingSync()
+
+    // 其他窗口存了 save 覆盖：本窗口生效视图即时跟随
+    handlers.storage({
+      key: STORAGE_KEY,
+      newValue: JSON.stringify({ save: { modifiers: [], key: 'j' } })
+    })
+    expect(bindings.value.save).toEqual({ modifiers: [], key: 'j' })
+    expect(isCustomized('save')).toBe(true)
+
+    // 非本 key 的 storage 事件忽略
+    handlers.storage({
+      key: 'other-key',
+      newValue: JSON.stringify({ save: { modifiers: [], key: 'z' } })
+    })
+    expect(bindings.value.save.key).toBe('j')
+
+    // 坏 JSON 覆盖 → 全量回落默认（loadOverrides 语义）
+    handlers.storage({ key: STORAGE_KEY, newValue: 'notjson' })
+    expect(isCustomized('save')).toBe(false)
+
+    // 幂等：重复调用不再注册监听
+    const callsAfterInit = windowAdd.mock.calls.length
+    initKeybindingSync()
+    expect(windowAdd.mock.calls.length).toBe(callsAfterInit)
+
+    resetAll()
+    vi.unstubAllGlobals()
   })
 })
