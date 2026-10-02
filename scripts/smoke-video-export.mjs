@@ -71,8 +71,7 @@ const exportBtn = page.locator('[data-export-video]')
 const recordBtn = page.locator('[data-screen-record]')
 // 按钮文案断言统一去空白：antd 对恰好两个汉字的按钮（「录屏」）自动在
 // 中间插空格排版，textContent 是「录 屏」；strip 后断言不受此特性干扰
-const labelOf = async (btn) =>
-  (await btn.textContent()).replace(/\s+/g, '')
+const labelOf = async (btn) => (await btn.textContent()).replace(/\s+/g, '')
 
 // 1. 首页双击示例卡进图表页
 await page.waitForSelector('.xk-example-card', { timeout: 15_000 })

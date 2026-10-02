@@ -412,6 +412,40 @@ vue/electron），渲染层经 `src/renderer/src/i18n.js` 注册进 vue-i18n 11�
   与 i18nMain 的 `DICTS` 各加一行 + 设置语言行加一个 radio——渲染层复数/插值由
   vue-i18n 消息格式（`{n, plural, ...}`）内建，主进程 `t()` 引擎不用动。
 
+### 6.8 视频导出（环绕动画 / 实时录屏）
+
+两种模式共用一条录制管线（`src/renderer/src/utils/videoExport.js`）：
+
+```
+three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
+  --captureStream(30)--> MediaRecorder --Blob--> video:save IPC --> 主进程保存框落盘
+```
+
+- **水印单源**：合成 canvas 的水印样式出自 `computeWatermarkStyle` 纯函数，
+  `exportPng` 也走同一 `createRecordingCanvas`——PNG 与视频水印同源，画布上
+  不显示、只进导出产物。
+- **格式探测**：`pickMimeType` 依次探测 `video/mp4;codecs=avc1` → mp4 →
+  webm(vp9/vp8/裸)，全不支持时 toast 降级；返回 `[mime, ext]` 元组。
+- **环绕动画**（`exportVideo`）：rAF 循环手动绕当前 lookAt 焦点旋转相机一圈
+  （角度按时间进度插值、帧率无关）。不能用 `controls.autoRotate`——
+  three-render-objects 默认 controlType 是 **trackball**（TrackballControls
+  无该属性），也不能临时换 controls（交互手感会变）。录制期间 capture 截断
+  画布 pointerdown/move/wheel（库层监听均为 bubble），`Esc` 中途取消丢弃产物。
+- **实时录屏**（`startScreenRecording`/`stopScreenRecording`）：同管线但不锁
+  交互不转相机；`Esc` 不参与停止（避免与画布编辑器等既有 Esc 语义冲突）。
+- **落盘走主进程**：渲染层 `a.download` 对 MB 级视频不可用（dataURL 有 ~2MB
+  上限——PNG 182KB 可过、视频不行；`blob:` URL 在 Electron 下不触发下载），
+  故 blob → ArrayBuffer 经 `video:save` IPC 传主进程，`fileService.saveVideoFile`
+  弹保存框写二进制（一次性导出产物，不进 chart 的 guard/mtime 体系；用户
+  取消静默返回）。`XK_SMOKE_VIDEO_DIR` 环境变量注入时跳过模态保存框直写
+  指定目录——冒烟专用后门（无人值守环境系统保存框会挂死）。
+- **互斥**：两种录制状态由 ChartView 持有（`exportingVideo`/`screenRecording`
+  单一来源），按钮 disabled 双向互斥；XkGraph3D 根节点 `data-video-recording`
+  锚点（''/orbit/screen）供冒烟断言。
+- **测试**：纯函数（探测/命名/水印样式）单测 + `fileService.saveVideoFile`
+  3 用例（取消/写入/冒烟后门）+ `scripts/smoke-video-export.mjs` 冒烟（状态机
+  + Esc 取消 + 互斥 + toast + 经冒烟后门硬断言两个非空视频文件落盘）。
+
 ## 7. 核心数据流
 
 ### 7.1 图表数据的两条装载路径
