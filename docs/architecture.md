@@ -424,6 +424,10 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 - **水印单源**：合成 canvas 的水印样式出自 `computeWatermarkStyle` 纯函数，
   `exportPng` 也走同一 `createRecordingCanvas`——PNG 与视频水印同源，画布上
   不显示、只进导出产物。
+- **1080p 录制**：`applyRecordingScale` 录制期间把渲染缓冲按目标高度 1080
+  放大（`setPixelRatio` 后 WebGL 按新缓冲真实重渲染，原生细节而非事后
+  上采样；CSS 尺寸不动屏幕显示无感），录完恢复——否则画布缓冲跟随
+  窗口×DPR（小窗只有 ~1100×770），视频帧上限被窗口大小绑架。
 - **格式探测**：`pickMimeType` 依次探测 `video/mp4;codecs=avc1` → mp4 →
   webm(vp9/vp8/裸)，全不支持时 toast 降级；返回 `[mime, ext]` 元组。
 - **环绕动画**（`exportVideo`）：rAF 循环手动绕当前 lookAt 焦点旋转相机一圈

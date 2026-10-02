@@ -51,7 +51,7 @@ export const createRecordingCanvas = (srcCanvas, watermarkColor) => {
 
 /** 组装 MediaRecorder（canvas.captureStream）。timeslice 250ms 分片收集让
  *  长录屏内存平稳；stop() 幂等并释放轨道，返回完整 Blob */
-export const createRecorder = ({ canvas, mimeType, fps = 30, bitsPerSecond = 8_000_000 }) => {
+export const createRecorder = ({ canvas, mimeType, fps = 30, bitsPerSecond = 16_000_000 }) => {
   const stream = canvas.captureStream(fps)
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitsPerSecond })
   const chunks = []

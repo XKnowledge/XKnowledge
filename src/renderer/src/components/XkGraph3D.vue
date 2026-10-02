@@ -760,6 +760,7 @@ onUnmounted(() => {
   if (screenSession) {
     cancelAnimationFrame(screenSession.raf)
     screenSession.rec.stop()
+    screenSession.restoreScale()
     screenSession = null
   }
   videoMode.value = ''
@@ -931,6 +932,32 @@ const onOrbitEsc = (e) => {
   if (e.key === 'Escape' && videoMode.value === 'orbit') orbitCancel?.()
 }
 
+/** 录制分辨率提升：渲染缓冲按「目标高度 1080」放大（setPixelRatio 后
+ *  WebGL 按新缓冲真实重渲染，高清是原生细节而非事后上采样；CSS 尺寸
+ *  不动，屏幕显示无感）。画布缓冲跟随窗口×DPR（小窗常只有 ~1100×770），
+ *  直接录它就是视频帧的上限；scale 按当前缓冲高折算（DPR 无关），
+ *  下限 1（大窗口不降级）、上限 2.5（防小窗口缓冲爆炸）。
+ *  返回恢复函数，录制结束必须调用 */
+const RECORD_TARGET_H = 1080
+const applyRecordingScale = () => {
+  const renderer = graph.renderer()
+  const el = renderer.domElement
+  const prevRatio = renderer.getPixelRatio()
+  const bufferH = el.clientHeight * prevRatio
+  const scale = Math.min(2.5, Math.max(1, RECORD_TARGET_H / bufferH))
+  if (scale > 1) {
+    // setPixelRatio 不立即生效，须跟一次 setSize（按 CSS 尺寸，缓冲 = 尺寸 × ratio）
+    renderer.setPixelRatio(prevRatio * scale)
+    renderer.setSize(el.clientWidth, el.clientHeight)
+  }
+  return () => {
+    if (scale > 1) {
+      renderer.setPixelRatio(prevRatio)
+      renderer.setSize(el.clientWidth, el.clientHeight)
+    }
+  }
+}
+
 /** 环绕总扫角：一圈 */
 const ORBIT_SWEEP = Math.PI * 2
 
@@ -962,6 +989,7 @@ const exportVideo = async (durationMs = 10000) => {
   window.addEventListener('keydown', onOrbitEsc)
   const target = graph.controls().target
   const look = { x: target.x, y: target.y, z: target.z }
+  const restoreScale = applyRecordingScale()
   const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
   const rec = createRecorder({ canvas: recCanvas, mimeType })
   const startTs = performance.now()
@@ -994,7 +1022,8 @@ const exportVideo = async (durationMs = 10000) => {
   orbitCancel = null
   cancelAnimationFrame(raf)
   const blob = await rec.stop()
-  // 恢复交互（无论取消与否）
+  // 恢复交互与渲染分辨率（无论取消与否）
+  restoreScale()
   for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.removeEventListener(ev, blockCanvasInput, true)
   window.removeEventListener('keydown', onOrbitEsc)
   videoMode.value = ''
@@ -1019,6 +1048,7 @@ const startScreenRecording = () => {
   }
   closeEditor()
   videoMode.value = 'screen'
+  const restoreScale = applyRecordingScale()
   const { canvas: recCanvas, draw } = createRecordingCanvas(
     graph.renderer().domElement,
     sceneColors.value.watermark
@@ -1029,7 +1059,7 @@ const startScreenRecording = () => {
     draw()
     raf = requestAnimationFrame(loop)
   })
-  screenSession = { rec, raf, ext: picked[1] }
+  screenSession = { rec, raf, ext: picked[1], restoreScale }
   return true
 }
 
@@ -1040,6 +1070,7 @@ const stopScreenRecording = async () => {
   videoMode.value = '' // 先清态：停 rAF 循环
   cancelAnimationFrame(session.raf)
   const blob = await session.rec.stop()
+  session.restoreScale()
   const res = await saveVideoBlob(blob, session.ext)
   if (!res?.canceled) message.info(t('chart.recordingSaved'))
 }
