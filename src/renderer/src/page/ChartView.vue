@@ -187,6 +187,7 @@ import {
 } from '../utils/XkUtils'
 import { applyUndo, applyRedo } from '../utils/historyActions'
 import { defaultFocusNode, focusNeighborhood, reconcileNodeHighlight } from '../utils/graphData.js'
+import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { takePendingChart } from '../store/chartStore'
 
 import XkCreateNode from '../components/XkCreateNode.vue'
@@ -517,26 +518,26 @@ const shortcut = (event) => {
   // 统一转换为小写处理
   const key = event.key.toLowerCase()
   // 焦点在按钮等普通控件上时快捷键照常生效，只在文本输入元素中屏蔽，
-  // 否则点击工具栏/侧边栏控件后焦点残留，Insert/Delete/Ctrl+Z/Y 会静默失效
+  // 否则点击工具栏/侧边栏控件后焦点残留，Insert/Delete/Ctrl(⌘)+Z/Y 会静默失效
   const target = event.target
   const isTypingContext =
     target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
-  // 快捷键配置映射表
+  // 快捷键配置映射表（修饰键 Ctrl/⌘ 双收，见 platformModifier.shortcutModifierActive）
   const shortcutMap = {
     // 全局快捷键
     'ctrl+s': {
-      match: () => event.ctrlKey && key === 's',
+      match: () => shortcutModifierActive(event) && key === 's',
       action: () => triggerShortcut('save_file')
     },
     'ctrl+r': {
-      match: () => event.ctrlKey && key === 'r',
+      match: () => shortcutModifierActive(event) && key === 'r',
       action: () => event.preventDefault() // 阻止浏览器刷新
     },
     'ctrl+f': {
       // 不加 isTypingContext 守卫：任何输入框聚焦时按 Ctrl+F 都应跳到
       // 搜索框（浏览器惯例）
-      match: () => event.ctrlKey && key === 'f',
+      match: () => shortcutModifierActive(event) && key === 'f',
       action: () => {
         event.preventDefault() // 防御性拦截（Electron 默认无查找，防未来版本行为变化）
         graph3dRef.value?.openSearch()
@@ -556,11 +557,11 @@ const shortcut = (event) => {
       action: () => triggerShortcut(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
     },
     'ctrl+z': {
-      match: () => !isTypingContext && event.ctrlKey && key === 'z',
+      match: () => !isTypingContext && shortcutModifierActive(event) && key === 'z',
       action: () => triggerShortcut('undo')
     },
     'ctrl+y': {
-      match: () => !isTypingContext && event.ctrlKey && key === 'y',
+      match: () => !isTypingContext && shortcutModifierActive(event) && key === 'y',
       action: () => triggerShortcut('redo')
     }
   }
@@ -861,7 +862,7 @@ const persistFile = async () => {
 
 const saveFile = async () => {
   /**
-   * 手动保存（Ctrl+S/菜单/关闭前保存）：在 persistFile 之上叠加 UI 重置
+   * 手动保存（Ctrl/⌘+S/菜单/关闭前保存）：在 persistFile 之上叠加 UI 重置
    * ——保存成功后回到干净的属性面板，这是用户主动动作的预期反馈。
    * 返回是否保存成功（供退出流程使用）。
    */
@@ -905,7 +906,7 @@ const saveAs = async () => {
 
 const undo = () => {
   /**
-   * 实现快捷键Ctrl+Z
+   * 实现快捷键Ctrl/⌘+Z
    * 数据补偿逻辑在 utils/historyActions（多重边安全），这里只管序号与 UI
    */
   const { historyList, historySequenceNumber } = xkContext.value
@@ -925,7 +926,7 @@ const undo = () => {
 
 const redo = () => {
   /**
-   * 实现快捷键Ctrl+Y
+   * 实现快捷键Ctrl/⌘+Y
    * 数据补偿逻辑在 utils/historyActions（多重边安全），这里只管序号与 UI
    */
   const currentHSN = xkContext.value.historySequenceNumber + 1

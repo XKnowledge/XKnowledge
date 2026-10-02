@@ -153,6 +153,7 @@ import XkWorldMenu from '../components/XkWorldMenu.vue'
 import XkWorldSearch from '../components/XkWorldSearch.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 import { setPendingChart } from '../store/chartStore'
+import { shortcutModifierActive } from '../utils/platformModifier.js'
 import {
   createWorldState,
   applyExpansion,
@@ -368,7 +369,7 @@ const pickUserDir = async () => {
 }
 
 const onKeydown = (event) => {
-  if (event.ctrlKey && event.key.toLowerCase() === 'f') {
+  if (shortcutModifierActive(event) && event.key.toLowerCase() === 'f') {
     event.preventDefault()
     if (!loading.value) {
       searchOpen.value = true

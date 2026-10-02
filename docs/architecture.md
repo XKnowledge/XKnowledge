@@ -125,7 +125,7 @@ XKnowledge/
   圆点且两处位置不同：标题条在文件名后（`金融 • — XKnowledge`）、任务栏在标题前
   （`• 金融 — XKnowledge`），由渲染端 `file:dirty` 上报驱动。
 - **单实例锁**：`requestSingleInstanceLock` 失败即退出。
-- **禁止刷新**（F5 / Ctrl+R / Ctrl+F5）：pending 图表数据取后即清，刷新会直接丢失
+- **禁止刷新**（F5 / Ctrl+R / Ctrl+F5 / ⌘+R）：pending 图表数据取后即清，刷新会直接丢失
   图表内容，因此经 `before-input-event` 统一拦截。
 - DevTools 仅开发模式自动打开；生产环境不暴露。
 - `setWindowOpenHandler`：拒绝所有新窗口请求，http/https 链接转交系统默认浏览器，
@@ -314,7 +314,11 @@ vitest、生成脚本三方直接 import 同一份逻辑；`exampleService.js` �
 
 快捷键（`window.keydown`）：Ctrl+S 保存、Ctrl+Z 撤销、Ctrl+Y 重做、Insert 创建节点、
 Delete 删除**最后点击**的对象（点击节点/边时对称清对方的选中 index，据此分发
-`delete_node`/`delete_edge`，无选中时 `<0` 守卫兜底无动作）、Ctrl+R 阻止刷新；
+`delete_node`/`delete_edge`，无选中时 `<0` 守卫兜底无动作）、Ctrl+R 阻止刷新。修饰键
+判定在 `utils/platformModifier.js`：键盘快捷键全平台 Ctrl/⌘ 双收
+（`shortcutModifierActive`），建边拖拽手势按平台分流（`linkDragModifierActive`，
+macOS ⌘/其余 Ctrl——macOS 的 Ctrl+点按是系统右键语义，不承担建边），提示条与
+XkMenu 快捷键文案经 `modifierKeyLabel` 按平台显示 ⌘/Ctrl；
 Insert/Delete/Ctrl+Z/Ctrl+Y 在焦点位于
 INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载时移除监听，防止同窗口反复
 挂载导致快捷键跑两遍。
@@ -388,7 +392,7 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 ### 7.3 保存 / 自动保存 / 冲突
 
 - 保存分两层：`persistFile` 是核心层（写盘 + 路径/登记/脏标记维护 + 错误处理，
-  无 UI 副作用）；手动保存 `saveFile`（Ctrl+S/菜单/关闭前保存）在其上叠加
+  无 UI 副作用）；手动保存 `saveFile`（Ctrl/⌘+S/菜单/关闭前保存）在其上叠加
   「成功后重置侧边栏」（回属性面板、清表单高亮）。有路径直接 `file:save` 写回；
   无路径（新建空白/示例副本）由主进程弹另存为。
 - 自动保存：每 60 秒，若有未保存修改且有文件路径，直接调 `persistFile` 纯保存——

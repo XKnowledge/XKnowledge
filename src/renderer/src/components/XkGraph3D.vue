@@ -24,7 +24,7 @@
         <span>{{ cat }}</span>
       </div>
     </div>
-    <!-- 图内搜索覆盖层（Ctrl+F）：状态由本组件持有，XkGraphSearch 纯展示 -->
+    <!-- 图内搜索覆盖层（Ctrl/⌘+F）：状态由本组件持有，XkGraphSearch 纯展示 -->
     <XkGraphSearch
       ref="searchCompRef"
       :open="searchOpen"
@@ -70,6 +70,7 @@ import { effective } from '../store/themeStore.js'
 import XkGraphSearch from './XkGraphSearch.vue'
 import XkCanvasEditor from './XkCanvasEditor.vue'
 import { clampEditorPos, pickNearestNode, focusPlaneDistance } from '../utils/canvasEdit.js'
+import { linkDragModifierActive, modifierKeyLabel } from '../utils/platformModifier.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
@@ -310,14 +311,17 @@ const onCanvasDblClick = (e) => {
 // 连线拖拽状态：source 起点（实时重投影，力模拟未稳时起点跟随节点），cx/cy 鼠标
 const linkDrag = ref(null) // { source, sx, sy, cx, cy } | null
 
+// 建边主修饰键按平台分流：macOS ⌘（Ctrl 留给系统右键语义 ctrl+click），其余 Ctrl
+const isDarwin = window.electronAPI.platform === 'darwin'
+
 const onCanvasPointerDown = (e) => {
   if (!graph || initFailed.value || editor.value.mode || e.button !== 0) return
-  // 普通拖让位 DragControls（移动节点）；Ctrl+拖才是连线
-  if (!e.ctrlKey) return
+  // 普通拖让位 DragControls（移动节点）；主修饰键+拖才是连线（⌘/Ctrl 按平台）
+  if (!linkDragModifierActive(e, isDarwin)) return
   const { x: cx, y: cy } = toLocal(e)
   const hit = pickNearestNode(projectAllNodes(), cx, cy)
-  if (!hit) return // Ctrl+空白按下：交给 OrbitControls 旋转
-  // Ctrl+命中节点：截断传播即独占手势——DragControls/OrbitControls 的
+  if (!hit) return // 修饰键+空白按下：交给 OrbitControls 旋转
+  // 修饰键+命中节点：截断传播即独占手势——DragControls/OrbitControls 的
   // pointerdown 均为 bubble 且先于本组件注册，同为 bubble 拦不住它们抢拖；
   // 故本监听挂 capture 阶段（见 onMounted），stopPropagation 后二者收不到
   // pointerdown 不会启动，也无需再切换 controls().enabled
@@ -572,7 +576,7 @@ onMounted(() => {
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
     .onBackgroundClick(() => emit('background-click'))
     // 普通拖动=移动节点（库 DragControls；坐标不落盘仅会话内整理，编辑刷新
-    // 经 mergeGraphNodes 保留同名旧坐标）；Ctrl+拖=连线（onCanvasPointerDown）
+    // 经 mergeGraphNodes 保留同名旧坐标）；⌘/Ctrl+拖=连线（onCanvasPointerDown）
     .enableNodeDrag(true)
     // 不做引擎停止后的自动取景：库的 cooldownTime 默认 15s，届时自动
     // zoomToFit 会把用户已拖动过的视角抢回去。取景/复位只由「复位视图」
@@ -590,7 +594,7 @@ onMounted(() => {
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
   if (navInfo)
     navInfo.textContent =
-      '左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　Ctrl+拖到节点：连线'
+      `左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　${modifierKeyLabel(isDarwin)}+拖到节点：连线`
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
@@ -605,7 +609,7 @@ onMounted(() => {
   setRepulsion(100)
 
   // 画布直操手势：dblclick 在 canvas DOM 上（库不提供双击回调）；
-  // pointerdown 挂 capture（Ctrl+拖连线时截断传播，抢在先注册的 DragControls/
+  // pointerdown 挂 capture（主修饰键+拖连线时截断传播，抢在先注册的 DragControls/
   // OrbitControls 之前——见 onCanvasPointerDown），move/up/cancel 常规 bubble
   const canvasEl = graph.renderer().domElement
   canvasEl.addEventListener('dblclick', onCanvasDblClick)

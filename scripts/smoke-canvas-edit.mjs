@@ -3,6 +3,8 @@
 // 轮走「大」档）、Ctrl+按住节点拖出连线的
 // 确定性部分（预览线出现 → 松开空白处静默放弃、预览消失）、无 Ctrl 普通拖
 // 不劫持为连线（DragControls 移动节点，预览/编辑器均不出现）、Esc 取消路径、
+// Meta+拖不劫持（建边手势平台分流：macOS ⌘、非 mac 只认 Ctrl，防双收化回归）、
+// Meta+F 开图内搜索（键盘快捷键 Ctrl/⌘ 双收正向）、
 // 再建 Beta（下拉此时已有类目，方向键+回车选定）、Ctrl+Z 撤销计数回落、
 // 画布右缘双击编辑器不溢出容器。连边的数据链路由 xkUtils 单测覆盖，这里只
 // 防手势层回归。
@@ -225,6 +227,35 @@ expectTrue(
   '普通拖不弹边编辑器',
   (await page.locator('[data-canvas-edit-mode="edge"]').count()) === 0
 )
+
+// 3.6 建边手势平台分流回归（冒烟机为 Windows，isDarwin=false）：Meta(Win 键)+拖
+//     不得劫持为连线——建边主修饰键 macOS ⌘ / 其余 Ctrl 分流，防未来双收化把
+//     两平台语义搅浑（macOS 上 Ctrl+click 是系统右键，Ctrl 不能再承担建边）
+await settleMouse(C.x, C.y)
+await page.keyboard.down('Meta')
+await page.mouse.down()
+await page.waitForTimeout(100)
+await page.mouse.move(C.x + 200, C.y, { steps: 8 })
+expectTrue(
+  'Meta 拖拽不出现连线预览（平台分流）',
+  (await page.locator('[data-link-preview]').count()) === 0
+)
+await page.mouse.up()
+await page.keyboard.up('Meta')
+await page.waitForTimeout(150) // 悬停轮询冲刷，松手不误派发
+expectTrue(
+  'Meta 拖拽不弹边编辑器',
+  (await page.locator('[data-canvas-edit-mode="edge"]').count()) === 0
+)
+
+// 3.7 键盘快捷键 Ctrl/⌘ 双收正向：Meta+F 应打开图内搜索（macOS ⌘+F 主路径；
+//     与 3.6 相对——键盘是双收语义，两平台两键任一都认）
+await page.keyboard.down('Meta')
+await page.keyboard.press('f')
+await page.keyboard.up('Meta')
+expectTrue('Meta+F 打开图内搜索（双收）', await page.locator('.graph-search-input').isVisible())
+await page.locator('.graph-search-close').click()
+expectTrue('搜索浮层已收起（不挡后续画布手势）', !(await page.locator('.graph-search-input').isVisible()))
 
 // 4. Esc 取消路径：再双击空白 → 编辑器出现 → Esc 关闭，不建点
 await settleMouse(E1.x, E1.y)

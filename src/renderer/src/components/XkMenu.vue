@@ -12,13 +12,13 @@
         <a-menu-item key="3" @click="undo">
           <a-row>
             <a-col flex="120px">撤销</a-col>
-            <a-col flex="auto">Ctrl+Z</a-col>
+            <a-col flex="auto">{{ modifierKeyLabel(isDarwin) }}+Z</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-item key="4" @click="redo">
           <a-row>
             <a-col flex="120px">重做</a-col>
-            <a-col flex="auto">Ctrl+Y</a-col>
+            <a-col flex="auto">{{ modifierKeyLabel(isDarwin) }}+Y</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-divider />
@@ -39,7 +39,7 @@
         <a-menu-item key="10" @click="saveFile">
           <a-row>
             <a-col flex="120px">保存</a-col>
-            <a-col flex="auto">Ctrl+S</a-col>
+            <a-col flex="auto">{{ modifierKeyLabel(isDarwin) }}+S</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-item key="11" @click="saveAs"> 另存为... </a-menu-item>
@@ -53,8 +53,10 @@
 
 <script setup>
 import MenuIcon from '../assets/menu.png'
+import { modifierKeyLabel } from '../utils/platformModifier.js'
 
-const menuTrigger = window.electronAPI.platform === 'darwin' ? ['click'] : ['hover']
+const isDarwin = window.electronAPI.platform === 'darwin'
+const menuTrigger = isDarwin ? ['click'] : ['hover']
 const shortcutActive = defineModel('shortcutActive', { type: String })
 const shortcutWatch = defineModel('shortcutWatch', { type: Boolean })
 
