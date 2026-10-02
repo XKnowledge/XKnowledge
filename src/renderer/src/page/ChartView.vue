@@ -142,11 +142,23 @@
                  滑块），不进 undo/redo；绑定经 computed 兜底，见脚本区注释 -->
             <a-textarea v-model:value="chartDescription" :rows="4" @change="onDescriptionChange" />
             <a-divider orientation="left">{{ $t('chart.view') }}</a-divider>
-            <!-- space-evenly：flex 项间等宽空隙（左边缘/按钮间/右边缘） -->
+            <!-- space-evenly：2 个 flex 项产生 3 段等宽空隙，按钮中心落在
+                 1/3 与 2/3 处；静照类（导出图片/复位）与视频类（环绕/录屏）
+                 各一排 -->
             <a-row justify="space-evenly">
               <a-button size="small" @click="graph3dRef?.exportPng()">{{
                 $t('chart.exportPng')
               }}</a-button>
+              <a-button
+                size="small"
+                data-reset-view
+                :disabled="exportingVideo"
+                @click="graph3dRef?.resetView()"
+              >
+                {{ $t('chart.resetView') }}
+              </a-button>
+            </a-row>
+            <a-row justify="space-evenly" style="margin-top: 8px">
               <a-button
                 size="small"
                 data-export-video
@@ -163,14 +175,6 @@
                 @click="onToggleScreenRecord"
               >
                 {{ screenRecording ? $t('chart.stopRecord') : $t('chart.screenRecord') }}
-              </a-button>
-              <a-button
-                size="small"
-                data-reset-view
-                :disabled="exportingVideo"
-                @click="graph3dRef?.resetView()"
-              >
-                {{ $t('chart.resetView') }}
               </a-button>
             </a-row>
           </div>

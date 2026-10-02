@@ -89,7 +89,7 @@ await page.waitForTimeout(500)
 check('buttons-present', (await exportBtn.count()) === 1 && (await recordBtn.count()) === 1)
 check(
   'initial-labels',
-  (await labelOf(exportBtn)) === '导出视频' && (await labelOf(recordBtn)) === '录屏'
+  (await labelOf(exportBtn)) === '环绕录制' && (await labelOf(recordBtn)) === '导出录屏'
 )
 check('initial-no-recording', (await recordingState()) === '')
 
@@ -110,8 +110,8 @@ await shot('02b-orbit-mid') // 与 02c 对比人工复核旋转
 await page.keyboard.press('Escape')
 await page.waitForTimeout(1_000)
 check('esc-cancel-restored', (await recordingState()) === '')
-check('esc-cancel-label', (await labelOf(exportBtn)) === '导出视频')
-check('esc-cancel-toast', await waitForToast('已取消导出'))
+check('esc-cancel-label', (await labelOf(exportBtn)) === '环绕录制')
+check('esc-cancel-toast', await waitForToast('已取消环绕录制'))
 
 // 5. 再跑满一次环绕（默认 10s）：成功 toast + 恢复
 await exportBtn.click()
@@ -120,7 +120,7 @@ check('orbit-again-anchor', (await recordingState()) === 'orbit')
 await shot('02c-orbit-running')
 await page.waitForTimeout(11_000)
 check('orbit-done-restored', (await recordingState()) === '')
-check('orbit-done-toast', await waitForToast('已导出视频'))
+check('orbit-done-toast', await waitForToast('环绕视频已导出'))
 
 // 6. 录屏：danger 按钮 + screen 锚点 + 互斥（导出视频 disabled）
 await recordBtn.click()
@@ -138,7 +138,7 @@ await page.waitForTimeout(800)
 await recordBtn.click() // 停止
 await page.waitForTimeout(1_000)
 check('screen-stopped-restored', (await recordingState()) === '')
-check('screen-stopped-label', (await labelOf(recordBtn)) === '录屏')
+check('screen-stopped-label', (await labelOf(recordBtn)) === '导出录屏')
 check('screen-saved-toast', await waitForToast('录屏已保存'))
 
 await shot('03-final')
