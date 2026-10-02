@@ -183,6 +183,8 @@ import {
 import { applyUndo, applyRedo } from '../utils/historyActions'
 import { defaultFocusNode, focusNeighborhood, reconcileNodeHighlight } from '../utils/graphData.js'
 import { shortcutModifierActive } from '../utils/platformModifier.js'
+import { matchEvent } from '../utils/keybindings.js'
+import { bindings as keybindings } from '../store/keybindingStore.js'
 import { takePendingChart } from '../store/chartStore'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
@@ -513,21 +515,24 @@ const shortcut = (event) => {
   const isTypingContext =
     target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
-  // 快捷键配置映射表（修饰键 Ctrl/⌘ 双收，见 platformModifier.shortcutModifierActive）
+  // 快捷键配置映射表：5 个可自定义键位读 keybindingStore（设置里录制改键），
+  // 判定经 keybindings.matchEvent 精确匹配（primary=Ctrl/⌘ 双收）；
+  // isTypingContext 守卫跟动作走、不跟键走——改键不改变守卫行为
   const shortcutMap = {
     // 全局快捷键
-    'ctrl+s': {
-      match: () => shortcutModifierActive(event) && key === 's',
+    save: {
+      match: () => matchEvent(event, keybindings.value.save),
       action: () => triggerShortcut('save_file')
     },
     'ctrl+r': {
+      // 拦截项非用户动作、不进自定义列表，保持原样
       match: () => shortcutModifierActive(event) && key === 'r',
       action: () => event.preventDefault() // 阻止浏览器刷新
     },
-    'ctrl+f': {
-      // 不加 isTypingContext 守卫：任何输入框聚焦时按 Ctrl+F 都应跳到
+    search: {
+      // 不加 isTypingContext 守卫：任何输入框聚焦时按搜索键都应跳到
       // 搜索框（浏览器惯例）
-      match: () => shortcutModifierActive(event) && key === 'f',
+      match: () => matchEvent(event, keybindings.value.search),
       action: () => {
         event.preventDefault() // 防御性拦截（Electron 默认无查找，防未来版本行为变化）
         graph3dRef.value?.openSearch()
@@ -536,10 +541,10 @@ const shortcut = (event) => {
 
     // 图表区域快捷键（输入文本时不触发）
     delete: {
-      // Delete 删「框选集优先，否则最后点击的对象」：框选批量删（deleteSelection）；
+      // 删「框选集优先，否则最后点击的对象」：框选批量删（deleteSelection）；
       // 无框选时最后点过边（且未再点节点）删边，否则删节点；两边 index 在对方
       // 被点击时对称清空，无选中时各自函数的 <0 守卫兜底，按键无动作
-      match: () => !isTypingContext && key === 'delete',
+      match: () => !isTypingContext && matchEvent(event, keybindings.value.delete),
       action: () => {
         if (selectionNodeNames.value.length || selectionLinkIndexes.value.length) {
           triggerShortcut('delete_selection')
@@ -548,12 +553,12 @@ const shortcut = (event) => {
         triggerShortcut(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
       }
     },
-    'ctrl+z': {
-      match: () => !isTypingContext && shortcutModifierActive(event) && key === 'z',
+    undo: {
+      match: () => !isTypingContext && matchEvent(event, keybindings.value.undo),
       action: () => triggerShortcut('undo')
     },
-    'ctrl+y': {
-      match: () => !isTypingContext && shortcutModifierActive(event) && key === 'y',
+    redo: {
+      match: () => !isTypingContext && matchEvent(event, keybindings.value.redo),
       action: () => triggerShortcut('redo')
     }
   }
