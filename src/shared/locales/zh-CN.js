@@ -29,6 +29,7 @@ export const zhCN = {
     unsavedExit: '文件未保存，是否退出？',
     saveTo: '将文件保存到…',
     saveAsTo: '将文件另存为…',
+    videoSaveAs: '视频保存到…',
     open: '打开',
     pickWorldDir: '选择图库目录'
   },

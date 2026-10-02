@@ -28,6 +28,7 @@ export const enUS = {
     unsavedExit: 'The file has unsaved changes. Exit anyway?',
     saveTo: 'Save file to...',
     saveAsTo: 'Save file as...',
+    videoSaveAs: 'Save video to...',
     open: 'Open',
     pickWorldDir: 'Choose gallery folder'
   },

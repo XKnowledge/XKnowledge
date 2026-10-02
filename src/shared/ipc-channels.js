@@ -10,6 +10,8 @@ export const IPC = {
   FILE_SAVE: 'file:save',
   FILE_SAVE_AS: 'file:save-as',
   FILE_DIRTY: 'file:dirty',
+  // 导出视频落盘（MB 级二进制，渲染层 a.download 通路不可用，走主进程保存框）
+  VIDEO_SAVE: 'video:save',
 
   // 内置示例域（examples/ 目录即图库）
   EXAMPLE_LIST: 'example:list',

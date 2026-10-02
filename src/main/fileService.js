@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { join } from 'path'
 import { dialog } from 'electron'
 import { createPathGuard } from './fileGuard'
 import { isExamplePath } from './examplePaths'
@@ -182,5 +183,31 @@ export const writeChartFile = async (filePath, content) => {
     throw wrapWriteError(err, filePath)
   }
   await recordWritten(filePath)
+  return { path: filePath }
+}
+
+/**
+ * 保存导出视频：弹保存对话框写二进制。视频是一次性导出产物（非装载
+ * 图谱），不进 chart 的 guard/mtime 体系；渲染层 blob → ArrayBuffer 经
+ * IPC 传入（渲染层 a.download 通路对 MB 级文件不可用：dataURL 有 ~2MB
+ * 上限、blob: URL 在 Electron 下不触发下载）。用户取消返回 { canceled: true }。
+ * XK_SMOKE_VIDEO_DIR 注入时跳过系统保存框（模态框在无人值守环境会挂死
+ * 冒烟），直接写该目录——冒烟专用后门，正常运行无此变量不生效。
+ */
+export const saveVideoFile = async (window, bytes, defaultName, ext) => {
+  const smokeDir = process.env.XK_SMOKE_VIDEO_DIR
+  if (smokeDir) {
+    const filePath = join(smokeDir, defaultName)
+    await fs.promises.writeFile(filePath, bytes)
+    return { path: filePath }
+  }
+  const { filePath } = await dialog.showSaveDialog(window, {
+    title: t('dialog.videoSaveAs'),
+    defaultPath: defaultName,
+    properties: ['createDirectory'],
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }]
+  })
+  if (!filePath) return { canceled: true }
+  await fs.promises.writeFile(filePath, bytes)
   return { path: filePath }
 }

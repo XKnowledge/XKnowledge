@@ -95,7 +95,7 @@ import {
 import {
   createRecordingCanvas,
   createRecorder,
-  downloadBlob,
+  saveVideoBlob,
   pickMimeType
 } from '../utils/videoExport.js'
 import {
@@ -927,9 +927,16 @@ const onOrbitEsc = (e) => {
   if (e.key === 'Escape' && videoMode.value === 'orbit') orbitCancel?.()
 }
 
-/** 一键环绕动画导出：autoRotate 绕当前视角焦点转一圈（autoRotateSpeed 惯例
- *  2=30s/圈，6=10s/圈；controls.enabled=false 只断输入事件，update() 内的
- *  autoRotate 照转）；水印与 PNG 单源；Esc 中途取消丢弃产物 */
+/** 环绕总扫角：一圈 */
+const ORBIT_SWEEP = Math.PI * 2
+
+/** 一键环绕动画导出：rAF 循环里手动绕当前 lookAt 焦点旋转相机一圈。
+ *  不能用 controls.autoRotate——three-render-objects 默认 controlType 是
+ *  'trackball'（TrackballControls，无该属性，那是 OrbitControls 独有）；
+ *  也不能临时换 controls，交互手感会变。角度按时间进度插值（帧率无关），
+ *  每帧只转相对上一帧的增量；cameraPosition 双参 setter 无动画立即生效。
+ *  锁交互靠 capture 截断（库层监听均为 bubble）；水印与 PNG 单源；
+ *  Esc 中途取消丢弃产物 */
 const exportVideo = async (durationMs = 10000) => {
   if (!graph || videoMode.value) return
   const picked = pickMimeType()
@@ -940,16 +947,28 @@ const exportVideo = async (durationMs = 10000) => {
   const [mimeType, ext] = picked
   closeEditor()
   videoMode.value = 'orbit'
-  const controls = graph.controls()
   const canvasEl = graph.renderer().domElement
-  controls.enabled = false
-  controls.autoRotate = true
-  controls.autoRotateSpeed = 6
   for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.addEventListener(ev, blockCanvasInput, true)
   window.addEventListener('keydown', onOrbitEsc)
+  const cam0 = graph.cameraPosition()
+  const look = cam0.lookAt ?? { x: 0, y: 0, z: 0 }
   const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
   const rec = createRecorder({ canvas: recCanvas, mimeType })
+  const startTs = performance.now()
+  let swept = 0
   let raf = requestAnimationFrame(function loop() {
+    const t = Math.min(1, (performance.now() - startTs) / durationMs)
+    const angle = ORBIT_SWEEP * t - swept
+    swept += angle
+    const cam = graph.cameraPosition()
+    const dx = cam.x - look.x
+    const dz = cam.z - look.z
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
+    graph.cameraPosition(
+      { x: look.x + dx * cos - dz * sin, y: cam.y, z: look.z + dx * sin + dz * cos },
+      look
+    )
     draw()
     raf = requestAnimationFrame(loop)
   })
@@ -966,8 +985,6 @@ const exportVideo = async (durationMs = 10000) => {
   cancelAnimationFrame(raf)
   const blob = await rec.stop()
   // 恢复交互（无论取消与否）
-  controls.autoRotate = false
-  controls.enabled = true
   for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.removeEventListener(ev, blockCanvasInput, true)
   window.removeEventListener('keydown', onOrbitEsc)
   videoMode.value = ''
@@ -975,8 +992,9 @@ const exportVideo = async (durationMs = 10000) => {
     message.info(t('chart.recordingCancelled'))
     return
   }
-  downloadBlob(blob, ext)
-  message.info(t('chart.videoExported'))
+  // 主进程保存框：用户在框里取消（canceled）时静默返回，不视为错误
+  const res = await saveVideoBlob(blob, ext)
+  if (!res?.canceled) message.info(t('chart.videoExported'))
 }
 
 /** 实时录屏：同一合成管线（水印单源）但不锁交互不转相机——录的正是用户
@@ -1012,8 +1030,8 @@ const stopScreenRecording = async () => {
   videoMode.value = '' // 先清态：停 rAF 循环
   cancelAnimationFrame(session.raf)
   const blob = await session.rec.stop()
-  downloadBlob(blob, session.ext)
-  message.info(t('chart.recordingSaved'))
+  const res = await saveVideoBlob(blob, session.ext)
+  if (!res?.canceled) message.info(t('chart.recordingSaved'))
 }
 
 defineExpose({

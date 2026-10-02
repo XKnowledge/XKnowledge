@@ -13,7 +13,8 @@ import {
   validateChartStructure,
   readChartFile,
   writeChartFile,
-  saveChartFileAs
+  saveChartFileAs,
+  saveVideoFile
 } from '../../src/main/fileService'
 
 const VALID_CHART = JSON.stringify({
@@ -267,5 +268,33 @@ describe('示例目录写保护（examples 内文件永不被写）', () => {
     dialog.showSaveDialog.mockResolvedValue({ filePath: path })
     await saveChartFileAs(null, VALID_CHART, 'title')
     expect(fs.existsSync(path)).toBe(true)
+  })
+})
+
+describe('saveVideoFile（视频导出保存，二进制、不走 guard 体系）', () => {
+  it('用户取消保存框返回 { canceled: true } 且不写盘', async () => {
+    dialog.showSaveDialog.mockResolvedValue({ filePath: undefined })
+    const res = await saveVideoFile(undefined, Buffer.from('x'), 'v.mp4', 'mp4')
+    expect(res).toEqual({ canceled: true })
+  })
+
+  it('选中路径后写入二进制并返回 { path }', async () => {
+    const target = join(dir, 'out.mp4')
+    dialog.showSaveDialog.mockResolvedValue({ filePath: target })
+    const res = await saveVideoFile(undefined, Buffer.from('binary!'), 'v.mp4', 'mp4')
+    expect(res).toEqual({ path: target })
+    expect(await fs.promises.readFile(target, 'utf-8')).toBe('binary!')
+  })
+
+  it('XK_SMOKE_VIDEO_DIR 注入时跳过保存框直接写入该目录（冒烟后门）', async () => {
+    process.env.XK_SMOKE_VIDEO_DIR = dir
+    try {
+      const res = await saveVideoFile(undefined, Buffer.from('fake-video'), 'v.mp4', 'mp4')
+      expect(res.path).toBe(join(dir, 'v.mp4'))
+      expect(await fs.promises.readFile(res.path, 'utf-8')).toBe('fake-video')
+      expect(dialog.showSaveDialog).not.toHaveBeenCalled()
+    } finally {
+      delete process.env.XK_SMOKE_VIDEO_DIR
+    }
   })
 })

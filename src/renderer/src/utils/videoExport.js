@@ -72,13 +72,11 @@ export const createRecorder = ({ canvas, mimeType, fps = 30, bitsPerSecond = 8_0
   }
 }
 
-/** 触发下载（与 exportPng 的 <a download> 同通路）；revoke 延迟——click 触发
- *  的取数是异步的，立即回收会有竞态空文件 */
-export const downloadBlob = (blob, ext) => {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = composeFileName(ext)
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+/** 保存视频：blob → ArrayBuffer 经主进程 showSaveDialog 落盘。渲染层
+ *  a.download 通路对 MB 级视频不可用（dataURL 有 ~2MB 上限、blob: URL
+ *  在 Electron 下不触发下载），主进程保存与「另存为」同构、跨环境确定。
+ *  返回 { canceled } 或 { path }；默认文件名对齐 PNG 命名 */
+export const saveVideoBlob = async (blob, ext) => {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  return window.electronAPI.saveVideoFile({ bytes, defaultName: composeFileName(ext), ext })
 }

@@ -75,6 +75,11 @@ export const registerIpc = () => {
     return fileService.saveChartFileAs(senderWindow(event), content, t('dialog.saveAsTo'))
   })
 
+  ipcMain.handle(IPC.VIDEO_SAVE, (event, { bytes, defaultName, ext }) =>
+    // 渲染层传 Uint8Array（结构化克隆），转 Buffer 后写盘
+    fileService.saveVideoFile(senderWindow(event), Buffer.from(bytes), defaultName, ext)
+  )
+
   ipcMain.handle(IPC.FILE_OPEN, async (event) => {
     const res = await fileService.showOpenDialog(senderWindow(event))
     if (res.canceled) return { canceled: true }
