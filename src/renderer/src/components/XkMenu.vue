@@ -12,13 +12,13 @@
         <a-menu-item key="3" @click="undo">
           <a-row>
             <a-col flex="120px">撤销</a-col>
-            <a-col flex="auto">{{ modifierKeyLabel(isDarwin) }}+Z</a-col>
+            <a-col flex="auto">{{ undoLabel }}</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-item key="4" @click="redo">
           <a-row>
             <a-col flex="120px">重做</a-col>
-            <a-col flex="auto">{{ modifierKeyLabel(isDarwin) }}+Y</a-col>
+            <a-col flex="auto">{{ redoLabel }}</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-divider />
@@ -33,7 +33,7 @@
         <a-menu-item key="10" @click="saveFile">
           <a-row>
             <a-col flex="120px">保存</a-col>
-            <a-col flex="auto">{{ modifierKeyLabel(isDarwin) }}+S</a-col>
+            <a-col flex="auto">{{ saveLabel }}</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-item key="11" @click="saveAs"> 另存为... </a-menu-item>
@@ -46,10 +46,16 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import MenuIcon from '../assets/menu.png'
-import { modifierKeyLabel } from '../utils/platformModifier.js'
+import { bindings as keybindings } from '../store/keybindingStore.js'
+import { formatBindingLabel } from '../utils/keybindings.js'
 
 const isDarwin = window.electronAPI.platform === 'darwin'
+// 菜单快捷键标注跟随用户自定义（keybindingStore 生效视图）
+const undoLabel = computed(() => formatBindingLabel(keybindings.value.undo, isDarwin))
+const redoLabel = computed(() => formatBindingLabel(keybindings.value.redo, isDarwin))
+const saveLabel = computed(() => formatBindingLabel(keybindings.value.save, isDarwin))
 const menuTrigger = isDarwin ? ['click'] : ['hover']
 const shortcutActive = defineModel('shortcutActive', { type: String })
 const shortcutWatch = defineModel('shortcutWatch', { type: Boolean })
