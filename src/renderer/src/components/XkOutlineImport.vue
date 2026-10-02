@@ -3,6 +3,7 @@
     v-model:open="open"
     title="从大纲导入"
     ok-text="导入"
+    cancel-text="取消"
     :ok-button-props="{ disabled: !parsed.nodes.length }"
     :mask-closable="false"
     data-outline-import
