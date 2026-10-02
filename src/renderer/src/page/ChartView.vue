@@ -142,14 +142,6 @@
             </a-row>
           </div>
 
-          <XkCreateNode
-            v-show="createNodeVisible"
-            v-model:new-node="newNode"
-            v-model:category-items="categoryItems"
-            v-model:category-name="categoryName"
-            v-model:xk-context="xkContext"
-          ></XkCreateNode>
-
           <XkCurrentNode
             v-show="currentNodeVisible"
             v-model:current-node="currentNode"
@@ -190,7 +182,6 @@ import { defaultFocusNode, focusNeighborhood, reconcileNodeHighlight } from '../
 import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { takePendingChart } from '../store/chartStore'
 
-import XkCreateNode from '../components/XkCreateNode.vue'
 import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
 import XkMenu from '../components/XkMenu.vue'
@@ -200,7 +191,6 @@ import XkSettings from '../components/XkSettings.vue'
 import XkOutlineImport from '../components/XkOutlineImport.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 
-import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
 import EditIcon from '../assets/edit.png'
@@ -222,15 +212,6 @@ const saveNodeVisible = ref(false)
 const attributeVisible = ref(true)
 const checkedValues = ref([])
 const repulsion = ref(100)
-
-const createNodeVisible = ref(false)
-const newNode = ref({
-  name: '',
-  des: '',
-  symbolSize: 50,
-  // placeholder 只有在 value = undefined 才会显示
-  category: undefined
-})
 
 const currentNodeVisible = ref(false)
 const currentNode = ref({
@@ -518,7 +499,7 @@ const shortcut = (event) => {
   // 统一转换为小写处理
   const key = event.key.toLowerCase()
   // 焦点在按钮等普通控件上时快捷键照常生效，只在文本输入元素中屏蔽，
-  // 否则点击工具栏/侧边栏控件后焦点残留，Insert/Delete/Ctrl(⌘)+Z/Y 会静默失效
+  // 否则点击工具栏/侧边栏控件后焦点残留，Delete/Ctrl(⌘)+Z/Y 会静默失效
   const target = event.target
   const isTypingContext =
     target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
@@ -545,10 +526,6 @@ const shortcut = (event) => {
     },
 
     // 图表区域快捷键（输入文本时不触发）
-    insert: {
-      match: () => !isTypingContext && key === 'insert',
-      action: () => triggerShortcut('create_node')
-    },
     delete: {
       // Delete 删「最后一个点击的对象」：最后点过边（且未再点节点）删边，
       // 否则删节点；两边 index 在对方被点击时对称清空，无选中时各自
@@ -589,7 +566,6 @@ watch(shortcutWatch, () => {
     close_file: closeFile,
     create_new_file: createNewFile,
     open_file: openFile,
-    create_node: createNode,
     delete_node: deleteNode,
     delete_edge: deleteEdge,
     undo: undo,
@@ -616,7 +592,6 @@ const resetRefData = () => {
    * 重置各种ref，配合侧边栏显示一块用
    */
   downplayAllHightlight()
-  resetNodeRef(newNode)
   currentNodeDataIndex.value = -1
   resetNodeRef(currentNode)
   currentEdgeDataIndex.value = -1
@@ -629,17 +604,16 @@ const resetSider = () => {
    */
   xkContext.value.errorMessage = ''
   attributeVisible.value = true
-  createNodeVisible.value = false
   currentNodeVisible.value = false
   currentEdgeVisible.value = false
 }
 
 // 画布直操：就地编辑器提交 → 共享数据操作（校验/历史/刷新与表单路径同源）；
 // 错误走全局 message（侧栏此刻未必展开）。建点成功后回填落点坐标。
-const onCanvasCreateNode = ({ name, category, symbolSize, world }) => {
+const onCanvasCreateNode = ({ name, category, symbolSize, des, world }) => {
   const result = createNodeInChart(xkContext, {
     name,
-    des: '',
+    des: des ?? '',
     symbolSize: symbolSize ?? 50,
     category
   })
@@ -693,7 +667,6 @@ const onGraphNodeClick = (nodeData, index) => {
   attributeVisible.value = false
   currentNodeVisible.value = true
   currentNode.value = jsonReactive(nodeData)
-  newNode.value.symbolSize = currentNode.value.symbolSize
   currentNodeDataIndex.value = index
   // 选中高亮 toggle：再点同一个取消；换点直接换亮。边高亮同步清——
   // 图面高亮与侧栏显示对象必须一一对应（点节点不清边高亮的错位在此修正）
@@ -943,16 +916,6 @@ const redo = () => {
   resetRefData()
 }
 
-const createNode = () => {
-  /**
-   * 创建新节点
-   */
-  resetSider()
-  attributeVisible.value = false
-  siderVisible.value = true // 切换侧边栏的显示状态
-  createNodeVisible.value = true
-}
-
 const deleteNode = () => {
   /**
    * 删除节点
@@ -1008,7 +971,6 @@ const deleteEdge = () => {
 }
 
 const buttonList = ref([
-  { src: CreateNodeIcon, name: '创建节点', click: createNode },
   { src: DeleteNodeIcon, name: '删除节点', click: deleteNode },
   { src: DeleteEdgeIcon, name: '删除连接', click: deleteEdge },
   { src: EditIcon, name: '编辑栏', click: toggleSider }

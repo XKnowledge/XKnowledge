@@ -1,5 +1,5 @@
 <template>
-  <!-- 就地编辑覆盖层：双击建点（名称+类目）/ 拖拽连边输名。
+  <!-- 就地编辑覆盖层：双击建点（名称+可选描述+类目）/ 拖拽连边输名。
        放 .graph3d-container 外面（同图例/搜索，3D 库冷启动会清空容器） -->
   <!-- esc.capture：类目下拉展开时 vc-select 对 Esc stopPropagation（bubble 到不了
        本层）——曾只关下拉留下半死编辑器，滞留态里 Enter 仍会选中高亮项提交建点；
@@ -12,53 +12,68 @@
     @keydown.esc.capture="close"
   >
     <template v-if="mode === 'node'">
-      <a-input
-        ref="nameRef"
-        v-model:value="nodeName"
-        class="xk-canvas-editor-name"
-        placeholder="节点名称"
-        size="small"
-        @keydown.enter="onNameEnter"
-      />
-      <a-select
-        ref="catRef"
-        v-model:value="category"
-        :open="catOpen"
-        class="xk-canvas-editor-cat"
-        placeholder="类目"
-        size="small"
-        :options="localCategories.map((c) => ({ value: c }))"
-        :dropdown-match-select-width="false"
-        @keydown.enter.capture="onCatEnter"
-        @dropdownVisibleChange="onCatOpenChange"
-        @change="submitNode"
-      >
-        <template #dropdownRender="{ menuNode: menu }">
-          <component :is="menu" />
-          <a-divider style="margin: 4px 0" />
-          <a-space style="padding: 4px 8px">
-            <a-input
-              ref="newCatRef"
-              v-model:value="newCategory"
-              placeholder="新类目"
-              size="small"
-              style="width: 100px"
-              @keydown.enter="onNewCatEnter"
-            />
-            <a-button type="text" size="small" @click="addCategory">新增</a-button>
-          </a-space>
-        </template>
-      </a-select>
-      <a-radio-group
-        v-model:value="sizeTier"
-        size="small"
-        button-style="solid"
-        class="xk-canvas-editor-size"
-      >
-        <a-radio-button :value="30"><i class="xk-size-dot xk-dot-s" />小</a-radio-button>
-        <a-radio-button :value="50"><i class="xk-size-dot xk-dot-m" />中</a-radio-button>
-        <a-radio-button :value="80"><i class="xk-size-dot xk-dot-l" />大</a-radio-button>
-      </a-radio-group>
+      <!-- 两行布局：行1 名称+可选描述（Tab 序与填写次序一致——类目选定即整单
+           提交，可选字段必须排在类目之前）；行2 类目+大小档位 -->
+      <div class="xk-canvas-editor-node">
+        <div class="xk-canvas-editor-row">
+          <a-input
+            ref="nameRef"
+            v-model:value="nodeName"
+            class="xk-canvas-editor-name"
+            placeholder="节点名称"
+            size="small"
+            @keydown.enter="onNameEnter"
+          />
+          <a-input
+            v-model:value="nodeDes"
+            class="xk-canvas-editor-des"
+            placeholder="描述（可选）"
+            size="small"
+            @keydown.enter="onDesEnter"
+          />
+        </div>
+        <div class="xk-canvas-editor-row">
+          <a-select
+            ref="catRef"
+            v-model:value="category"
+            :open="catOpen"
+            class="xk-canvas-editor-cat"
+            placeholder="类目"
+            size="small"
+            :options="localCategories.map((c) => ({ value: c }))"
+            :dropdown-match-select-width="false"
+            @keydown.enter.capture="onCatEnter"
+            @dropdownVisibleChange="onCatOpenChange"
+            @change="submitNode"
+          >
+            <template #dropdownRender="{ menuNode: menu }">
+              <component :is="menu" />
+              <a-divider style="margin: 4px 0" />
+              <a-space style="padding: 4px 8px">
+                <a-input
+                  ref="newCatRef"
+                  v-model:value="newCategory"
+                  placeholder="新类目"
+                  size="small"
+                  style="width: 100px"
+                  @keydown.enter="onNewCatEnter"
+                />
+                <a-button type="text" size="small" @click="addCategory">新增</a-button>
+              </a-space>
+            </template>
+          </a-select>
+          <a-radio-group
+            v-model:value="sizeTier"
+            size="small"
+            button-style="solid"
+            class="xk-canvas-editor-size"
+          >
+            <a-radio-button :value="30"><i class="xk-size-dot xk-dot-s" />小</a-radio-button>
+            <a-radio-button :value="50"><i class="xk-size-dot xk-dot-m" />中</a-radio-button>
+            <a-radio-button :value="80"><i class="xk-size-dot xk-dot-l" />大</a-radio-button>
+          </a-radio-group>
+        </div>
+      </div>
     </template>
     <a-input
       v-else
@@ -88,6 +103,7 @@ const nameRef = ref(null)
 const catRef = ref(null)
 const newCatRef = ref(null)
 const nodeName = ref('')
+const nodeDes = ref('')
 const edgeName = ref('')
 const category = ref(undefined)
 const catOpen = ref(false)
@@ -109,6 +125,7 @@ watch(
   (m) => {
     if (!m) return
     nodeName.value = ''
+    nodeDes.value = ''
     edgeName.value = ''
     category.value = undefined
     newCategory.value = ''
@@ -134,6 +151,17 @@ const onNameEnter = (e) => {
   if (isComposingEnter(e)) return
   // 已选过类目：直接提交。antd 的 change 只在值变化时发射，重选同一项
   // 不会再触发——"先选类目再输名字"的流会卡死在选了却建不出
+  if (category.value) {
+    submitNode()
+    return
+  }
+  openCategory()
+}
+
+/** 描述框回车与名称框同语义：已选类目即提交，否则转类目下拉。描述是可选
+ *  字段，快速路径（名称回车直接开下拉）不经此框，零打扰 */
+const onDesEnter = (e) => {
+  if (isComposingEnter(e)) return
   if (category.value) {
     submitNode()
     return
@@ -194,7 +222,12 @@ const addCategory = () => {
 const submitNode = () => {
   const name = nodeName.value.trim()
   if (!name || !category.value) return
-  emit('create-node', { name, category: category.value, symbolSize: sizeTier.value })
+  emit('create-node', {
+    name,
+    category: category.value,
+    symbolSize: sizeTier.value,
+    des: nodeDes.value.trim()
+  })
 }
 
 const submitEdge = () => {
@@ -222,6 +255,23 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
 
 .xk-canvas-editor-name {
   width: 150px;
+}
+
+/* 建点态两行容器：行1 名称+描述、行2 类目+大小档（宽度由行1 决定） */
+.xk-canvas-editor-node {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xk-canvas-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.xk-canvas-editor-des {
+  width: 200px;
 }
 
 /* 连边态单框独占一行：加宽到整句提示可见（14px 字号、17 个全角字符最坏

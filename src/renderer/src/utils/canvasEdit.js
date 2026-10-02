@@ -3,11 +3,11 @@
  * 依赖 graph 实例（graph2ScreenCoords），这里只放可单测的纯计算。
  */
 
-/** 就地编辑器的估计占位（宽 440 / 高 90）：贴边时翻回容器内，留 8px 边距。
- *  宽取建点态估算值 ~438px（8 padding + 150 名称 + 6 gap + 130 类目 + 6 gap
- *  + ~128 大小档 radio 三钮 + 8 padding + 2 border）上取整；连边态单框更窄，
- *  按宽态钳制即可 */
-const EDITOR_W = 440
+/** 就地编辑器的估计占位（宽 380 / 高 90）：贴边时翻回容器内，留 8px 边距。
+ *  宽取建点态估算值 ~374px（8 padding + 150 名称 + 6 gap + 200 描述 + 8 padding
+ *  + 2 border，行2 类目+大小档更窄）；高按两行输入（~68px）上取整留余量。
+ *  连边态单框更窄更矮，按建点态钳制即可 */
+const EDITOR_W = 380
 const EDITOR_H = 90
 const EDGE_MARGIN = 8
 

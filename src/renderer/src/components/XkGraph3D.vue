@@ -4,6 +4,7 @@
     :data-node-count="nodes.length"
     :data-link-count="links.length"
     :data-last-node-size="nodes.length ? nodes[nodes.length - 1].symbolSize : ''"
+    :data-last-node-des="nodes.length ? (nodes[nodes.length - 1].des ?? '') : ''"
     :data-highlight-node="highlightNode"
     :data-highlight-edge="highlightLink?.name ?? ''"
   >
@@ -279,12 +280,12 @@ watch(
   }
 )
 
-const onEditorCreateNode = ({ name, category, symbolSize }) => {
+const onEditorCreateNode = ({ name, category, symbolSize, des }) => {
   const world = pendingWorldPos
   closeEditor()
-  // symbolSize 须显式透传：这里重建 payload，漏挑字段会被 ChartView 的
-  // `?? 50` 兜底吞成默认档（曾整批节点侧栏大小恒 50 的断点就在这层转发）
-  emit('canvas-create-node', { name, category, symbolSize, world })
+  // symbolSize/des 须显式透传：这里重建 payload，漏挑字段会被 ChartView 的
+  // 兜底吞成默认值（曾整批节点侧栏大小恒 50 的断点就在这层转发）
+  emit('canvas-create-node', { name, category, symbolSize, des, world })
 }
 
 const onEditorCreateEdge = ({ name }) => {

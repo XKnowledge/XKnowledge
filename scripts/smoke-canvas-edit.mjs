@@ -1,5 +1,6 @@
 // 冒烟驱动：画布直操编辑——双击空白建点（就地输入名称回车 → 类目下拉内新增
-// 「核心」→ 选定即建成：data-node-count/图例断言；大小档位默认「中」，Gamma
+// 「核心」→ 选定即建成：data-node-count/图例断言；Beta 轮带可选描述，
+// data-last-node-des 断言；大小档位默认「中」，Gamma
 // 轮走「大」档）、Ctrl+按住节点拖出连线的
 // 确定性部分（预览线出现 → 松开空白处静默放弃、预览消失）、无 Ctrl 普通拖
 // 不劫持为连线（DragControls 移动节点，预览/编辑器均不出现）、Esc 取消路径、
@@ -283,13 +284,17 @@ expectTrue('下拉展开态 Esc 关闭编辑器', await waitEditorCount('node', 
 expectEq('下拉态 Esc 取消不建点（节点计数）', await nodeCount(), '1')
 await shot('065-esc-with-dropdown')
 
-// 5. 再建 Beta：下拉此时已有「核心」，方向键+回车选定（键盘流全程不落鼠标）
+// 5. 再建 Beta（带可选描述）：Tab 进描述框输入 → 描述回车同样转类目下拉 →
+//    下拉此时已有「核心」，方向键+回车选定（键盘流全程不落鼠标）
 await settleMouse(PB.x, PB.y)
 await page.mouse.dblclick(PB.x, PB.y)
 expectTrue('Beta 双击出现建点编辑器', await waitEditorCount('node', 1))
 await awaitEditorFocus()
 await page.keyboard.type('Beta')
-await page.keyboard.press('Enter')
+await page.keyboard.press('Tab') // → 描述框（可选字段排在类目前）；中文输入走 fill
+const desBox = page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-des')
+await desBox.fill('Beta 的描述')
+await desBox.press('Enter') // 描述回车与名称回车同语义：转类目下拉
 await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
 await page.keyboard.press('ArrowDown')
 await page.keyboard.press('Enter')
@@ -301,6 +306,8 @@ if (count !== '2') {
   count = await awaitNodeCount('2')
 }
 expectEq('Beta 建成（节点计数）', count, '2')
+// 描述落库硬断言（同 data-last-node-size 的动机：防转发层丢字段）
+expectEq('Beta 描述落库', await wrap.getAttribute('data-last-node-des'), 'Beta 的描述')
 await shot('07-beta-created')
 
 // 6. Ctrl+Z 撤销：画布直操建点同样进撤销栈，一次撤销 Beta（2→1）
@@ -353,16 +360,17 @@ expectEq('先选类目后输名字回车直接建成', await awaitNodeCount('2')
 expectEq('大档建成的大小落库', await wrap.getAttribute('data-last-node-size'), '80')
 await shot('085-gamma-mouseflow')
 
-// 6.6 Tab 流回归（类目必选语义）：输名字 → Tab 到类目 select（下拉未开）→
-//     回车——antd 开拉即高亮 activeIndex 第一项，回车径直选中触发 change→
-//     submitNode，用户没看见下拉就被替选了类目建成（必选形同虚设）。现
-//     未展开态的回车只转为展开下拉，选项可见后回车才算确认
+// 6.6 Tab 流回归（类目必选语义）：输名字 → 两次 Tab 越过描述框到类目 select
+//     （下拉未开）→ 回车——antd 开拉即高亮 activeIndex 第一项，回车径直选中
+//     触发 change→submitNode，用户没看见下拉就被替选了类目建成（必选形同虚设）。
+//     现未展开态的回车只转为展开下拉，选项可见后回车才算确认
 await settleMouse(E1.x, E1.y)
 await page.mouse.dblclick(E1.x, E1.y)
 expectTrue('Tab 流双击出现建点编辑器', await waitEditorCount('node', 1))
 await awaitEditorFocus()
 await page.keyboard.type('TabNode')
-await page.keyboard.press('Tab')
+await page.keyboard.press('Tab') // → 描述框
+await page.keyboard.press('Tab') // → 类目 select
 await page.keyboard.press('Enter')
 await page.waitForTimeout(300)
 expectEq('未选类目 Tab 回车不建点（节点计数）', await nodeCount(), '2')

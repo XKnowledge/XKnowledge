@@ -22,12 +22,6 @@
           </a-row>
         </a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="6" @click="createNode">
-          <a-row>
-            <a-col flex="120px">创建节点</a-col>
-            <a-col flex="auto">Insert</a-col>
-          </a-row>
-        </a-menu-item>
         <a-menu-item key="7" @click="deleteNode">
           <a-row>
             <a-col flex="120px">删除节点</a-col>
@@ -82,11 +76,6 @@ const undo = () => {
 
 const redo = () => {
   shortcutActive.value = 'redo'
-  shortcutWatch.value = !shortcutWatch.value
-}
-
-const createNode = () => {
-  shortcutActive.value = 'create_node'
   shortcutWatch.value = !shortcutWatch.value
 }
 
