@@ -90,6 +90,7 @@ import {
   marqueeModifierActive,
   modifierKeyLabel
 } from '../utils/platformModifier.js'
+import { createRecordingCanvas } from '../utils/videoExport.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
@@ -871,22 +872,13 @@ const setRepulsion = (value) => {
   graph.d3ReheatSimulation()
 }
 
-/** 导出当前视图为 PNG 并触发下载；水印只合成进导出图（画布上不显示），
- *  样式对齐旧版：粗体、水平居中、位于底部约 5% 处；颜色随主题背景
- *  （浅底黑字/深底白字，导出即所见） */
+/** 导出当前视图为 PNG 并触发下载；水印经 videoExport 的合成 canvas 单源
+ *  （与视频导出同一条管线），画布上不显示、只合成进导出产物 */
 const exportPng = () => {
   if (!graph) return
   const src = graph.renderer().domElement
-  const canvas = document.createElement('canvas')
-  canvas.width = src.width
-  canvas.height = src.height
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(src, 0, 0)
-  const fontSize = Math.max(18, Math.round(canvas.height * 0.022))
-  ctx.font = `bold ${fontSize}px sans-serif`
-  ctx.fillStyle = sceneColors.value.watermark
-  ctx.textAlign = 'center'
-  ctx.fillText('By XKnowledge', canvas.width / 2, canvas.height * 0.95)
+  const { canvas, draw } = createRecordingCanvas(src, sceneColors.value.watermark)
+  draw()
   const url = canvas.toDataURL('image/png')
   const a = document.createElement('a')
   a.href = url
