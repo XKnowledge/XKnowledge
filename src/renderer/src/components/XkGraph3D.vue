@@ -150,7 +150,9 @@ const categoryColors = computed(() => assignCategoryColors(categories.value))
 const sceneColors = computed(() => SCENE_COLORS[effective.value])
 const catColor = (cat) => categoryColors.value.get(String(cat ?? ''))
 const hiddenCategories = ref(new Set())
+// 环绕录制中图例显隐切换会改变画面（录屏不拦——录的正是用户操作）
 const toggleCategory = (cat) => {
+  if (videoMode.value === 'orbit') return
   const next = new Set(hiddenCategories.value)
   next.has(cat) ? next.delete(cat) : next.add(cat)
   hiddenCategories.value = next
@@ -202,6 +204,8 @@ const flyToActive = () => {
 
 const openSearch = () => {
   if (initFailed.value) return // 图都没有，搜索无意义
+  // 环绕录制中不开搜索：命中跳转会抢走相机破坏录制（录屏不拦）
+  if (videoMode.value === 'orbit') return
   searchOpen.value = true
   nextTick(() => searchCompRef.value?.focus())
 }
@@ -930,13 +934,18 @@ const onOrbitEsc = (e) => {
 /** 环绕总扫角：一圈 */
 const ORBIT_SWEEP = Math.PI * 2
 
-/** 一键环绕动画导出：rAF 循环里手动绕当前 lookAt 焦点旋转相机一圈。
- *  不能用 controls.autoRotate——three-render-objects 默认 controlType 是
- *  'trackball'（TrackballControls，无该属性，那是 OrbitControls 独有）；
- *  也不能临时换 controls，交互手感会变。角度按时间进度插值（帧率无关），
- *  每帧只转相对上一帧的增量；cameraPosition 双参 setter 无动画立即生效。
- *  锁交互靠 capture 截断（库层监听均为 bubble）；水印与 PNG 单源；
- *  Esc 中途取消丢弃产物 */
+/** 一键环绕动画导出：rAF 循环里手动绕图中心（TrackballControls 的
+ *  target）旋转相机一圈。不能用 controls.autoRotate——three-render-objects
+ *  默认 controlType 是 'trackball'（TrackballControls，无该属性，那是
+ *  OrbitControls 独有）；也不能临时换 controls，交互手感会变。旋转中心取
+ *  controls.target 而非 cameraPosition() getter 的 lookAt——后者是
+ *  getLookAt() 用 quaternion 合成的「相机前方 1000 单位点」，图通常在
+ *  相机前几十~几百单位处，拿它当中心会绕到图外；target 才是用户手动
+ *  旋转与一切取景路径（zoomToFit/聚焦/复位）共同维护的真实旋转中心。
+ *  角度按时间进度插值（帧率无关），每帧只转相对上一帧的增量；
+ *  cameraPosition 双参 setter 无动画立即生效。锁交互靠 capture 截断
+ *  （库层监听均为 bubble）+ 侧栏视角/布局入口禁用（ChartView 层）；
+ *  水印与 PNG 单源；Esc 中途取消丢弃产物 */
 const exportVideo = async (durationMs = 10000) => {
   if (!graph || videoMode.value) return
   const picked = pickMimeType()
@@ -946,12 +955,13 @@ const exportVideo = async (durationMs = 10000) => {
   }
   const [mimeType, ext] = picked
   closeEditor()
+  closeSearch() // 搜索开着会被命中跳转抢走相机
   videoMode.value = 'orbit'
   const canvasEl = graph.renderer().domElement
   for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.addEventListener(ev, blockCanvasInput, true)
   window.addEventListener('keydown', onOrbitEsc)
-  const cam0 = graph.cameraPosition()
-  const look = cam0.lookAt ?? { x: 0, y: 0, z: 0 }
+  const target = graph.controls().target
+  const look = { x: target.x, y: target.y, z: target.z }
   const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
   const rec = createRecorder({ canvas: recCanvas, mimeType })
   const startTs = performance.now()

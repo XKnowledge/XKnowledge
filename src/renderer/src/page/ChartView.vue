@@ -67,6 +67,7 @@
             <a-checkbox-group
               v-model:value="checkedValues"
               class="attr-checkboxes"
+              :disabled="exportingVideo"
               @change="onChangeAttr"
             >
               <a-checkbox value="showEdgeName"> {{ $t('chart.showEdgeName') }} </a-checkbox>
@@ -86,6 +87,7 @@
                 <a-select
                   v-model:value="focusMode"
                   class="focus-mode-select"
+                  :disabled="exportingVideo"
                   :options="[
                     { value: 'off', label: $t('chart.focusOff') },
                     { value: 'focus', label: $t('chart.focusDim') },
@@ -101,7 +103,7 @@
                 <a-select
                   v-model:value="focusHops"
                   class="focus-hops-select"
-                  :disabled="focusMode === 'off'"
+                  :disabled="focusMode === 'off' || exportingVideo"
                   :options="[
                     { value: 1, label: '1' },
                     { value: 2, label: '2' },
@@ -121,6 +123,7 @@
                   v-model:value="repulsion"
                   :min="1"
                   :max="500"
+                  :disabled="exportingVideo"
                   @change="onChangeRepulsion"
                 />
               </a-col>
@@ -129,6 +132,7 @@
                   v-model:value="repulsion"
                   :min="1"
                   :max="500"
+                  :disabled="exportingVideo"
                   @change="onChangeRepulsion"
                 />
               </a-col>
@@ -160,9 +164,14 @@
               >
                 {{ screenRecording ? $t('chart.stopRecord') : $t('chart.screenRecord') }}
               </a-button>
-              <a-button size="small" @click="graph3dRef?.resetView()">{{
-                $t('chart.resetView')
-              }}</a-button>
+              <a-button
+                size="small"
+                data-reset-view
+                :disabled="exportingVideo"
+                @click="graph3dRef?.resetView()"
+              >
+                {{ $t('chart.resetView') }}
+              </a-button>
             </a-row>
           </div>
 

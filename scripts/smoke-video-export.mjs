@@ -69,6 +69,7 @@ const recordingState = () =>
   page.evaluate(() => document.querySelector('.graph3d-wrap')?.dataset.videoRecording ?? '')
 const exportBtn = page.locator('[data-export-video]')
 const recordBtn = page.locator('[data-screen-record]')
+const resetBtn = page.locator('[data-reset-view]')
 // 按钮文案断言统一去空白：antd 对恰好两个汉字的按钮（「录屏」）自动在
 // 中间插空格排版，textContent 是「录 屏」；strip 后断言不受此特性干扰
 const labelOf = async (btn) => (await btn.textContent()).replace(/\s+/g, '')
@@ -99,6 +100,8 @@ check('orbit-anchor', (await recordingState()) === 'orbit')
 check('orbit-label-recording', (await labelOf(exportBtn)) === '录制中…')
 check('orbit-export-disabled', await exportBtn.isDisabled())
 check('orbit-screen-record-disabled', await recordBtn.isDisabled())
+// 环绕录制中视角/布局入口须锁（复位视图飞相机+取景会毁掉录制）
+check('orbit-reset-view-disabled', await resetBtn.isDisabled())
 await shot('02a-orbit-start')
 await page.waitForTimeout(2_000)
 await shot('02b-orbit-mid') // 与 02c 对比人工复核旋转
@@ -129,6 +132,8 @@ check(
   await recordBtn.evaluate((el) => el.classList.contains('ant-btn-dangerous'))
 )
 check('screen-export-disabled', await exportBtn.isDisabled())
+// 录屏不锁用户操作：复位视图保持可用（录的正是用户操作）
+check('screen-reset-view-enabled', !(await resetBtn.isDisabled()))
 await page.waitForTimeout(800)
 await recordBtn.click() // 停止
 await page.waitForTimeout(1_000)
