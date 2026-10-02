@@ -1,5 +1,6 @@
 <template>
-  <!-- 就地编辑覆盖层：双击建点（名称+可选描述+类目）/ 拖拽连边输名。
+  <!-- 就地编辑覆盖层：双击建点（三行：名称+类目 / 大小档位+自定义数框 / 可选
+       描述）/ 拖拽连边输名。
        放 .graph3d-container 外面（同图例/搜索，3D 库冷启动会清空容器） -->
   <!-- esc.capture：类目下拉展开时 vc-select 对 Esc stopPropagation（bubble 到不了
        本层）——曾只关下拉留下半死编辑器，滞留态里 Enter 仍会选中高亮项提交建点；
@@ -12,8 +13,11 @@
     @keydown.esc.capture="close"
   >
     <template v-if="mode === 'node'">
-      <!-- 两行布局：行1 名称+可选描述（Tab 序与填写次序一致——类目选定即整单
-           提交，可选字段必须排在类目之前）；行2 类目+大小档位+自定义数框 -->
+      <!-- 三行布局（future-features 定稿）：行1 名称+类目、行2 大小档位+自定义
+           数框、行3 可选描述。类目紧邻名称——「输名回车→选类目→建成」快速路径
+           最短；可选字段排在类目之后，Tab 越过未展开的类目不会替选（类目必选
+           语义仍由回车守卫把守）。下拉 placement=topLeft 向上展开：铺向类目
+           上方画布，不盖行2/行3 待填字段 -->
       <div class="xk-canvas-editor-node">
         <div class="xk-canvas-editor-row">
           <a-input
@@ -24,17 +28,6 @@
             size="small"
             @keydown.enter="onNameEnter"
           />
-          <!-- 描述：多行文本域（同侧栏描述字段），Enter 换行不提交——提交节奏
-               仍由「类目选定即整单提交」独占；可拖角拉伸（见样式注释） -->
-          <a-textarea
-            v-model:value="nodeDes"
-            class="xk-canvas-editor-des"
-            placeholder="描述（可选）"
-            size="small"
-            :rows="1"
-          />
-        </div>
-        <div class="xk-canvas-editor-row">
           <a-select
             ref="catRef"
             v-model:value="category"
@@ -42,6 +35,7 @@
             class="xk-canvas-editor-cat"
             placeholder="类目"
             size="small"
+            placement="topLeft"
             :options="localCategories.map((c) => ({ value: c }))"
             :dropdown-match-select-width="false"
             @keydown.enter.capture="onCatEnter"
@@ -64,8 +58,14 @@
               </a-space>
             </template>
           </a-select>
+        </div>
+        <div class="xk-canvas-editor-row">
+          <!-- name 让浏览器把三个 radio 折叠成单 Tab 停点（无障碍标准行为）：
+               不设 name 时 Chromium 视作三个独立停点，Tab 序 名称→类目→小→中
+               →大→数框→描述，档位平白多占两停 -->
           <a-radio-group
             v-model:value="sizeTier"
+            name="xk-node-size-tier"
             size="small"
             button-style="solid"
             class="xk-canvas-editor-size"
@@ -82,6 +82,17 @@
             size="small"
             :min="1"
             :max="100"
+          />
+        </div>
+        <div class="xk-canvas-editor-row">
+          <!-- 描述：多行文本域（同侧栏描述字段），Enter 换行不提交——提交节奏
+               仍由「类目选定即整单提交」独占；可拖角拉伸（见样式注释） -->
+          <a-textarea
+            v-model:value="nodeDes"
+            class="xk-canvas-editor-des"
+            placeholder="描述（可选）"
+            size="small"
+            :rows="1"
           />
         </div>
       </div>
@@ -258,7 +269,8 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
   width: 150px;
 }
 
-/* 建点态两行容器：行1 名称+描述、行2 类目+大小档（宽度由行1 决定） */
+/* 建点态三行容器：行1 名称+类目（宽度由行1 决定）、行2 大小档+弹性数框、
+   行3 描述整行 */
 .xk-canvas-editor-node {
   display: flex;
   flex-direction: column;
@@ -271,30 +283,33 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
   gap: 6px;
 }
 
-/* 描述：可拖角双向拉伸（antd reset 只给 textarea resize:vertical，这里放开
-   both——长描述先拉大再写）；min 兜住拖拽下限不至拖没了，宽高超出后编辑器
-   占地随之增长（clampEditorPos 的估算不追手改尺寸，只管初定位） */
+/* 描述：行3 整行（356 与行1 内容宽对齐：150 名称+6 gap+200 类目），可拖角双向
+   拉伸（antd reset 只给 textarea resize:vertical，这里放开 both——长描述先拉大
+   再写）；min 兜住拖拽下限不至拖没了，宽高超出后编辑器占地随之增长
+   （clampEditorPos 的估算不追手改尺寸，只管初定位） */
 .xk-canvas-editor-des {
-  width: 200px;
+  width: 356px;
   min-width: 120px;
   min-height: 24px;
   resize: both;
 }
 
-/* 自定义大小数框：只放 1~100 三位数（antd 默认 90px 偏宽，行 2 预算紧） */
+/* 自定义大小数框：弹性填满行2 余宽（future-features 草案的「节点大小值」通栏
+   数框），min 80 兜住只放 1~100 三位数的可读宽 */
 .xk-canvas-editor-size-custom {
-  width: 80px;
+  flex: 1;
+  min-width: 80px;
 }
 
 /* 连边态单框独占一行：加宽到整句提示可见（14px 字号、17 个全角字符最坏
-   238px + 14px 内边距，取 260）；仍窄于建点态 ~303px，右缘钳制 EDITOR_W
+   238px + 14px 内边距，取 260）；仍窄于建点态 ~374px，右缘钳制 EDITOR_W
    按宽态估计不受影响 */
 .xk-canvas-editor-edge {
   width: 260px;
 }
 
 .xk-canvas-editor-cat {
-  width: 130px;
+  width: 200px;
 }
 
 /* 档位圆点示意 3D 球体大小：直径 6/9/12px，色随文字（未选中主题色/选中反白） */

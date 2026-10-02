@@ -1,7 +1,9 @@
-// 冒烟驱动：画布直操编辑——双击空白建点（就地输入名称回车 → 类目下拉内新增
-// 「核心」→ 选定即建成：data-node-count/图例断言；Beta 轮带可选描述——多行
-// 文本域可拖角拉伸（resize:both 断言）、Tab 流越过描述框，data-last-node-des
-// 断言；大小档位默认「中」，Gamma 轮走「大」档、自定义轮数框直填 65 落库）、
+// 冒烟驱动：画布直操编辑——双击空白建点（三行布局断言：行1 名称+类目、行2
+// 档位+数框、行3 描述；类目下拉 placement=topLeft 向上展开断言；就地输入名称
+// 回车 → 类目下拉内新增「核心」→ 选定即建成：data-node-count/图例断言；Beta
+// 轮带可选描述——多行文本域可拖角拉伸（resize:both 断言）、Tab 流沿 名称→
+// 类目→档位→数框→描述 走位（Shift+Tab 回类目），data-last-node-des 断言；
+// 大小档位默认「中」，Gamma 轮走「大」档、自定义轮数框直填 65 落库）、
 // Ctrl+按住节点拖出连线的
 // 确定性部分（预览线出现 → 松开空白处静默放弃、预览消失）、无 Ctrl 普通拖
 // 不劫持为连线（DragControls 移动节点，预览/编辑器均不出现）、Esc 取消路径、
@@ -160,6 +162,24 @@ expectTrue(
     return !!checked && checked.textContent.includes('中')
   })
 )
+// 三行布局（future-features 定稿）：行1 名称+类目、行2 档位+自定义数框、行3
+// 描述——行归属是 Tab 序与提交节奏的载体，防布局回退把可选字段挪回类目前
+expectTrue(
+  '建点编辑器三行布局（行1 名称+类目、行2 档位+数框、行3 描述）',
+  await page.evaluate(() => {
+    const rows = document.querySelectorAll('[data-canvas-edit-mode="node"] .xk-canvas-editor-row')
+    if (rows.length !== 3) return false
+    const [r1, r2, r3] = rows
+    return (
+      !!r1.querySelector('.xk-canvas-editor-name') &&
+      !!r1.querySelector('.xk-canvas-editor-cat') &&
+      !r1.querySelector('.xk-canvas-editor-des') &&
+      !!r2.querySelector('.xk-canvas-editor-size') &&
+      !!r2.querySelector('.xk-canvas-editor-size-custom') &&
+      !!r3.querySelector('.xk-canvas-editor-des')
+    )
+  })
+)
 await awaitEditorFocus()
 await shot('02-node-editor-open')
 await page.keyboard.type('Alpha')
@@ -167,6 +187,24 @@ await page.keyboard.press('Enter')
 // antd 下拉 teleport 到 body；排除收起态残留（ant-select-dropdown-hidden）
 const dropdown = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
 await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
+// 类目下拉向上展开（placement=topLeft）：dropdown 底缘不越过 select 顶缘——
+// 向上铺开不盖行2/行3 待填字段；waitForFunction 轮询等开场动画滑完再量
+expectTrue(
+  '类目下拉向上展开（不盖下方待填字段）',
+  await page
+    .waitForFunction(
+      () => {
+        const dd = document.querySelector('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
+        const sel = document.querySelector('[data-canvas-edit-mode="node"] .xk-canvas-editor-cat')
+        if (!dd || !sel) return false
+        return dd.getBoundingClientRect().bottom <= sel.getBoundingClientRect().top + 0.5
+      },
+      null,
+      { timeout: 2_000 }
+    )
+    .then(() => true)
+    .catch(() => false)
+)
 // 下拉宽不钳到 select 宽（dropdownMatchSelectWidth=false）：新增按钮须完整
 // 可见——曾随 select 定宽 130px 被 overflow 裁掉大半（输入框 100 + 按钮要 ~172px）
 expectTrue(
@@ -285,15 +323,19 @@ expectTrue('下拉展开态 Esc 关闭编辑器', await waitEditorCount('node', 
 expectEq('下拉态 Esc 取消不建点（节点计数）', await nodeCount(), '1')
 await shot('065-esc-with-dropdown')
 
-// 5. 再建 Beta（带可选描述）：Tab 进描述框（多行文本域，可拖角拉伸）输入 →
-//    Tab 到类目 select（未展开）→ 回车转展开下拉（6.6 守卫的正向路径）→
-//    方向键+回车选定（键盘流全程不落鼠标）
+// 5. 再建 Beta（带可选描述）：Tab 流沿三行布局走到行尾——Tab 过类目（未展开
+//    不替选）/ 档位 / 数框进描述框（多行文本域，可拖角拉伸）输入 → Shift+Tab
+//    ×3 回类目 select → 回车转展开下拉（6.6 守卫的正向路径）→ 方向键+回车
+//    选定（键盘流全程不落鼠标）
 await settleMouse(PB.x, PB.y)
 await page.mouse.dblclick(PB.x, PB.y)
 expectTrue('Beta 双击出现建点编辑器', await waitEditorCount('node', 1))
 await awaitEditorFocus()
 await page.keyboard.type('Beta')
-await page.keyboard.press('Tab') // → 描述框（可选字段排在类目前）；中文输入走 fill
+await page.keyboard.press('Tab') // → 类目 select（未展开不替选，越过）
+await page.keyboard.press('Tab') // → 档位 radio
+await page.keyboard.press('Tab') // → 自定义数框
+await page.keyboard.press('Tab') // → 描述框（行3 末位）；中文输入走 fill
 const desBox = page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-des')
 await desBox.fill('Beta 的描述')
 expectTrue(
@@ -303,7 +345,9 @@ expectTrue(
     return !!el && el.tagName === 'TEXTAREA' && getComputedStyle(el).resize === 'both'
   })
 )
-await page.keyboard.press('Tab') // → 类目 select（下拉未开）
+await page.keyboard.press('Shift+Tab') // → 数框
+await page.keyboard.press('Shift+Tab') // → 档位 radio
+await page.keyboard.press('Shift+Tab') // → 类目 select（下拉未开）
 await page.keyboard.press('Enter') // 未展开态回车只转展开，不替选
 await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
 await page.keyboard.press('ArrowDown')
@@ -370,17 +414,17 @@ expectEq('先选类目后输名字回车直接建成', await awaitNodeCount('2')
 expectEq('大档建成的大小落库', await wrap.getAttribute('data-last-node-size'), '80')
 await shot('085-gamma-mouseflow')
 
-// 6.6 Tab 流回归（类目必选语义）：输名字 → 两次 Tab 越过描述框到类目 select
-//     （下拉未开）→ 回车——antd 开拉即高亮 activeIndex 第一项，回车径直选中
-//     触发 change→submitNode，用户没看见下拉就被替选了类目建成（必选形同虚设）。
-//     现未展开态的回车只转为展开下拉，选项可见后回车才算确认
+// 6.6 Tab 流回归（类目必选语义）：输名字 → 一次 Tab 直达类目 select（三行布
+//     局类目紧邻名称，下拉未开）→ 回车——antd 开拉即高亮 activeIndex 第一项，
+//     回车径直选中触发 change→submitNode，用户没看见下拉就被替选了类目建成
+//     （必选形同虚设）。现未展开态的回车只转为展开下拉，选项可见后回车才算
+//     确认
 await settleMouse(E1.x, E1.y)
 await page.mouse.dblclick(E1.x, E1.y)
 expectTrue('Tab 流双击出现建点编辑器', await waitEditorCount('node', 1))
 await awaitEditorFocus()
 await page.keyboard.type('TabNode')
-await page.keyboard.press('Tab') // → 描述框
-await page.keyboard.press('Tab') // → 类目 select
+await page.keyboard.press('Tab') // → 类目 select（紧邻名称，一次直达）
 await page.keyboard.press('Enter')
 await page.waitForTimeout(300)
 expectEq('未选类目 Tab 回车不建点（节点计数）', await nodeCount(), '2')

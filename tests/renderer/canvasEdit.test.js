@@ -13,7 +13,7 @@ describe('clampEditorPos', () => {
     expect(clampEditorPos(800, 600, 100, 200)).toEqual({ x: 100, y: 200 })
   })
 
-  it('超出右边界钳回（编辑器宽 380 高 90 估计值）', () => {
+  it('超出右边界钳回（编辑器宽 380 高 100 估计值）', () => {
     const r = clampEditorPos(800, 600, 790, 200)
     expect(r.x).toBeLessThanOrEqual(800)
     expect(r.x).toBe(800 - 380)
@@ -21,7 +21,7 @@ describe('clampEditorPos', () => {
 
   it('超出下边界钳回', () => {
     const r = clampEditorPos(800, 600, 100, 590)
-    expect(r.y).toBe(600 - 90)
+    expect(r.y).toBe(600 - 100)
   })
 
   it('负坐标钳到 8（留边）', () => {
