@@ -13,7 +13,7 @@
   >
     <template v-if="mode === 'node'">
       <!-- 两行布局：行1 名称+可选描述（Tab 序与填写次序一致——类目选定即整单
-           提交，可选字段必须排在类目之前）；行2 类目+大小档位 -->
+           提交，可选字段必须排在类目之前）；行2 类目+大小档位+自定义数框 -->
       <div class="xk-canvas-editor-node">
         <div class="xk-canvas-editor-row">
           <a-input
@@ -24,12 +24,14 @@
             size="small"
             @keydown.enter="onNameEnter"
           />
-          <a-input
+          <!-- 描述：多行文本域（同侧栏描述字段），Enter 换行不提交——提交节奏
+               仍由「类目选定即整单提交」独占；可拖角拉伸（见样式注释） -->
+          <a-textarea
             v-model:value="nodeDes"
             class="xk-canvas-editor-des"
             placeholder="描述（可选）"
             size="small"
-            @keydown.enter="onDesEnter"
+            :rows="1"
           />
         </div>
         <div class="xk-canvas-editor-row">
@@ -72,6 +74,15 @@
             <a-radio-button :value="50"><i class="xk-size-dot xk-dot-m" />中</a-radio-button>
             <a-radio-button :value="80"><i class="xk-size-dot xk-dot-l" />大</a-radio-button>
           </a-radio-group>
+          <!-- 自定义大小数框：与档位 radio 共用 sizeTier（参照侧栏节点大小
+               1~100）——点档位同步数框，改数框即脱离档位（radio 全灭） -->
+          <a-input-number
+            v-model:value="sizeTier"
+            class="xk-canvas-editor-size-custom"
+            size="small"
+            :min="1"
+            :max="100"
+          />
         </div>
       </div>
     </template>
@@ -109,8 +120,9 @@ const category = ref(undefined)
 const catOpen = ref(false)
 const newCategory = ref('')
 
-// 大小档位：30/50/80 映射 symbolSize，默认中=50（与历史固定值一致）。纯参数
-// 不参与提交流——类目选定即整单提交的节奏不变，不碰档位即零打扰
+// 大小：档位 30/50/80（默认中=50，与历史固定值一致）与自定义数框共用此值——
+// 点档位同步数框、数框改值即脱离档位（radio 全灭=自定义），1~100 与侧栏节点
+// 大小一致。纯参数不参与提交流——类目选定即整单提交的节奏不变，零打扰
 const sizeTier = ref(50)
 
 // 就地新增的类目先记本地（节点落库后 updateChart watch 会从节点重算 categoryItems）
@@ -151,17 +163,6 @@ const onNameEnter = (e) => {
   if (isComposingEnter(e)) return
   // 已选过类目：直接提交。antd 的 change 只在值变化时发射，重选同一项
   // 不会再触发——"先选类目再输名字"的流会卡死在选了却建不出
-  if (category.value) {
-    submitNode()
-    return
-  }
-  openCategory()
-}
-
-/** 描述框回车与名称框同语义：已选类目即提交，否则转类目下拉。描述是可选
- *  字段，快速路径（名称回车直接开下拉）不经此框，零打扰 */
-const onDesEnter = (e) => {
-  if (isComposingEnter(e)) return
   if (category.value) {
     submitNode()
     return
@@ -270,8 +271,19 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
   gap: 6px;
 }
 
+/* 描述：可拖角双向拉伸（antd reset 只给 textarea resize:vertical，这里放开
+   both——长描述先拉大再写）；min 兜住拖拽下限不至拖没了，宽高超出后编辑器
+   占地随之增长（clampEditorPos 的估算不追手改尺寸，只管初定位） */
 .xk-canvas-editor-des {
   width: 200px;
+  min-width: 120px;
+  min-height: 24px;
+  resize: both;
+}
+
+/* 自定义大小数框：只放 1~100 三位数（antd 默认 90px 偏宽，行 2 预算紧） */
+.xk-canvas-editor-size-custom {
+  width: 80px;
 }
 
 /* 连边态单框独占一行：加宽到整句提示可见（14px 字号、17 个全角字符最坏

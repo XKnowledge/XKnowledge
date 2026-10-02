@@ -1,7 +1,8 @@
 // 冒烟驱动：画布直操编辑——双击空白建点（就地输入名称回车 → 类目下拉内新增
-// 「核心」→ 选定即建成：data-node-count/图例断言；Beta 轮带可选描述，
-// data-last-node-des 断言；大小档位默认「中」，Gamma
-// 轮走「大」档）、Ctrl+按住节点拖出连线的
+// 「核心」→ 选定即建成：data-node-count/图例断言；Beta 轮带可选描述——多行
+// 文本域可拖角拉伸（resize:both 断言）、Tab 流越过描述框，data-last-node-des
+// 断言；大小档位默认「中」，Gamma 轮走「大」档、自定义轮数框直填 65 落库）、
+// Ctrl+按住节点拖出连线的
 // 确定性部分（预览线出现 → 松开空白处静默放弃、预览消失）、无 Ctrl 普通拖
 // 不劫持为连线（DragControls 移动节点，预览/编辑器均不出现）、Esc 取消路径、
 // Meta+拖不劫持（建边手势平台分流：macOS ⌘、非 mac 只认 Ctrl，防双收化回归）、
@@ -284,8 +285,9 @@ expectTrue('下拉展开态 Esc 关闭编辑器', await waitEditorCount('node', 
 expectEq('下拉态 Esc 取消不建点（节点计数）', await nodeCount(), '1')
 await shot('065-esc-with-dropdown')
 
-// 5. 再建 Beta（带可选描述）：Tab 进描述框输入 → 描述回车同样转类目下拉 →
-//    下拉此时已有「核心」，方向键+回车选定（键盘流全程不落鼠标）
+// 5. 再建 Beta（带可选描述）：Tab 进描述框（多行文本域，可拖角拉伸）输入 →
+//    Tab 到类目 select（未展开）→ 回车转展开下拉（6.6 守卫的正向路径）→
+//    方向键+回车选定（键盘流全程不落鼠标）
 await settleMouse(PB.x, PB.y)
 await page.mouse.dblclick(PB.x, PB.y)
 expectTrue('Beta 双击出现建点编辑器', await waitEditorCount('node', 1))
@@ -294,7 +296,15 @@ await page.keyboard.type('Beta')
 await page.keyboard.press('Tab') // → 描述框（可选字段排在类目前）；中文输入走 fill
 const desBox = page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-des')
 await desBox.fill('Beta 的描述')
-await desBox.press('Enter') // 描述回车与名称回车同语义：转类目下拉
+expectTrue(
+  '描述框为可拖角拉伸的多行文本域（resize: both）',
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-canvas-edit-mode="node"] .xk-canvas-editor-des')
+    return !!el && el.tagName === 'TEXTAREA' && getComputedStyle(el).resize === 'both'
+  })
+)
+await page.keyboard.press('Tab') // → 类目 select（下拉未开）
+await page.keyboard.press('Enter') // 未展开态回车只转展开，不替选
 await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
 await page.keyboard.press('ArrowDown')
 await page.keyboard.press('Enter')
@@ -384,6 +394,31 @@ expectTrue('未选类目回车转为展开下拉', tabOpenedDropdown)
 await page.keyboard.press('Escape') // 下拉展开态一次 Esc 取消整单（4.5 已测路径）
 expectTrue('Tab 流 Esc 后编辑器消失', await waitEditorCount('node', 0))
 await shot('086-tab-enter-guard')
+
+// 6.7 自定义大小轮：档位旁数框直填 65（1~100，同侧栏节点大小语义）——数框与
+//     档位共用一值，改数框即脱离档位（radio 全灭），建成落库 65；防转发层丢
+//     自定义值的回归（同 6.5 的 80 断言动机）
+const PD = { x: box.x + box.width * 0.8, y: box.y + box.height * 0.3 } // Delta 落点
+await settleMouse(PD.x, PD.y)
+await page.mouse.dblclick(PD.x, PD.y)
+expectTrue('自定义轮双击出现建点编辑器', await waitEditorCount('node', 1))
+await awaitEditorFocus()
+await page.keyboard.type('Delta')
+const numBox = page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-size-custom input')
+await numBox.fill('65')
+await numBox.press('Enter') // 数框回车落值；焦点留在数框不挡下面的鼠标流
+expectTrue(
+  '自定义值后档位 radio 全灭（脱离预设）',
+  (await page
+    .locator('[data-canvas-edit-mode="node"] .ant-radio-button-wrapper-checked')
+    .count()) === 0
+)
+await page.locator('[data-canvas-edit-mode="node"] .xk-canvas-editor-cat').click()
+await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
+await dropdown.locator('.ant-select-item-option', { hasText: '核心' }).click()
+expectEq('Delta 建成（节点计数）', await awaitNodeCount('3'), '3')
+expectEq('自定义大小落库', await wrap.getAttribute('data-last-node-size'), '65')
+await shot('087-custom-size')
 
 // 7. 画布右缘双击：编辑器出现且右边界不溢出容器（clampEditorPos 钳制兑现）。
 //    box 重量化：途中若有节点点击误开侧栏，画布已缩窄，旧坐标会落进侧栏
