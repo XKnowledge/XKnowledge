@@ -1,12 +1,13 @@
 /**
- * 画布直操编辑的纯工具：位置钳制与投影拾取。手势层在 XkGraph3D 里
+ * 画布直操编辑的纯工具：位置钳制、投影拾取与框选几何。手势层在 XkGraph3D 里
  * 依赖 graph 实例（graph2ScreenCoords），这里只放可单测的纯计算。
  */
 
 /** 就地编辑器的估计占位（宽 380 / 高 90）：贴边时翻回容器内，留 8px 边距。
  *  宽取建点态估算值 ~374px（8 padding + 150 名称 + 6 gap + 200 描述 + 8 padding
- *  + 2 border，行2 类目+大小档更窄）；高按两行输入（~68px）上取整留余量。
- *  连边态单框更窄更矮，按建点态钳制即可 */
+ *  + 2 border；行2 类目+档位+自定义数框 ~368px 更窄）；高按两行输入（~68px）
+ *  上取整留余量。描述文本域可拖角拉伸、超出估算时钳制兜不住——本值只为初
+ *  定位贴边兜底，不追手改尺寸。连边态单框更窄更矮，按建点态钳制即可 */
 const EDITOR_W = 380
 const EDITOR_H = 90
 const EDGE_MARGIN = 8
@@ -33,6 +34,49 @@ export const pickNearestNode = (projected, cx, cy, threshold = 16) => {
     }
   }
   return best
+}
+
+/**
+ * Shift+拖框选的矩形几何（纯计算，手势层在 XkGraph3D 依赖 graph 实例）。
+ * 三个函数配套：buildMarqueeRect 归一化拖拽矩形，pointInRect 判节点投影，
+ * segmentIntersectsRect 判边（两端点屏幕投影线段与矩形相交即选中）。
+ */
+
+/** 拖拽起止点归一化为非负宽高的矩形（任意拖拽方向都成立） */
+export const buildMarqueeRect = (x1, y1, x2, y2) => ({
+  x: Math.min(x1, x2),
+  y: Math.min(y1, y2),
+  w: Math.abs(x2 - x1),
+  h: Math.abs(y2 - y1)
+})
+
+/** 点是否在矩形内（边界含入：贴框线拖拽的节点算选中） */
+export const pointInRect = (px, py, rect) =>
+  px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h
+
+/** 线段 (x1,y1)-(x2,y2) 与线段 (ax,ay)-(bx,by) 是否相交（端点相触也算） */
+const segmentsIntersect = (x1, y1, x2, y2, ax, ay, bx, by) => {
+  const d = (x2 - x1) * (by - ay) - (y2 - y1) * (bx - ax)
+  if (d === 0) return false // 平行/共线：交叠判定复杂，框选按不相交处理（保守）
+  const t = ((ax - x1) * (by - ay) - (ay - y1) * (bx - ax)) / d
+  const u = ((ax - x1) * (y2 - y1) - (ay - y1) * (x2 - x1)) / d
+  return t >= 0 && t <= 1 && u >= 0 && u <= 1
+}
+
+/**
+ * 线段与轴对齐矩形是否相交：任一端点在矩形内直接命中，否则逐条测矩形
+ * 四边。两端都在框外但线段穿过框（斜穿/贯穿）同样命中——边的语义是
+ * 「被框住」，与节点「球心在框内」一致地取几何相交。
+ */
+export const segmentIntersectsRect = (x1, y1, x2, y2, rect) => {
+  if (pointInRect(x1, y1, rect) || pointInRect(x2, y2, rect)) return true
+  const { x, y, w, h } = rect
+  return (
+    segmentsIntersect(x1, y1, x2, y2, x, y, x + w, y) || // 上边
+    segmentsIntersect(x1, y1, x2, y2, x, y + h, x + w, y + h) || // 下边
+    segmentsIntersect(x1, y1, x2, y2, x, y, x, y + h) || // 左边
+    segmentsIntersect(x1, y1, x2, y2, x + w, y, x + w, y + h) // 右边
+  )
 }
 
 /**

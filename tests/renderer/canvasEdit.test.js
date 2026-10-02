@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { clampEditorPos, pickNearestNode, focusPlaneDistance } from '../../src/renderer/src/utils/canvasEdit'
+import {
+  clampEditorPos,
+  pickNearestNode,
+  focusPlaneDistance,
+  buildMarqueeRect,
+  pointInRect,
+  segmentIntersectsRect
+} from '../../src/renderer/src/utils/canvasEdit'
 
 describe('clampEditorPos', () => {
   it('位置在安全区内原样返回', () => {
@@ -91,14 +98,71 @@ describe('focusPlaneDistance', () => {
 
   it('非有限坐标节点被忽略', () => {
     expect(
-      focusPlaneDistance(
-        { x: 0, y: 0, z: 100 },
-        { x: 0, y: 0, z: 0 },
-        [
-          { x: NaN, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 }
-        ]
-      )
+      focusPlaneDistance({ x: 0, y: 0, z: 100 }, { x: 0, y: 0, z: 0 }, [
+        { x: NaN, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 }
+      ])
     ).toBeCloseTo(100, 5)
+  })
+})
+
+describe('buildMarqueeRect（框选矩形归一化）', () => {
+  it('右下方向拖拽：起点即左上角', () => {
+    expect(buildMarqueeRect(100, 100, 300, 250)).toEqual({ x: 100, y: 100, w: 200, h: 150 })
+  })
+
+  it('左上方向拖拽：宽高非负、左上角随拖拽方向翻转', () => {
+    expect(buildMarqueeRect(300, 250, 100, 100)).toEqual({ x: 100, y: 100, w: 200, h: 150 })
+  })
+
+  it('Shift+单击未拖（起止同点）：零尺寸矩形，选择自然为空', () => {
+    expect(buildMarqueeRect(120, 80, 120, 80)).toEqual({ x: 120, y: 80, w: 0, h: 0 })
+  })
+})
+
+describe('pointInRect（节点投影是否入框）', () => {
+  const rect = { x: 100, y: 100, w: 200, h: 150 }
+
+  it('框内命中', () => {
+    expect(pointInRect(150, 200, rect)).toBe(true)
+    expect(pointInRect(100, 100, rect)).toBe(true)
+  })
+
+  it('边界含入：贴框线的球心算选中', () => {
+    expect(pointInRect(300, 250, rect)).toBe(true)
+    expect(pointInRect(100, 250, rect)).toBe(true)
+  })
+
+  it('框外不命中', () => {
+    expect(pointInRect(99, 200, rect)).toBe(false)
+    expect(pointInRect(301, 100, rect)).toBe(false)
+    expect(pointInRect(150, 251, rect)).toBe(false)
+  })
+})
+
+describe('segmentIntersectsRect（边投影线段与框相交）', () => {
+  const rect = { x: 100, y: 100, w: 200, h: 150 }
+
+  it('任一端点在框内：命中（边连着框内节点）', () => {
+    expect(segmentIntersectsRect(50, 50, 150, 150, rect)).toBe(true)
+    expect(segmentIntersectsRect(150, 150, 500, 500, rect)).toBe(true)
+  })
+
+  it('两端都在框外但斜穿框：命中（边横贯框住的区域）', () => {
+    expect(segmentIntersectsRect(0, 175, 500, 175, rect)).toBe(true)
+    expect(segmentIntersectsRect(0, 0, 500, 400, rect)).toBe(true)
+  })
+
+  it('两端框外且不相交：不命中', () => {
+    expect(segmentIntersectsRect(0, 50, 500, 50, rect)).toBe(false)
+    expect(segmentIntersectsRect(400, 0, 500, 400, rect)).toBe(false)
+  })
+
+  it('端点恰好落在框边上：命中（贴框拖拽的边也算被框住）', () => {
+    expect(segmentIntersectsRect(150, 100, 400, 100, rect)).toBe(true)
+  })
+
+  it('与框边平行且在框外的线段：不命中', () => {
+    expect(segmentIntersectsRect(0, 300, 500, 300, rect)).toBe(false)
   })
 })

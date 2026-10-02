@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   mergeGraphNodes,
   linkEnd,
+  linkKey,
   planHighlightRepaint,
   reconcileNodeHighlight,
   labelThreshold,
@@ -302,6 +303,103 @@ describe('planHighlightRepaint：选中高亮与其他状态的组合', () => {
     expect(nodeRepaints).toEqual([
       [nodes[0], categoryColors.get('x')],
       [nodes[2], HL_COLOR]
+    ])
+  })
+})
+
+describe('planHighlightRepaint：框选批量集合（节点名集 + 边三元组键集）', () => {
+  const nodes = [
+    { name: 'A', category: 'x' },
+    { name: 'B', category: 'y' },
+    { name: 'C', category: 'x' }
+  ]
+  const links = [
+    { source: 'A', target: 'B', name: 'e1' },
+    { source: 'A', target: 'B', name: 'e2' }, // 同端点多重边：靠 name 区分
+    { source: { name: 'B' }, target: 'C', name: 'e3' } // d3 反解形态
+  ]
+  const keyOf = (l) => linkKey(l)
+
+  it('新增批量选中：集合内节点/边上 hl，集合外不动', () => {
+    const { nodeRepaints, linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLinks: [],
+      nextNodes: ['A', 'C'],
+      nextLinks: [keyOf(links[0]), keyOf(links[2])]
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], HL_COLOR],
+      [nodes[2], HL_COLOR]
+    ])
+    expect(linkRepaints).toEqual([
+      [links[0], HL_COLOR],
+      [links[2], HL_COLOR]
+    ])
+  })
+
+  it('多重边只选中键匹配的那条：同端点同名靠 name、同端点异名靠三元组区分', () => {
+    const { linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLinks: [],
+      nextNodes: [],
+      nextLinks: [keyOf(links[1])] // 只选 e2
+    })
+    expect(linkRepaints).toEqual([[links[1], HL_COLOR]])
+  })
+
+  it('清空框选：集合内全部还原（节点回类目色、边回底色）', async () => {
+    const { assignCategoryColors } = await import('../../src/renderer/src/utils/categoryColor.js')
+    const categoryColors = assignCategoryColors(['x', 'y'])
+    const { nodeRepaints, linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: ['A', 'C'],
+      prevLinks: [keyOf(links[0]), keyOf(links[2])],
+      nextNodes: [],
+      nextLinks: [],
+      categoryColors
+    })
+    expect(nodeRepaints).toEqual([
+      [nodes[0], categoryColors.get('x')],
+      [nodes[2], categoryColors.get('x')]
+    ])
+    expect(linkRepaints).toEqual([
+      [links[0], LINK_BASE_COLOR],
+      [links[2], LINK_BASE_COLOR]
+    ])
+  })
+
+  it('集合不变时不产生任何重着色（框选后重复 emit 同集合）', () => {
+    const plan = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: ['A'],
+      prevLinks: [keyOf(links[0])],
+      nextNodes: ['A'],
+      nextLinks: [keyOf(links[0])]
+    })
+    expect(plan).toEqual({ nodeRepaints: [], linkRepaints: [] })
+  })
+
+  it('批量选中边不被聚焦灰化压住（与单选边同优先级）', () => {
+    const { linkRepaints } = planHighlightRepaint({
+      nodes,
+      links,
+      prevNodes: [],
+      prevLinks: [],
+      nextNodes: [],
+      nextLinks: [keyOf(links[0])],
+      prevDimNodes: null,
+      nextDimNodes: new Set(['A'])
+    })
+    expect(linkRepaints).toEqual([
+      [links[0], HL_COLOR],
+      [links[1], FOCUS_DIM_COLOR],
+      [links[2], FOCUS_DIM_COLOR]
     ])
   })
 })

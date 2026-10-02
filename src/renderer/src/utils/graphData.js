@@ -66,6 +66,10 @@ export const mergeGraphNodes = (newNodes, oldNodes) => {
 /** d3 布局会把 link 的 source/target 反解为节点对象；归一化回名字符串再比较 */
 export const linkEnd = (v) => (typeof v === 'object' && v !== null ? v.name : v)
 
+/** 边的三元组键：两端名 + 边名（顺序敏感），与 historyActions.sameEdge 同语义。
+ *  框选批量边的选中集用它做成员判定——多重边（同端点对不同边名）天然区分 */
+export const linkKey = (l) => `${linkEnd(l.source)}\u0000${linkEnd(l.target)}\u0000${l.name}`
+
 /** 「小节点」判定：按大小排序后最小的 60% 视为小节点，开关关闭时隐藏其名称 */
 const SMALL_NODE_RATIO = 0.6
 /**
@@ -187,6 +191,9 @@ export const focusNeighborhood = (nodes, links, focusName, hops) => {
  * @param {Set<string>|Array|null} prevSearchNodes/nextSearchNodes 上一次/本次的搜索命中
  *   集合；null/不传表示搜索无命中（向后兼容旧调用）
  * @param {string|null} prevSearchActive/nextSearchActive 上一次/本次的搜索当前项名
+ * @param {Iterable<string>|null} prevLinks/nextLinks 上一次/本次的批量选中边三元组键
+ *   集合（linkKey 产物；框选高亮用）；null/不传表示无（向后兼容旧调用），
+ *   prevNodes/nextNodes 传入单选+框选合并后的节点名集合即可复用节点侧通道
  * @param {Map<string,string>} categoryColors 本图类型集合的色映射（assignCategoryColors 产物），
  *   退出高亮/聚焦的还原色从这里查；查询统一 get(String(category ?? ''))
  * @param {object} sceneColors 场景色套（SCENE_COLORS.light/dark），缺省浅色（现状）
@@ -199,6 +206,8 @@ export const planHighlightRepaint = ({
   prevLink,
   nextNodes,
   nextLink,
+  prevLinks,
+  nextLinks,
   prevDimNodes,
   nextDimNodes,
   prevSearchNodes,
@@ -212,6 +221,8 @@ export const planHighlightRepaint = ({
   const nextSet = new Set(nextNodes ?? [])
   const prevSearch = new Set(prevSearchNodes ?? [])
   const nextSearch = new Set(nextSearchNodes ?? [])
+  const prevSelLinks = new Set(prevLinks ?? [])
+  const nextSelLinks = new Set(nextLinks ?? [])
   // 节点组合色：高亮 > 搜索当前项 > 搜索命中 > 聚焦外灰 > 类目色
   const nodeColorOf = (n, hlSet, active, searchSet, dim) =>
     hlSet.has(n.name)
@@ -223,9 +234,9 @@ export const planHighlightRepaint = ({
           : dim && !dim.has(n.name)
             ? sceneColors.dim
             : categoryColors?.get(String(n.category ?? ''))
-  // 边组合色：高亮 > 任一端不在邻域的灰 > 底色
-  const linkColorOf = (l, hl, dim) =>
-    hl
+  // 边组合色：高亮（单选或批量选中）> 任一端不在邻域的灰 > 底色
+  const linkColorOf = (l, hl, selLinks, dim) =>
+    hl || selLinks.has(linkKey(l))
       ? sceneColors.hl
       : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
         ? sceneColors.dim
@@ -238,8 +249,8 @@ export const planHighlightRepaint = ({
   }
   const linkRepaints = []
   for (const l of links ?? []) {
-    const was = linkColorOf(l, isSameLink(l, prevLink), prevDimNodes)
-    const is = linkColorOf(l, isSameLink(l, nextLink), nextDimNodes)
+    const was = linkColorOf(l, isSameLink(l, prevLink), prevSelLinks, prevDimNodes)
+    const is = linkColorOf(l, isSameLink(l, nextLink), nextSelLinks, nextDimNodes)
     if (was !== is) linkRepaints.push([l, is])
   }
   return { nodeRepaints, linkRepaints }

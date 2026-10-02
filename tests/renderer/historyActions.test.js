@@ -214,3 +214,86 @@ describe('importOutline', () => {
     expect(chartData.links).toEqual(entry.data.links)
   })
 })
+
+describe('deleteSelection（框选批量删除）', () => {
+  // 模拟 ChartView.deleteSelection：框选删 A、B 两节点（连带 e1、e2）+ 直选 e3
+  const buildSelectionHistory = (chart) => {
+    const names = new Set(['A', 'B'])
+    const linkIdxs = new Set([2]) // 直选 e3
+    const deletedNodes = chart.nodes.filter((n) => names.has(n.name))
+    const removedLinks = chart.links.filter(
+      (l, i) => linkIdxs.has(i) || names.has(l.source) || names.has(l.target)
+    )
+    return {
+      act: 'deleteSelection',
+      data: {
+        nodes: JSON.parse(JSON.stringify(deletedNodes)),
+        links: JSON.parse(JSON.stringify(removedLinks))
+      }
+    }
+  }
+
+  it('undo 整批恢复：节点 + 直选边 + 删点连带边一步回全', () => {
+    const chart = multiEdgeChart()
+    const history = buildSelectionHistory(chart)
+    // 模拟 deleteSelection 的删除路径（单次 filter，直选 + 连带一并移除）
+    const names = new Set(['A', 'B'])
+    const linkIdxs = new Set([2])
+    chart.nodes = chart.nodes.filter((n) => !names.has(n.name))
+    chart.links = chart.links.filter(
+      (l, i) => !linkIdxs.has(i) && !names.has(l.source) && !names.has(l.target)
+    )
+    expect(chart.nodes.map((n) => n.name)).toEqual(['C'])
+    expect(chart.links).toEqual([])
+
+    expect(applyUndo(chart, history)).toBe(true)
+    expect([...chart.nodes.map((n) => n.name)].sort()).toEqual(['A', 'B', 'C'])
+    expect([...chart.links.map((l) => l.name)].sort()).toEqual(['e1', 'e2', 'e3'])
+  })
+
+  it('redo 再删整批：节点按名、边按对象引用（undo push 回的正是 history 持有的对象）', () => {
+    const chart = multiEdgeChart()
+    const history = buildSelectionHistory(chart)
+    chart.nodes = chart.nodes.filter((n) => n.name !== 'A' && n.name !== 'B')
+    chart.links = []
+    applyUndo(chart, history) // 全部 push 回（data 持有的对象）
+
+    expect(applyRedo(chart, history)).toBe(true)
+    expect(chart.nodes.map((n) => n.name)).toEqual(['C'])
+    expect(chart.links).toEqual([])
+  })
+
+  it('redo 只删本批引用，同端点三元组的非本批边保留（多重边安全）', () => {
+    const chart = multiEdgeChart()
+    const history = buildSelectionHistory(chart)
+    chart.nodes = chart.nodes.filter((n) => n.name !== 'A' && n.name !== 'B')
+    chart.links = []
+    applyUndo(chart, history)
+    // undo 与 redo 之间用户手工建了同端点同名的边（不同对象）
+    chart.links.push({ source: 'A', target: 'B', name: 'e1', des: '手工重建' })
+
+    expect(applyRedo(chart, history)).toBe(true)
+    // A、B 是本批节点仍被删，但手工边不是本批引用——节点删了边悬空留着
+    // （与 createNode 撤销对齐：引用本批节点的既有边保留不动）
+    expect(chart.nodes.map((n) => n.name)).toEqual(['C'])
+    expect(chart.links).toEqual([{ source: 'A', target: 'B', name: 'e1', des: '手工重建' }])
+  })
+
+  it('只框选边不选节点：节点不动，只删直选边', () => {
+    const chart = multiEdgeChart()
+    const history = {
+      act: 'deleteSelection',
+      data: {
+        nodes: [],
+        links: [JSON.parse(JSON.stringify(chart.links[1]))] // 直选 e2
+      }
+    }
+    chart.links = chart.links.filter((l) => l.name !== 'e2')
+
+    expect(applyUndo(chart, history)).toBe(true)
+    expect(chart.links.map((l) => l.name).sort()).toEqual(['e1', 'e2', 'e3'])
+    expect(chart.nodes.map((n) => n.name)).toEqual(['A', 'B', 'C'])
+    expect(applyRedo(chart, history)).toBe(true)
+    expect(chart.links.map((l) => l.name)).toEqual(['e1', 'e3'])
+  })
+})

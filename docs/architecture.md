@@ -43,7 +43,7 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 ┌──────────────▼──────────────── 渲染进程 (src/renderer) ──────────▼───────────────────────┐
 │  vue-router:  / → AddView（首页示例图库）           /chart → ChartView（图表编辑页）        │
 │  ChartView ── XkMenu（下拉菜单）/ 工具栏按钮 / 全局快捷键                                   │
-│      ├── XkGraph3D        3D 力导向图（渲染、图例、高亮、导出、双击建点/拖拽连边就地编辑）    │
+│      ├── XkGraph3D        3D 力导向图（渲染、图例、高亮、导出、双击建点/拖拽连边/框选批量删） │
 │      └── 侧边栏表单        XkCurrentNode / XkCurrentEdge                                    │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
         src/shared/ipc-channels.js：IPC 通道名单，主进程与 preload 共同引用
@@ -313,11 +313,14 @@ vitest、生成脚本三方直接 import 同一份逻辑；`exampleService.js` �
 `watch(shortcutWatch)` 按 `actionMap` 分发到 `saveFile / deleteNode / undo / ...`。
 
 快捷键（`window.keydown`）：Ctrl+S 保存、Ctrl+Z 撤销、Ctrl+Y 重做、
-Delete 删除**最后点击**的对象（点击节点/边时对称清对方的选中 index，据此分发
+Delete **框选集优先**——有框选（Shift+拖，见 §8 手势层）时批量删（`delete_selection`，
+一条 `deleteSelection` 历史承载被选节点 + 直选边 + 删点连带边），否则删**最后点击**
+的对象（点击节点/边时对称清对方的选中 index，据此分发
 `delete_node`/`delete_edge`，无选中时 `<0` 守卫兜底无动作）、Ctrl+R 阻止刷新。修饰键
 判定在 `utils/platformModifier.js`：键盘快捷键全平台 Ctrl/⌘ 双收
 （`shortcutModifierActive`），建边拖拽手势按平台分流（`linkDragModifierActive`，
-macOS ⌘/其余 Ctrl——macOS 的 Ctrl+点按是系统右键语义，不承担建边），提示条与
+macOS ⌘/其余 Ctrl——macOS 的 Ctrl+点按是系统右键语义，不承担建边），框选拖拽
+全平台统一 Shift（`marqueeModifierActive`，Shift 拖拽无平台保留语义）；提示条与
 XkMenu 快捷键文案经 `modifierKeyLabel` 按平台显示 ⌘/Ctrl；
 Delete/Ctrl+Z/Ctrl+Y 在焦点位于
 INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载时移除监听，防止同窗口反复
@@ -416,11 +419,12 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
 ### 7.5 撤销 / 重做
 
 历史栈元素为 `{ act, ... }`，`act ∈ { createNode, deleteNode, changeNode, createEdge,
-deleteEdge, changeEdge }`；创建/删除携带 `data`（删除节点额外携带被连带删除的
-`links`），修改携带 `old/new`。`addHistory`（XkUtils）追加前先**截断当前位置之后的
-废弃 redo 分支**，否则 undo 后做新操作会残留过期记录，再次 undo/redo 会重放与当前
-状态不符的操作。撤销/重做的逆操作以策略对象（`actionHandlers` 映射）实现，按节点
-name 定位目标。历史为内存态，不落盘。
+deleteEdge, changeEdge, deleteSelection }`；创建/删除携带 `data`（删除节点额外携带被
+连带删除的 `links`，框选批量删除的 `deleteSelection` 携带整批 `{ nodes, links }`——
+含直选边与删点连带边），修改携带 `old/new`。`addHistory`（XkUtils）追加前先
+**截断当前位置之后的废弃 redo 分支**，否则 undo 后做新操作会残留过期记录，再次
+undo/redo 时会重放与当前状态不符的操作。撤销/重做的逆操作以策略对象
+（`actionHandlers` 映射）实现，按节点 name 定位目标。历史为内存态，不落盘。
 
 ## 8. 3D 渲染层（XkGraph3D.vue）
 
@@ -429,6 +433,13 @@ name 定位目标。历史为内存态，不落盘。
 - **数据拷贝**：图实例吃的是 `chartData` 的拷贝（附加内部 `__idx` 与 d3 坐标字段），
   增量刷新时按 name 匹配旧节点**保留坐标与拖拽锚点**，编辑后已布局的图不跳；发给父
   组件的点击数据经 `pureNode/pureLink` 剥离内部字段。
+- **画布手势层**：dblclick/pointer 事件直接挂 canvas DOM。双击空白建点、⌘/Ctrl+拖
+  连线之外，**Shift+拖为框选**（`marquee`）：矩形以 SVG 覆盖层随拖拽绘制，松手按屏幕
+  投影拾取——框内节点 + 投影线段与框相交的边（隐形/无坐标对象不参与），emit
+  `marquee-select` 给 ChartView 落选中集（`selectionNodes/selectionLinks` props 回流
+  高亮，Delete 批量删）。框选与连线共用 capture 阶段 pointerdown 截断传播独占手势
+  （DragControls/OrbitControls 收不到 pointerdown 不抢拖）；矩形归一/点入框/线段
+  相交的纯几何在 `utils/canvasEdit.js` 可单测。
 - **节点大小语义**：three-forcegraph 半径 = ∛val × nodeRelSize，直接传 symbolSize 时
   40/50/70 几乎不可辨；`nodeVal = symbolSize³ / 2500` 让半径与 symbolSize 线性成正比，
   对齐旧 2D 图语义。

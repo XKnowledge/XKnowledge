@@ -46,11 +46,14 @@
             :show-small-labels="showSmallLabels"
             :focus-node-names="focusNodeNames"
             :focus-deep="focusMode === 'deep'"
+            :selection-nodes="selectionNodeNames"
+            :selection-links="selectionLinkIndexes"
             @node-click="onGraphNodeClick"
             @link-click="onGraphLinkClick"
             @background-click="onGraphBackgroundClick"
             @canvas-create-node="onCanvasCreateNode"
             @canvas-create-edge="onCanvasCreateEdge"
+            @marquee-select="onGraphMarqueeSelect"
           />
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
@@ -259,6 +262,12 @@ const highlightEdgeIndex = ref(-1)
 // 选中高亮节点名（''=无）。name 键：增删后 index 漂移，name 全图唯一稳定；
 // 与 highlightEdgeIndex 互斥——同一时刻图上最多一个高亮对象
 const highlightNodeName = ref('')
+// Shift+拖框选的批量选中集：节点名 + 边 index（chartData.links 索引，选择时
+// 快照；后续任何单击选中/结构变更都会清空，index 不会失配）。与单击高亮
+// （highlightNodeName/highlightEdgeIndex）互斥——Delete 按框选优先分发的
+// 语义只能有一个「当前删除对象」
+const selectionNodeNames = ref([])
+const selectionLinkIndexes = ref([])
 const highlightEdgeObj = computed(() => {
   const i = highlightEdgeIndex.value
   const links = xkContext.value.chartData?.links
@@ -527,11 +536,17 @@ const shortcut = (event) => {
 
     // 图表区域快捷键（输入文本时不触发）
     delete: {
-      // Delete 删「最后一个点击的对象」：最后点过边（且未再点节点）删边，
-      // 否则删节点；两边 index 在对方被点击时对称清空，无选中时各自
-      // 函数的 <0 守卫兜底，按键无动作
+      // Delete 删「框选集优先，否则最后点击的对象」：框选批量删（deleteSelection）；
+      // 无框选时最后点过边（且未再点节点）删边，否则删节点；两边 index 在对方
+      // 被点击时对称清空，无选中时各自函数的 <0 守卫兜底，按键无动作
       match: () => !isTypingContext && key === 'delete',
-      action: () => triggerShortcut(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
+      action: () => {
+        if (selectionNodeNames.value.length || selectionLinkIndexes.value.length) {
+          triggerShortcut('delete_selection')
+          return
+        }
+        triggerShortcut(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
+      }
     },
     'ctrl+z': {
       match: () => !isTypingContext && shortcutModifierActive(event) && key === 'z',
@@ -568,6 +583,7 @@ watch(shortcutWatch, () => {
     open_file: openFile,
     delete_node: deleteNode,
     delete_edge: deleteEdge,
+    delete_selection: deleteSelection,
     undo: undo,
     redo: redo,
     open_settings: () => settingsRef.value?.open(),
@@ -596,6 +612,10 @@ const resetRefData = () => {
   resetNodeRef(currentNode)
   currentEdgeDataIndex.value = -1
   resetEdgeRef(currentEdge)
+  // 框选集同步清空：删除/撤销/重做/保存/切换侧栏后选中集已失效
+  // （节点可能已不在图内、边 index 已漂移）
+  selectionNodeNames.value = []
+  selectionLinkIndexes.value = []
 }
 
 const resetSider = () => {
@@ -675,6 +695,9 @@ const onGraphNodeClick = (nodeData, index) => {
   // 对称清对方的选中态：Delete 删「最后一个点击的对象」，选中节点后
   // 旧边选中态作废（防菜单「删除连接」误删旧边）
   currentEdgeDataIndex.value = -1
+  // 单击选中与框选互斥：Delete 的删除对象切换为本次点击的节点
+  selectionNodeNames.value = []
+  selectionLinkIndexes.value = []
   // 聚焦/深度聚焦开着时单击即换焦点（与「选中看属性」一次点击两个语义，不冲突）
   if (focusMode.value !== 'off' && nodeData?.name) focusNodeId.value = nodeData.name
 
@@ -692,8 +715,20 @@ const onGraphLinkClick = (linkData, index) => {
   currentNodeDataIndex.value = -1
   highlightNodeName.value = ''
   highlightEdgeIndex.value = highlightEdgeIndex.value === index ? -1 : index
+  selectionNodeNames.value = []
+  selectionLinkIndexes.value = []
 
   if (!siderVisible.value) switchSider()
+}
+
+/** Shift+拖框选提交（XkGraph3D 松手拾取后 emit）：集体高亮、Delete 批量删。
+ *  与单击选中互斥——先清单击态再落框选集；空框（Shift+单击未拖）等同点空白
+ *  完整取消选中。侧栏回属性页，不弹表单 */
+const onGraphMarqueeSelect = (nodes, links) => {
+  resetSider()
+  resetRefData()
+  selectionNodeNames.value = nodes
+  selectionLinkIndexes.value = links
 }
 
 /** 点空白＝完整取消选中：清高亮与 Delete 对象、面板回默认属性页；侧栏
@@ -968,6 +1003,38 @@ const deleteEdge = () => {
   xkContext.value.updateChart = !xkContext.value.updateChart
   resetSider()
   resetRefData()
+}
+
+const deleteSelection = () => {
+  /**
+   * 框选批量删除：Delete 在框选集非空时优先走这里。一条 deleteSelection 历史
+   * 承载整批——被选节点 + 直选边 + 删点连带边（与单点删除同语义），一步撤销。
+   * 边按对象引用进出历史（undo push 回的即 history 持有的对象），多重边安全
+   */
+  const names = new Set(selectionNodeNames.value)
+  const linkIdxs = new Set(selectionLinkIndexes.value)
+  if (!names.size && !linkIdxs.size) return
+
+  const { nodes, links } = xkContext.value.chartData
+  const deletedNodes = nodes.filter((n) => names.has(n.name))
+  const removedLinks = links.filter(
+    (l, i) => linkIdxs.has(i) || names.has(l.source) || names.has(l.target)
+  )
+
+  addHistory(xkContext, {
+    act: 'deleteSelection',
+    data: { nodes: jsonReactive(deletedNodes), links: jsonReactive(removedLinks) }
+  })
+
+  xkContext.value.chartData.nodes = nodes.filter((n) => !names.has(n.name))
+  xkContext.value.chartData.links = links.filter(
+    (l, i) => !linkIdxs.has(i) && !names.has(l.source) && !names.has(l.target)
+  )
+
+  xkContext.value.updateChart = !xkContext.value.updateChart
+  resetSider()
+  resetRefData()
+  message.info(`已删除 ${deletedNodes.length} 个节点、${removedLinks.length} 条连接`)
 }
 
 const buttonList = ref([

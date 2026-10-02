@@ -78,6 +78,13 @@ export const applyUndo = (chartData, currentHistory) => {
       chartData.nodes = chartData.nodes.filter((n) => !names.has(n.name))
       const own = new Set(currentHistory.data.links)
       chartData.links = chartData.links.filter((l) => !own.has(l))
+    },
+
+    // 框选批量删除的撤销：整批 push 回（节点 + 边，边含被连带删除的邻接边——
+    // 建历史时 data.links 已并入直选边与连带边，删除路径保证无重复）
+    deleteSelection: () => {
+      chartData.nodes.push(...currentHistory.data.nodes)
+      chartData.links.push(...currentHistory.data.links)
     }
   }
 
@@ -139,6 +146,15 @@ export const applyRedo = (chartData, currentHistory) => {
     importOutline: () => {
       chartData.nodes.push(...currentHistory.data.nodes)
       chartData.links.push(...currentHistory.data.links)
+    },
+
+    // 框选批量删除的重做：与 importOutline 撤销同构——节点按名、边按对象引用
+    // （撤销 push 回的正是 data 持有的对象，引用比对只命中本批，多重边安全）
+    deleteSelection: () => {
+      const names = new Set(currentHistory.data.nodes.map((n) => n.name))
+      const own = new Set(currentHistory.data.links)
+      chartData.nodes = chartData.nodes.filter((n) => !names.has(n.name))
+      chartData.links = chartData.links.filter((l) => !own.has(l))
     }
   }
 

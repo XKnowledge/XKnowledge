@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   shortcutModifierActive,
   linkDragModifierActive,
+  marqueeModifierActive,
   modifierKeyLabel
 } from '../../src/renderer/src/utils/platformModifier'
 
@@ -46,6 +47,22 @@ describe('linkDragModifierActive（建边拖拽：平台分流主修饰键）', 
   it('无修饰键两平台都不激活', () => {
     expect(linkDragModifierActive({}, true)).toBe(false)
     expect(linkDragModifierActive({}, false)).toBe(false)
+  })
+})
+
+describe('marqueeModifierActive（框选拖拽：全平台统一 Shift，无平台分流）', () => {
+  it('Shift+拖激活（双平台同键）', () => {
+    expect(marqueeModifierActive({ shiftKey: true })).toBe(true)
+  })
+
+  it('Ctrl/Meta/Alt+拖不激活——只认 Shift，不与连线手势/快捷键修饰串台', () => {
+    expect(marqueeModifierActive({ ctrlKey: true })).toBe(false)
+    expect(marqueeModifierActive({ metaKey: true })).toBe(false)
+    expect(marqueeModifierActive({ altKey: true })).toBe(false)
+  })
+
+  it('无修饰键不激活', () => {
+    expect(marqueeModifierActive({})).toBe(false)
   })
 })
 

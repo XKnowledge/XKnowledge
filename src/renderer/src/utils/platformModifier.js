@@ -7,7 +7,7 @@
  * - 键盘快捷键（Ctrl+S/Z/Y/F）：全平台 Ctrl/Meta 双收（VS Code 同款惯例），
  *   远程桌面/外接键盘不踩坑；z/y 的 isTypingContext 守卫在组件侧，不受影响
  * - 建边拖拽手势：平台分流主修饰键——macOS 用 ⌘(metaKey)，Ctrl 留给系统
- *   右键语义（ctrl+click）；Windows/Linux 保持 Ctrl，Meta(Win 键) 不串台
+ *   右键语义（ctrl+click)；Windows/Linux 保持 Ctrl，Meta(Win 键) 不串台
  */
 
 /** 键盘快捷键的修饰键是否按下（Ctrl 或 ⌘ 任一即可） */
@@ -18,6 +18,12 @@ export const shortcutModifierActive = (event) => !!(event.ctrlKey || event.metaK
  * @param {boolean} isMac 目标平台是否 macOS
  */
 export const linkDragModifierActive = (event, isMac) => !!(isMac ? event.metaKey : event.ctrlKey)
+
+/**
+ * 框选拖拽（Shift+拖）的修饰键是否按下：全平台统一 Shift，无平台分流——
+ * Shift 拖拽在 macOS 无系统保留语义（Ctrl+点按才是右键），不需要主修饰键那套分流
+ */
+export const marqueeModifierActive = (event) => !!event.shiftKey
 
 /** 文案用主修饰键显示名：macOS 显示 ⌘，其余显示 Ctrl */
 export const modifierKeyLabel = (isMac) => (isMac ? '⌘' : 'Ctrl')

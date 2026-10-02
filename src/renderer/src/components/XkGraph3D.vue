@@ -7,6 +7,7 @@
     :data-last-node-des="nodes.length ? (nodes[nodes.length - 1].des ?? '') : ''"
     :data-highlight-node="highlightNode"
     :data-highlight-edge="highlightLink?.name ?? ''"
+    :data-selection-count="selectionNodes.length + selectionLinks.length"
   >
     <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
          Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
@@ -55,6 +56,10 @@
     <svg v-if="linkDrag" class="graph3d-link-preview" data-link-preview>
       <line :x1="linkDrag.sx" :y1="linkDrag.sy" :x2="linkDrag.cx" :y2="linkDrag.cy" />
     </svg>
+    <!-- 框选拖拽矩形：SVG 覆盖层跟随鼠标，pointer-events 穿透 -->
+    <svg v-if="marquee" class="graph3d-marquee" data-marquee>
+      <rect :x="marqueeRect.x" :y="marqueeRect.y" :width="marqueeRect.w" :height="marqueeRect.h" />
+    </svg>
     <!-- WebGL 失败提示条 -->
     <div v-if="initFailed" class="graph3d-fallback">
       3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用
@@ -70,12 +75,24 @@ import { assignCategoryColors } from '../utils/categoryColor.js'
 import { effective } from '../store/themeStore.js'
 import XkGraphSearch from './XkGraphSearch.vue'
 import XkCanvasEditor from './XkCanvasEditor.vue'
-import { clampEditorPos, pickNearestNode, focusPlaneDistance } from '../utils/canvasEdit.js'
-import { linkDragModifierActive, modifierKeyLabel } from '../utils/platformModifier.js'
+import {
+  clampEditorPos,
+  pickNearestNode,
+  focusPlaneDistance,
+  buildMarqueeRect,
+  pointInRect,
+  segmentIntersectsRect
+} from '../utils/canvasEdit.js'
+import {
+  linkDragModifierActive,
+  marqueeModifierActive,
+  modifierKeyLabel
+} from '../utils/platformModifier.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
   linkEnd,
+  linkKey,
   labelThreshold,
   searchGraphNodes,
   SCENE_COLORS
@@ -92,7 +109,11 @@ const props = defineProps({
   // 聚焦模式邻域节点名（空数组 = 聚焦未开启；邻域为空同样以空数组表达）
   focusNodeNames: { type: Array, default: () => [] },
   // 深度聚焦：邻域外节点/边由灰化改为直接隐藏（走可见性管道，颜色管道不变）
-  focusDeep: { type: Boolean, default: false }
+  focusDeep: { type: Boolean, default: false },
+  // 框选批量选中的节点名集合（与 highlightNode 互斥由 ChartView 保证）
+  selectionNodes: { type: Array, default: () => [] },
+  // 框选批量选中的边 index 集合（props.links 索引；与 highlightLink 互斥）
+  selectionLinks: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits([
@@ -101,7 +122,8 @@ const emit = defineEmits([
   'background-click',
   'init-failed',
   'canvas-create-node',
-  'canvas-create-edge'
+  'canvas-create-edge',
+  'marquee-select'
 ])
 
 const containerRef = ref(null)
@@ -312,11 +334,57 @@ const onCanvasDblClick = (e) => {
 // 连线拖拽状态：source 起点（实时重投影，力模拟未稳时起点跟随节点），cx/cy 鼠标
 const linkDrag = ref(null) // { source, sx, sy, cx, cy } | null
 
+// 框选拖拽状态：sx/sy 起点，cx/cy 鼠标（矩形随拖拽方向自适应，纯展示层）
+const marquee = ref(null) // { sx, sy, cx, cy } | null
+const marqueeRect = computed(() =>
+  marquee.value
+    ? buildMarqueeRect(marquee.value.sx, marquee.value.sy, marquee.value.cx, marquee.value.cy)
+    : null
+)
+
+/** 框选拾取：矩形内的可见节点名 + 投影线段与矩形相交的可见边 __idx（props.links 索引）。
+ *  边的判定是屏幕几何相交——两端都在框外但斜穿的边也算被框住；隐形（类目隐藏/
+ *  深度聚焦隐藏）与布局未稳（无坐标）的边不参与，看得见才摸得着 */
+const pickMarqueeSelection = (m) => {
+  const rect = buildMarqueeRect(m.sx, m.sy, m.cx, m.cy)
+  const nodes = projectAllNodes()
+    .filter((p) => pointInRect(p.x, p.y, rect))
+    .map((p) => p.name)
+  const nodeVisible = buildNodeVisible()
+  const links = []
+  for (const l of graph.graphData().links) {
+    const s = l.source
+    const t = l.target
+    if (
+      typeof s !== 'object' ||
+      typeof t !== 'object' ||
+      !Number.isFinite(s.x) ||
+      !Number.isFinite(t.x) ||
+      !nodeVisible(s.name) ||
+      !nodeVisible(t.name)
+    )
+      continue
+    const p1 = graph.graph2ScreenCoords(s.x, s.y, s.z)
+    const p2 = graph.graph2ScreenCoords(t.x, t.y, t.z)
+    if (segmentIntersectsRect(p1.x, p1.y, p2.x, p2.y, rect)) links.push(l.__idx)
+  }
+  return { nodes, links }
+}
+
 // 建边主修饰键按平台分流：macOS ⌘（Ctrl 留给系统右键语义 ctrl+click），其余 Ctrl
 const isDarwin = window.electronAPI.platform === 'darwin'
 
 const onCanvasPointerDown = (e) => {
   if (!graph || initFailed.value || editor.value.mode || e.button !== 0) return
+  // Shift+拖：框选（优先于连线判定——两修饰键同按时语义唯一）。从任意位置
+  // 起拖（含节点上，对齐 Figma/PPT 橡皮筋行为），同样走 capture 截断独占手势
+  if (marqueeModifierActive(e)) {
+    const { x: cx, y: cy } = toLocal(e)
+    e.stopPropagation()
+    marquee.value = { sx: cx, sy: cy, cx, cy }
+    graph.renderer().domElement.setPointerCapture(e.pointerId)
+    return
+  }
   // 普通拖让位 DragControls（移动节点）；主修饰键+拖才是连线（⌘/Ctrl 按平台）
   if (!linkDragModifierActive(e, isDarwin)) return
   const { x: cx, y: cy } = toLocal(e)
@@ -332,7 +400,22 @@ const onCanvasPointerDown = (e) => {
 }
 
 const onCanvasPointerMove = (e) => {
+  if (marquee.value) {
+    // 手势独占期间截断 move：不给容器层喂「按键按住的移动」——three-render-objects
+    // 据此置 isPointerDragging，而它的 pointerup 在 isPointerPressed=false（手势
+    // pointerdown 已被截断）时提前返回不清该标志，残留成 stale 后**吞掉下一次
+    // 普通单击**（框选完点空白不清选中/点节点不开侧栏，直到用户做一次真拖拽）。
+    // 顺带冻结手势期间的悬停轮询，框选/连线时 tooltip 不乱闪
+    e.stopPropagation()
+    const { x: cx, y: cy } = toLocal(e)
+    marquee.value.cx = cx
+    marquee.value.cy = cy
+    return
+  }
   if (!linkDrag.value) return
+  // 同上：连线拖拽期间截断 move（该手势同样截断了 pointerdown，残留的
+  // isPointerDragging 会吞掉建边后的第一次单击）
+  e.stopPropagation()
   const { x: cx, y: cy } = toLocal(e)
   // 起点实时重投影：布局未稳/节点在漂移时预览线不脱钩
   const src = graph.graphData().nodes.find((n) => n.name === linkDrag.value.source)
@@ -346,6 +429,14 @@ const onCanvasPointerMove = (e) => {
 }
 
 const onCanvasPointerUp = () => {
+  if (marquee.value) {
+    const m = marquee.value
+    marquee.value = null
+    // 空框（Shift+单击未拖）同样走 emit：父层以空集清选中，语义与点空白一致
+    const { nodes, links } = pickMarqueeSelection(m)
+    emit('marquee-select', nodes, links)
+    return
+  }
   if (!linkDrag.value) return
   const drag = linkDrag.value
   linkDrag.value = null
@@ -358,8 +449,9 @@ const onCanvasPointerUp = () => {
 }
 
 // pointercancel（浏览器接管手势，如 alt-tab/触控边缘手势）：只清态，
-// 不做拾取——复用 pointerUp 的拾取会在恰有节点处误弹编辑器
+// 不做拾取——复用 pointerUp 的拾取会在恰有节点处误弹编辑器/误选中
 const onCanvasPointerCancel = () => {
+  marquee.value = null
   if (!linkDrag.value) return
   linkDrag.value = null
 }
@@ -411,6 +503,8 @@ let prevHlDim = null // Set<string>|null：上一次应用的聚焦邻域
 let prevHlSearch = new Set() // Set<string>：上一次应用的搜索命中集合
 let prevHlSearchActive = null // string|null：上一次应用的搜索当前项名
 let prevHlNodes = null // string[]|null：上一次应用的选中高亮节点（单元素或 null）
+let prevSelNodeNames = new Set() // Set<string>：上一次应用的框选节点集合
+let prevSelLinkKeys = new Set() // Set<string>：上一次应用的框选边三元组键集合
 
 const applyHighlight = () => {
   if (!graph) return
@@ -422,26 +516,38 @@ const applyHighlight = () => {
       ? new Set(searchHitNodes.value.map((n) => n.name))
       : new Set()
   const active = searchActiveName.value
+  // 框选集合：节点名集合 + 边三元组键集合（index 经 props.links 归一，多重边安全）
+  const selNodes = new Set(props.selectionNodes ?? [])
+  const selLinks = new Set(
+    (props.selectionLinks ?? [])
+      .map((i) => props.links[i])
+      .filter(Boolean)
+      .map((l) => linkKey(l))
+  )
   // accessor 描述"正确颜色"（选中 > 搜索当前项 > 搜索命中 > 聚焦外灰 >
   // 类目/底色）：graphData 重灌或 refresh 时库按它重建材质
   graph
     .nodeColor((n) =>
       props.highlightNode && n.name === props.highlightNode
         ? sceneColors.value.hl
-        : active && n.name === active
-          ? sceneColors.value.active
-          : search.has(n.name)
-            ? sceneColors.value.hit
-            : dim && !dim.has(n.name)
-              ? sceneColors.value.dim
-              : catColor(n.category)
+        : selNodes.has(n.name)
+          ? sceneColors.value.hl
+          : active && n.name === active
+            ? sceneColors.value.active
+            : search.has(n.name)
+              ? sceneColors.value.hit
+              : dim && !dim.has(n.name)
+                ? sceneColors.value.dim
+                : catColor(n.category)
     )
     .linkColor((l) =>
       le && linkEnd(l.source) === le.source && linkEnd(l.target) === le.target && le.name === l.name
         ? sceneColors.value.hl
-        : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
-          ? sceneColors.value.dim
-          : sceneColors.value.link
+        : selLinks.has(linkKey(l))
+          ? sceneColors.value.hl
+          : dim && !(dim.has(linkEnd(l.source)) && dim.has(linkEnd(l.target)))
+            ? sceneColors.value.dim
+            : sceneColors.value.link
     )
   // 高亮/聚焦变化走增量：只改翻转对象的材质颜色。不调 refresh()——它会对每个
   // 节点重新执行 nodeThreeObject，重建全部 SpriteText 标签，大图逐个点选持续掉帧。
@@ -450,10 +556,13 @@ const applyHighlight = () => {
   const { nodeRepaints, linkRepaints } = planHighlightRepaint({
     nodes: graph.graphData().nodes,
     links: graph.graphData().links,
-    prevNodes: prevHlNodes,
-    nextNodes: props.highlightNode ? [props.highlightNode] : [],
+    // 单选与框选同为 hl 档且互斥，合并成一个集合参与 diff
+    prevNodes: new Set([...(prevHlNodes ?? []), ...prevSelNodeNames]),
+    nextNodes: new Set([...(props.highlightNode ? [props.highlightNode] : []), ...selNodes]),
     prevLink: prevHlLink,
     nextLink: le,
+    prevLinks: prevSelLinkKeys,
+    nextLinks: selLinks,
     prevDimNodes: prevHlDim,
     nextDimNodes: dim,
     prevSearchNodes: prevHlSearch,
@@ -485,6 +594,8 @@ const applyHighlight = () => {
   if (repaints.length > 0 && painted === 0) graph.refresh()
   prevHlLink = le ? { source: le.source, target: le.target, name: le.name } : null
   prevHlNodes = props.highlightNode ? [props.highlightNode] : null
+  prevSelNodeNames = selNodes
+  prevSelLinkKeys = selLinks
   prevHlDim = dim
   prevHlSearch = search
   prevHlSearchActive = active
@@ -594,8 +705,7 @@ onMounted(() => {
   // 这里替换为中文；类名随库版本锁定（^1.80）
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
   if (navInfo)
-    navInfo.textContent =
-      `左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　${modifierKeyLabel(isDarwin)}+拖到节点：连线`
+    navInfo.textContent = `左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　${modifierKeyLabel(isDarwin)}+拖到节点：连线　Shift+拖：框选`
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
@@ -610,8 +720,9 @@ onMounted(() => {
   setRepulsion(100)
 
   // 画布直操手势：dblclick 在 canvas DOM 上（库不提供双击回调）；
-  // pointerdown 挂 capture（主修饰键+拖连线时截断传播，抢在先注册的 DragControls/
-  // OrbitControls 之前——见 onCanvasPointerDown），move/up/cancel 常规 bubble
+  // pointerdown 挂 capture（Shift+拖框选与主修饰键+拖连线时截断传播，抢在
+  // 先注册的 DragControls/OrbitControls 之前——见 onCanvasPointerDown），
+  // move/up/cancel 常规 bubble
   const canvasEl = graph.renderer().domElement
   canvasEl.addEventListener('dblclick', onCanvasDblClick)
   canvasEl.addEventListener('pointerdown', onCanvasPointerDown, true)
@@ -653,6 +764,8 @@ watch(
 
 watch(() => props.highlightLink, applyHighlight, { deep: true })
 watch(() => props.highlightNode, applyHighlight)
+// 框选集合变化走增量重着色（与单击高亮同一管道，hl 档）
+watch(() => [props.selectionNodes, props.selectionLinks], applyHighlight, { deep: true })
 // 聚焦邻域变化同样要走重着色：灰化/还原是增量材质色更新，只挂相机会
 // 出现「状态对、视觉没变」（冒烟截图已踩过）；深度聚焦开着时邻域还
 // 决定可见性，须一并刷新
@@ -868,5 +981,23 @@ defineExpose({
   stroke-width: 2;
   stroke-dasharray: 6 4;
   opacity: 0.7;
+}
+
+.graph3d-marquee {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.graph3d-marquee rect {
+  fill: var(--xk-text);
+  fill-opacity: 0.06;
+  stroke: var(--xk-text);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.8;
 }
 </style>
