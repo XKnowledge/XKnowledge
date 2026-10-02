@@ -8,6 +8,7 @@
     :data-highlight-node="highlightNode"
     :data-highlight-edge="highlightLink?.name ?? ''"
     :data-selection-count="selectionNodes.length + selectionLinks.length"
+    :data-video-recording="videoMode"
   >
     <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
          Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
@@ -71,6 +72,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import SpriteText from 'three-spritetext'
+import { message } from 'ant-design-vue'
 import { assignCategoryColors } from '../utils/categoryColor.js'
 import { effective } from '../store/themeStore.js'
 import { locale } from '../store/localeStore.js'
@@ -90,7 +92,12 @@ import {
   marqueeModifierActive,
   modifierKeyLabel
 } from '../utils/platformModifier.js'
-import { createRecordingCanvas } from '../utils/videoExport.js'
+import {
+  createRecordingCanvas,
+  createRecorder,
+  downloadBlob,
+  pickMimeType
+} from '../utils/videoExport.js'
 import {
   mergeGraphNodes,
   planHighlightRepaint,
@@ -744,6 +751,14 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
   // editor 仍开着时销毁组件：卸 window Esc 防监听泄漏
   window.removeEventListener('keydown', onWindowEsc)
+  // 录制会话开着销毁组件：卸环绕 Esc、停录屏 rAF/recorder（会话作废不下载）
+  window.removeEventListener('keydown', onOrbitEsc)
+  if (screenSession) {
+    cancelAnimationFrame(screenSession.raf)
+    screenSession.rec.stop()
+    screenSession = null
+  }
+  videoMode.value = ''
   if (graph) {
     const canvasEl = graph.renderer().domElement
     canvasEl.removeEventListener('dblclick', onCanvasDblClick)
@@ -893,9 +908,123 @@ const resetView = () => {
   graph.zoomToFit(600, 80)
 }
 
+// ---- 视频导出 / 实时录屏 ----
+// 录制状态：'' 无 | 'orbit' 环绕动画 | 'screen' 实时录屏，两态互斥；
+// data-video-recording 锚点供冒烟断言
+const videoMode = ref('')
+// 环绕录制 Esc 取消信号（resolve 定长等待 Promise）
+let orbitCancel = null
+// 录屏会话句柄（stopScreenRecording 消费后清空）
+let screenSession = null
+
+/** 环绕期间截断画布输入：capture 抢在库层 bubble 监听之前（同框选/连线
+ *  手势的拦截模式），OrbitControls/DragControls 的 pointerdown、滚轮缩放、
+ *  hover 轮询的 pointermove 全隔离，画面纯净 */
+const blockCanvasInput = (e) => e.stopPropagation()
+const ORBIT_BLOCK_EVENTS = ['pointerdown', 'pointermove', 'wheel']
+
+const onOrbitEsc = (e) => {
+  if (e.key === 'Escape' && videoMode.value === 'orbit') orbitCancel?.()
+}
+
+/** 一键环绕动画导出：autoRotate 绕当前视角焦点转一圈（autoRotateSpeed 惯例
+ *  2=30s/圈，6=10s/圈；controls.enabled=false 只断输入事件，update() 内的
+ *  autoRotate 照转）；水印与 PNG 单源；Esc 中途取消丢弃产物 */
+const exportVideo = async (durationMs = 10000) => {
+  if (!graph || videoMode.value) return
+  const picked = pickMimeType()
+  if (!picked) {
+    message.info(t('chart.videoUnsupported'))
+    return
+  }
+  const [mimeType, ext] = picked
+  closeEditor()
+  videoMode.value = 'orbit'
+  const controls = graph.controls()
+  const canvasEl = graph.renderer().domElement
+  controls.enabled = false
+  controls.autoRotate = true
+  controls.autoRotateSpeed = 6
+  for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.addEventListener(ev, blockCanvasInput, true)
+  window.addEventListener('keydown', onOrbitEsc)
+  const { canvas: recCanvas, draw } = createRecordingCanvas(
+    canvasEl,
+    sceneColors.value.watermark
+  )
+  const rec = createRecorder({ canvas: recCanvas, mimeType })
+  let raf = requestAnimationFrame(function loop() {
+    draw()
+    raf = requestAnimationFrame(loop)
+  })
+  let cancelled = false
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, durationMs)
+    orbitCancel = () => {
+      cancelled = true
+      clearTimeout(timer)
+      resolve()
+    }
+  })
+  orbitCancel = null
+  cancelAnimationFrame(raf)
+  const blob = await rec.stop()
+  // 恢复交互（无论取消与否）
+  controls.autoRotate = false
+  controls.enabled = true
+  for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.removeEventListener(ev, blockCanvasInput, true)
+  window.removeEventListener('keydown', onOrbitEsc)
+  videoMode.value = ''
+  if (cancelled) {
+    message.info(t('chart.recordingCancelled'))
+    return
+  }
+  downloadBlob(blob, ext)
+  message.info(t('chart.videoExported'))
+}
+
+/** 实时录屏：同一合成管线（水印单源）但不锁交互不转相机——录的正是用户
+ *  自由操作；Esc 不参与停止（仅「停止录屏」按钮，避免与画布编辑器等既有
+ *  Esc 语义冲突）。互斥由 ChartView 按钮 disabled 保证，这里 false 只兜底 */
+const startScreenRecording = () => {
+  if (!graph || videoMode.value) return false
+  const picked = pickMimeType()
+  if (!picked) {
+    message.info(t('chart.videoUnsupported'))
+    return false
+  }
+  closeEditor()
+  videoMode.value = 'screen'
+  const { canvas: recCanvas, draw } = createRecordingCanvas(
+    graph.renderer().domElement,
+    sceneColors.value.watermark
+  )
+  const rec = createRecorder({ canvas: recCanvas, mimeType: picked[0] })
+  let raf = requestAnimationFrame(function loop() {
+    if (videoMode.value !== 'screen') return
+    draw()
+    raf = requestAnimationFrame(loop)
+  })
+  screenSession = { rec, raf, ext: picked[1] }
+  return true
+}
+
+const stopScreenRecording = async () => {
+  if (videoMode.value !== 'screen' || !screenSession) return
+  const session = screenSession
+  screenSession = null
+  videoMode.value = '' // 先清态：停 rAF 循环
+  cancelAnimationFrame(session.raf)
+  const blob = await session.rec.stop()
+  downloadBlob(blob, session.ext)
+  message.info(t('chart.recordingSaved'))
+}
+
 defineExpose({
   setRepulsion,
   exportPng,
+  exportVideo,
+  startScreenRecording,
+  stopScreenRecording,
   resetView,
   focusCamera,
   openSearch,
