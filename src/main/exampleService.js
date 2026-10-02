@@ -2,6 +2,7 @@ import path from 'path'
 import { examplesDir } from './examplePaths'
 import { listExamplesFrom } from './exampleManifest.mjs'
 import { readChartFile } from './fileService'
+import { t } from './i18nMain'
 
 /**
  * 内置示例图库：examples/ 目录即图库，放入合法 .xk 即自动出现。
@@ -32,7 +33,7 @@ const EXAMPLE_NAME_RE = /^[\w一-龥-]+\.xk$/
  */
 export const openExample = async (fileName) => {
   if (typeof fileName !== 'string' || !EXAMPLE_NAME_RE.test(fileName)) {
-    throw Object.assign(new Error('无效的示例文件名'), {
+    throw Object.assign(new Error(t('error.invalidExampleName')), {
       code: 'INVALID_EXAMPLE_NAME',
       detail: String(fileName)
     })
@@ -40,7 +41,7 @@ export const openExample = async (fileName) => {
   const dir = path.resolve(examplesDir())
   const filePath = path.resolve(dir, fileName)
   if (!filePath.startsWith(dir + path.sep)) {
-    throw Object.assign(new Error('无效的示例文件名'), {
+    throw Object.assign(new Error(t('error.invalidExampleName')), {
       code: 'INVALID_EXAMPLE_NAME',
       detail: fileName
     })

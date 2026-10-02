@@ -18,6 +18,7 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 | 前端框架 | Vue 3.5（`<script setup>`） | 渲染层 UI |
 | 路由 | vue-router 5（hash 模式） | `loadFile` 场景下无需服务端路由 |
 | UI 组件库 | Ant Design Vue 4 | 布局、表单、菜单、提示 |
+| 国际化 | vue-i18n 11（渲染层）+ 主进程查表 `t()` | 双端共用一份字典（`src/shared/locales/`） |
 | 图可视化 | 3d-force-graph（Three.js）+ three-spritetext | 3D 力导向图与节点文字标签 |
 | 测试 | Vitest 5 | 135 个单元测试（`yarn test`） |
 | 质量 | ESLint 10（flat config）、Prettier 3、TypeScript 5.9 + vue-tsc | `yarn typecheck` |
@@ -377,6 +378,39 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
   （无输入框守卫，裸键会打断打字）。
 - `isTypingContext` 守卫跟动作走、不跟键走——改键不改变守卫行为；鼠标手势
   （双击建点/Shift+拖框选/Ctrl(⌘)+拖连线）固定不可改，设置中只读展示。
+
+### 6.7 国际化（中英双语）
+
+字典单源双端：`src/shared/locales/zh-CN.js` / `en-US.js`（纯数据模块，禁止 import
+vue/electron），渲染层经 `src/renderer/src/i18n.js` 注册进 vue-i18n 11（legacy: false、
+`fallbackLocale: 'zh-CN'`、`$t` 全局注入），主进程 `src/main/i18nMain.js` 用约 15 行
+查表 `t()`（嵌套 key + `{name}` 插值 + 缺 key 回落 zh）读同一份字典——翻译只做一次，
+双端永远一致。语言偏好纯函数在 `src/shared/localeUtil.js`（三态归一/系统语言映射/
+生效推导，双端共用）。
+
+- **localeStore**（`store/localeStore.js`，themeStore 同构）：三态 `auto`/`zh-CN`/
+  `en-US`，localStorage `xk-locale`、`storage` 事件跨窗口同步、`initLocaleSync()`
+  mount 前上报主进程；切换时同步 `i18n.global.locale`。跟随系统映射：`zh*` 前缀 →
+  zh-CN，否则 en-US（渲染层 `navigator.language`、主进程 `app.getLocale()`）。
+- **主进程上报链**（`app:locale-applied`，`app:theme-applied` 同模式）：主进程
+  `setCurrentLocale` 后 `refreshTitles()` 重算已登记窗口标题；未命名窗口不在登记簿，
+  由 ChartView `watch(locale)` 重报当前 dirty 走 `file:dirty` 的未命名标题分支刷新。
+- **错误 token 契约不动**：`[FILE_CONFLICT]` 等英文字面前缀保留在消息头，翻译只作用
+  于消息体；`chartValidation.mjs` 保持无 electron 依赖的纯模块（示例清单生成脚本
+  直接 import），返回稳定错误码（即字典 `error.validation.<code>` 键），翻译集中在
+  fileService。
+- **antd locale**：`App.vue` 的 `a-config-provider` 补 `:locale`，随语言切 `zhCN`/
+  `enUS`。
+- **语言相关文案的动态点**：`ACTION_NAMES` 常量改 `actionName(id)` 函数（设置行名/
+  冲突提示）、ChartView `buttonList` 与 XkSettings `keybindingRows`/`gestureRows` 均
+  computed 化；3D 底部导航条（navInfo，querySelector 覆盖 three-render-objects 内置
+  英文）在 XkGraph3D/XkWorldGraph `watch(locale)` 重设；nodeLabel 冒号分隔符走字典
+  （accessor 每次悬停执行，天然跟随）。
+- **不随语言变化的**：大纲导入默认类目「未分类」与示例内容属数据层；示例排序保持
+  `localeCompare('zh-CN')`（示例标题为中文）。
+- **加语言步骤**：`shared/locales/` 加一份字典 + `localeUtil.js` 的 `LOCALE_MODES`
+  与 i18nMain 的 `DICTS` 各加一行 + 设置语言行加一个 radio——渲染层复数/插值由
+  vue-i18n 消息格式（`{n, plural, ...}`）内建，主进程 `t()` 引擎不用动。
 
 ## 7. 核心数据流
 

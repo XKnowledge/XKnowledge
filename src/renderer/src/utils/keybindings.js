@@ -14,6 +14,8 @@
  *   （Ctrl+Shift+S 不再误触 Ctrl+S）
  */
 
+import { t } from '../i18n.js'
+
 /** 5 个可自定义键位及默认绑定（delete=三路分发整体：框选集优先→直选边→最后点击节点） */
 export const DEFAULT_BINDINGS = {
   save: { modifiers: ['primary'], key: 's' },
@@ -25,14 +27,8 @@ export const DEFAULT_BINDINGS = {
 
 export const KEYBINDING_IDS = Object.keys(DEFAULT_BINDINGS)
 
-/** 键位中文名（设置行名与冲突提示共用） */
-export const ACTION_NAMES = {
-  save: '保存',
-  undo: '撤销',
-  redo: '重做',
-  delete: '删除',
-  search: '图内搜索'
-}
+/** 键位动作名（语言相关：设置行名与冲突提示共用，查字典 keybinding.names.<id>） */
+export const actionName = (id) => t(`keybinding.names.${id}`)
 
 /** 合法修饰键（顺序即规范化顺序，便于相等比较与文案拼接） */
 const LEGAL_MODIFIERS = ['primary', 'shift', 'alt']
@@ -110,12 +106,11 @@ export const formatBindingLabel = (binding, isDarwin) => {
  *   任何位置都触发），裸键会让任何输入框打字即弹搜索
  */
 export const validateRecording = (id, binding) => {
-  if (binding.key === 'escape') return 'Esc 是录制取消键，不能作为快捷键'
-  if (binding.key === 'tab') return 'Tab 是焦点移动键，不能作为快捷键'
-  if (binding.key === 'f5') return 'F5 被保留（防刷新），不能作为快捷键'
+  if (binding.key === 'escape') return t('keybinding.reject.esc')
+  if (binding.key === 'tab') return t('keybinding.reject.tab')
+  if (binding.key === 'f5') return t('keybinding.reject.f5')
   if (binding.modifiers.includes('primary') && binding.key === 'r')
-    return 'Ctrl/⌘+R 被保留（防刷新），不能作为快捷键'
-  if (id === 'search' && binding.modifiers.length === 0)
-    return '图内搜索在输入框内也会触发，必须搭配至少一个修饰键'
+    return t('keybinding.reject.ctrlR')
+  if (id === 'search' && binding.modifiers.length === 0) return t('keybinding.reject.searchBare')
   return null
 }

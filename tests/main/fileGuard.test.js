@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// fileGuard → i18nMain 在模块加载期读 app.getLocale()
+vi.mock('electron', () => ({ app: { getLocale: vi.fn(() => 'zh-CN') } }))
 import fs from 'fs'
 import os from 'os'
 import { join } from 'path'

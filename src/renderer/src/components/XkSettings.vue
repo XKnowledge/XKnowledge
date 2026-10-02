@@ -1,20 +1,36 @@
 <template>
-  <!-- 设置弹窗：主题 + 快捷键自定义（5 键位录制）+ 鼠标手势只读。
+  <!-- 设置弹窗：语言 + 主题 + 快捷键自定义（5 键位录制）+ 鼠标手势只读。
        home 侧栏按钮与图表页菜单两个入口共用；mask 关闭不压暗底面；
        点击弹窗外空白 / Esc / × 均可关闭（录制态的 Esc 先被录制层
        capture 消费，只取消录制不关弹窗） -->
-  <a-modal v-model:open="open" title="设置" :footer="null" width="420px" :mask="false">
+  <a-modal
+    v-model:open="open"
+    :title="$t('settings.title')"
+    :footer="null"
+    width="420px"
+    :mask="false"
+  >
     <div class="xk-settings-scroll">
-      <div class="xk-settings-item">
-        <span class="xk-settings-label">主题</span>
-        <a-radio-group button-style="solid" :value="mode" @change="onThemeChange">
-          <a-radio-button value="auto">跟随系统</a-radio-button>
-          <a-radio-button value="light">浅色</a-radio-button>
-          <a-radio-button value="dark">深色</a-radio-button>
+      <div class="xk-settings-item" data-locale-row>
+        <span class="xk-settings-label">{{ $t('settings.language') }}</span>
+        <a-radio-group button-style="solid" :value="localeMode" @change="onLocaleChange">
+          <!-- 语言名永远用各自语言原文显示（业内惯例）；auto 跟随系统 -->
+          <a-radio-button value="auto">{{ $t('settings.followSystem') }}</a-radio-button>
+          <a-radio-button value="zh-CN">中文</a-radio-button>
+          <a-radio-button value="en-US">English</a-radio-button>
         </a-radio-group>
       </div>
 
-      <a-divider class="xk-settings-divider">快捷键</a-divider>
+      <div class="xk-settings-item">
+        <span class="xk-settings-label">{{ $t('settings.theme') }}</span>
+        <a-radio-group button-style="solid" :value="mode" @change="onThemeChange">
+          <a-radio-button value="auto">{{ $t('settings.followSystem') }}</a-radio-button>
+          <a-radio-button value="light">{{ $t('settings.light') }}</a-radio-button>
+          <a-radio-button value="dark">{{ $t('settings.dark') }}</a-radio-button>
+        </a-radio-group>
+      </div>
+
+      <a-divider class="xk-settings-divider">{{ $t('settings.keybindings') }}</a-divider>
       <div
         v-for="kb in keybindingRows"
         :key="kb.id"
@@ -30,7 +46,7 @@
             :data-recording="recordingId === kb.id ? 'on' : 'off'"
             @click="toggleRecording(kb.id)"
           >
-            {{ recordingId === kb.id ? '按下新组合…' : bindingLabel(kb.id) }}
+            {{ recordingId === kb.id ? $t('settings.pressNewCombo') : bindingLabel(kb.id) }}
           </a-button>
           <a-button
             v-if="isCustomized(kb.id)"
@@ -39,20 +55,22 @@
             class="xk-reset-btn"
             @click="resetBinding(kb.id)"
           >
-            恢复默认
+            {{ $t('settings.resetDefault') }}
           </a-button>
         </a-space>
       </div>
       <div v-if="anyCustomized" class="xk-settings-item xk-reset-all">
-        <a-button size="small" type="link" @click="resetAll">全部恢复默认</a-button>
+        <a-button size="small" type="link" @click="resetAll">
+          {{ $t('settings.resetAll') }}
+        </a-button>
       </div>
 
-      <a-divider class="xk-settings-divider">鼠标手势</a-divider>
+      <a-divider class="xk-settings-divider">{{ $t('settings.gestures') }}</a-divider>
       <div v-for="g in gestureRows" :key="g.id" class="xk-settings-item" :data-gesture-row="g.id">
         <span class="xk-settings-label">{{ g.name }}</span>
         <span class="xk-binding-text">{{ g.label }}</span>
       </div>
-      <div class="xk-settings-note">鼠标手势暂不支持自定义</div>
+      <div class="xk-settings-note">{{ $t('settings.gestureNote') }}</div>
     </div>
   </a-modal>
 </template>
@@ -61,6 +79,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { mode, setMode } from '../store/themeStore.js'
+// 语言三态（themeStore 同构）：auto/zh-CN/en-US，此处别名为 localeMode 避开主题 mode
+import { mode as localeMode, setLocaleMode } from '../store/localeStore.js'
 import {
   bindings,
   isCustomized,
@@ -69,24 +89,30 @@ import {
   setBinding
 } from '../store/keybindingStore.js'
 import {
-  ACTION_NAMES,
   KEYBINDING_IDS,
+  actionName,
   findConflict,
   formatBindingLabel,
   normalizeRecordedEvent,
   validateRecording
 } from '../utils/keybindings.js'
 import { modifierKeyLabel } from '../utils/platformModifier.js'
+import { t } from '../i18n.js'
 
 const open = ref(false)
 const isDarwin = window.electronAPI.platform === 'darwin'
 
-const keybindingRows = KEYBINDING_IDS.map((id) => ({ id, name: ACTION_NAMES[id] }))
-const gestureRows = [
-  { id: 'create-node', name: '新建节点', label: '双击空白处' },
-  { id: 'marquee', name: '框选', label: 'Shift+拖拽' },
-  { id: 'link', name: '新建连接', label: `${modifierKeyLabel(isDarwin)}+拖拽节点` }
-]
+// 语言切换后行名即时跟随：动作名/手势名语言相关，computed 而非常量
+const keybindingRows = computed(() => KEYBINDING_IDS.map((id) => ({ id, name: actionName(id) })))
+const gestureRows = computed(() => [
+  { id: 'create-node', name: t('gesture.createNode'), label: t('gesture.doubleClickBlank') },
+  { id: 'marquee', name: t('gesture.marquee'), label: t('gesture.shiftDrag') },
+  {
+    id: 'link',
+    name: t('gesture.createLink'),
+    label: t('gesture.linkLabel', { modifier: modifierKeyLabel(isDarwin) })
+  }
+])
 
 const recordingId = ref(null)
 const anyCustomized = computed(() => KEYBINDING_IDS.some((id) => isCustomized(id)))
@@ -118,7 +144,7 @@ const onRecordKeydown = (event) => {
   }
   const conflictId = findConflict(bindings.value, id, binding)
   if (conflictId) {
-    message.warning(`已被「${ACTION_NAMES[conflictId]}」占用`)
+    message.warning(t('settings.keybindingConflict', { name: actionName(conflictId) }))
     stopRecording()
     return
   }
@@ -143,6 +169,7 @@ watch(open, (v) => {
 onUnmounted(stopRecording)
 
 const onThemeChange = (e) => setMode(e.target.value)
+const onLocaleChange = (e) => setLocaleMode(e.target.value)
 
 defineExpose({ open: () => (open.value = true) })
 </script>
@@ -159,7 +186,7 @@ defineExpose({ open: () => (open.value = true) })
   font-size: 14px;
 }
 
-/* 内容超出滚动（主题 1 行 + 快捷键 5 行 + 手势 3 行） */
+/* 内容超出滚动（语言 1 行 + 主题 1 行 + 快捷键 5 行 + 手势 3 行） */
 .xk-settings-scroll {
   max-height: 60vh;
   overflow-y: auto;

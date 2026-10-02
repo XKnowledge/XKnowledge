@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { t } from './i18nMain'
 
 /**
  * 文件写入门卫：跟踪"本会话通过对话框/打开操作授权过的文件路径"及其
@@ -28,7 +29,7 @@ export const createPathGuard = () => {
      */
     async assertWritable(path) {
       if (!authorized.has(path)) {
-        throw fail('PATH_NOT_AUTHORIZED', '该文件未经过打开或另存为操作，不允许直接写入', path)
+        throw fail('PATH_NOT_AUTHORIZED', t('error.notOpenedGuard'), path)
       }
       const known = authorized.get(path)
       let current = null
@@ -40,11 +41,7 @@ export const createPathGuard = () => {
       if (known !== null && current !== null && known !== current) {
         // message 前缀的 [FILE_CONFLICT] 是稳定 token：invoke 错误边界只
         // 保留 message（code 属性跨 IPC 丢失），渲染端按 token 分支提示
-        throw fail(
-          'FILE_CONFLICT',
-          '[FILE_CONFLICT] 文件已被其他窗口或外部程序修改，为避免覆盖他人的修改，请使用"另存为"',
-          path
-        )
+        throw fail('FILE_CONFLICT', `[FILE_CONFLICT] ${t('error.fileConflict')}`, path)
       }
     }
   }

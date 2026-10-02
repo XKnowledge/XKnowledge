@@ -2,11 +2,11 @@
   <div class="inner-div">
     <div class="content">
       <div class="gallery-header">
-        <a-typography-title :level="2">示例图库</a-typography-title>
+        <a-typography-title :level="2">{{ $t('gallery.title') }}</a-typography-title>
         <a-input
           v-model:value="keyword"
           class="gallery-search"
-          placeholder="搜索示例：标题 / 描述 / 分类"
+          :placeholder="$t('gallery.searchPlaceholder')"
           allow-clear
         >
           <template #prefix><SearchOutlined /></template>
@@ -17,11 +17,11 @@
         <div
           v-if="!keyword.trim()"
           class="new-blank-card"
-          title="新建空白文件"
+          :title="$t('gallery.newBlankFile')"
           @click="createBlankFile"
         >
           <PlusOutlined class="new-blank-icon" />
-          <div>新建空白文件</div>
+          <div>{{ $t('gallery.newBlankFile') }}</div>
         </div>
         <XkExampleCard
           v-for="ex in visibleExamples"
@@ -34,7 +34,7 @@
       </a-space>
       <a-empty
         v-if="!loading && filteredExamples.length === 0"
-        :description="keyword.trim() ? '无匹配的示例' : '暂无示例'"
+        :description="keyword.trim() ? $t('gallery.noMatch') : $t('gallery.noExamples')"
       />
     </div>
   </div>
@@ -48,6 +48,7 @@ import { message } from 'ant-design-vue'
 
 import XkExampleCard from '../components/XkExampleCard.vue'
 import { setPendingChart } from '../store/chartStore'
+import { t } from '../i18n.js'
 import { filterExamples } from '../utils/filterExamples'
 import { sortExamples } from '../utils/sortExamples'
 
@@ -125,8 +126,8 @@ const openExampleChart = async (ex) => {
     router.push('/chart')
   } catch (err) {
     console.error('打开示例失败', err)
-    // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
-    message.error('打开失败：文件读取失败或已损坏')
+    // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定提示
+    message.error(t('common.openFailedDetail'))
   }
 }
 </script>

@@ -62,7 +62,7 @@
     </svg>
     <!-- WebGL 失败提示条 -->
     <div v-if="initFailed" class="graph3d-fallback">
-      3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用
+      {{ $t('chart.init3dFailed') }}
     </div>
   </div>
 </template>
@@ -73,6 +73,8 @@ import ForceGraph3D from '3d-force-graph'
 import SpriteText from 'three-spritetext'
 import { assignCategoryColors } from '../utils/categoryColor.js'
 import { effective } from '../store/themeStore.js'
+import { locale } from '../store/localeStore.js'
+import { t } from '../i18n.js'
 import XkGraphSearch from './XkGraphSearch.vue'
 import XkCanvasEditor from './XkCanvasEditor.vue'
 import {
@@ -623,7 +625,7 @@ const applyLabels = () => {
 const applyInteraction = () => {
   if (!graph) return
   graph
-    .nodeLabel((n) => (n.des ? `${n.name}：${n.des}` : `${n.name}`))
+    .nodeLabel((n) => (n.des ? `${n.name}${t('chart.nodeLabelSep')}${n.des}` : `${n.name}`))
     .linkLabel((l) => (props.showLinkName && l.name ? l.name : ''))
 }
 
@@ -639,6 +641,13 @@ const applySimulationScale = () => {
     graph.d3AlphaDecay(0.0228).cooldownTime(15000)
   }
 }
+
+// 语言切换重设底部导航提示（querySelector 覆盖式文案，与 onMounted 内
+// 首次覆盖同一目标；watch 回调执行时容器必已挂载——语言切换只发生在交互期）
+watch(locale, () => {
+  const navInfo = containerRef.value?.querySelector?.('.scene-nav-info')
+  if (navInfo) navInfo.textContent = t('chart.navInfo3d', { modifier: modifierKeyLabel(isDarwin) })
+})
 
 onMounted(() => {
   try {
@@ -704,8 +713,7 @@ onMounted(() => {
   // 底部导航提示文案在 three-render-objects 内硬编码为英文且无配置项，
   // 这里替换为中文；类名随库版本锁定（^1.80）
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
-  if (navInfo)
-    navInfo.textContent = `左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　${modifierKeyLabel(isDarwin)}+拖到节点：连线　Shift+拖：框选`
+  if (navInfo) navInfo.textContent = t('chart.navInfo3d', { modifier: modifierKeyLabel(isDarwin) })
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value

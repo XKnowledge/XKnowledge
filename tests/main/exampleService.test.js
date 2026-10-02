@@ -6,7 +6,7 @@ import { join } from 'path'
 // exampleService 依赖 app.getAppPath() 定位 examples 目录；
 // fileService 顶部 import { dialog }，mock 中需一并提供
 vi.mock('electron', () => ({
-  app: { getAppPath: vi.fn() },
+  app: { getLocale: vi.fn(() => 'zh-CN'), getAppPath: vi.fn() },
   dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() }
 }))
 

@@ -6,7 +6,7 @@
         class="world-search-input"
         type="text"
         :value="keyword"
-        placeholder="搜索全库节点：名称 / 描述"
+        :placeholder="$t('search.worldPlaceholder')"
         @input="$emit('keyword', $event.target.value)"
         @keydown.enter.prevent="$emit('next')"
         @keydown.down.prevent="$emit('next')"
@@ -14,7 +14,9 @@
         @keydown.esc="$emit('close')"
       />
       <span class="world-search-count">{{ hitTotal ? `${activeIndex + 1}/${hitTotal}` : '' }}</span>
-      <button class="world-search-close" title="关闭 (Esc)" @click="$emit('close')">✕</button>
+      <button class="world-search-close" :title="$t('common.closeEsc')" @click="$emit('close')">
+        ✕
+      </button>
     </div>
     <div v-if="hits.length" class="world-search-list">
       <!-- mousedown.prevent：点列表项不让输入框失焦（点完还能继续 Enter） -->
@@ -31,9 +33,11 @@
         <span class="world-search-name">{{ hit.name }}</span>
         <span class="world-search-des">{{ hit.des }}</span>
       </div>
-      <div v-if="hitTotal > hits.length" class="world-search-more">…共 {{ hitTotal }} 个命中</div>
+      <div v-if="hitTotal > hits.length" class="world-search-more">
+        …{{ $t('chart.searchHits', { count: hitTotal }) }}
+      </div>
     </div>
-    <div v-else-if="keyword" class="world-search-empty">无匹配节点</div>
+    <div v-else-if="keyword" class="world-search-empty">{{ $t('search.noMatch') }}</div>
   </div>
 </template>
 

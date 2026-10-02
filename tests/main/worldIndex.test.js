@@ -8,7 +8,7 @@ import { join } from 'path'
 globalThis.__worldCalls = []
 
 vi.mock('electron', () => ({
-  app: { getAppPath: vi.fn(), getPath: vi.fn() },
+  app: { getLocale: vi.fn(() => 'zh-CN'), getAppPath: vi.fn(), getPath: vi.fn() },
   dialog: { showOpenDialog: vi.fn() }
 }))
 

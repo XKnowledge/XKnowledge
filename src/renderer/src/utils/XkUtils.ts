@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 export function jsonReactive(x) {
   return JSON.parse(JSON.stringify(x))
 }
@@ -40,10 +41,10 @@ export function resetEdgeRef(edge) {
  */
 export function createNodeInChart(xkContext, node) {
   const ctx = xkContext.value
-  if (!node.name?.trim()) return { ok: false, error: '节点名称不能为空' }
-  if (!node.category?.trim()) return { ok: false, error: '请选择/创建节点所属类目' }
+  if (!node.name?.trim()) return { ok: false, error: t('validation.nodeNameRequired') }
+  if (!node.category?.trim()) return { ok: false, error: t('validation.categoryRequired') }
   const { nodes } = ctx.chartData
-  if (nodes.some((n) => n.name === node.name)) return { ok: false, error: '不能创建同名节点' }
+  if (nodes.some((n) => n.name === node.name)) return { ok: false, error: t('validation.duplicateNode') }
 
   const newNodeJson = jsonReactive({ ...node })
   nodes.push(newNodeJson)
@@ -60,7 +61,7 @@ export function createEdgeInChart(xkContext, edge) {
       (l.source === edge.source && l.target === edge.target) ||
       (l.source === edge.target && l.target === edge.source)
   )
-  if (isDuplicate) return { ok: false, error: '两个节点间连接已存在' }
+  if (isDuplicate) return { ok: false, error: t('validation.edgeExists') }
 
   const newEdgeJson = jsonReactive({ ...edge })
   links.push(newEdgeJson)

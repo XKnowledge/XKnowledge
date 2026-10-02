@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// titleService → i18nMain 在模块加载期读 app.getLocale()
+vi.mock('electron', () => ({ app: { getLocale: vi.fn(() => 'zh-CN') } }))
 import { sep } from 'path'
 import { computeTitles, composeWindowTitles } from '../../src/main/titleService'
 

@@ -69,8 +69,8 @@
               class="attr-checkboxes"
               @change="onChangeAttr"
             >
-              <a-checkbox value="showEdgeName"> 悬浮显示连接名称 </a-checkbox>
-              <a-checkbox value="showSmallLabels"> 显示小节点名称 </a-checkbox>
+              <a-checkbox value="showEdgeName"> {{ $t('chart.showEdgeName') }} </a-checkbox>
+              <a-checkbox value="showSmallLabels"> {{ $t('chart.showSmallLabels') }} </a-checkbox>
             </a-checkbox-group>
             <!-- 聚焦模式：三态选择（关闭/灰化/隐藏）不走 checkedValues/onChangeAttr
                  ——那条管道会置脏且被 initAttr 连带重置，与「跨图保持/不写盘」冲突。
@@ -82,14 +82,14 @@
               :data-focus-mode="focusMode"
             >
               <a-col flex="auto" style="text-align: left">
-                <span class="focus-mode-label">聚焦模式</span>
+                <span class="focus-mode-label">{{ $t('chart.focusMode') }}</span>
                 <a-select
                   v-model:value="focusMode"
                   class="focus-mode-select"
                   :options="[
-                    { value: 'off', label: '关闭' },
-                    { value: 'focus', label: '灰化' },
-                    { value: 'deep', label: '隐藏' }
+                    { value: 'off', label: $t('chart.focusOff') },
+                    { value: 'focus', label: $t('chart.focusDim') },
+                    { value: 'deep', label: $t('chart.focusHide') }
                   ]"
                   size="small"
                   style="width: 68px"
@@ -97,7 +97,7 @@
                 />
               </a-col>
               <a-col>
-                <span class="focus-hops-label">跳数</span>
+                <span class="focus-hops-label">{{ $t('chart.focusHops') }}</span>
                 <a-select
                   v-model:value="focusHops"
                   class="focus-hops-select"
@@ -112,7 +112,7 @@
                 />
               </a-col>
             </a-row>
-            <a-divider orientation="left">排斥力大小</a-divider>
+            <a-divider orientation="left">{{ $t('chart.repulsion') }}</a-divider>
             <!-- align="middle"：滑块轨道高 12px、数字框高 32px，
                  默认顶部对齐会让滑块明显偏上 -->
             <a-row align="middle">
@@ -133,15 +133,19 @@
                 />
               </a-col>
             </a-row>
-            <a-divider orientation="left">图谱简介</a-divider>
+            <a-divider orientation="left">{{ $t('chart.description') }}</a-divider>
             <!-- 图表级元数据：即时写入 chartData.description 并置脏（同复选框/
                  滑块），不进 undo/redo；绑定经 computed 兜底，见脚本区注释 -->
             <a-textarea v-model:value="chartDescription" :rows="4" @change="onDescriptionChange" />
-            <a-divider orientation="left">视图</a-divider>
+            <a-divider orientation="left">{{ $t('chart.view') }}</a-divider>
             <!-- space-evenly：2 个 flex 项产生 3 段等宽空隙（左边缘/按钮间/右边缘） -->
             <a-row justify="space-evenly">
-              <a-button size="small" @click="graph3dRef?.exportPng()">导出图片</a-button>
-              <a-button size="small" @click="graph3dRef?.resetView()">复位视图</a-button>
+              <a-button size="small" @click="graph3dRef?.exportPng()">{{
+                $t('chart.exportPng')
+              }}</a-button>
+              <a-button size="small" @click="graph3dRef?.resetView()">{{
+                $t('chart.resetView')
+              }}</a-button>
             </a-row>
           </div>
 
@@ -185,6 +189,8 @@ import { defaultFocusNode, focusNeighborhood, reconcileNodeHighlight } from '../
 import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { matchEvent } from '../utils/keybindings.js'
 import { bindings as keybindings } from '../store/keybindingStore.js'
+import { locale } from '../store/localeStore.js'
+import { t } from '../i18n.js'
 import { takePendingChart } from '../store/chartStore'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
@@ -343,7 +349,7 @@ onMounted(async () => {
       }
     } catch (err) {
       console.error('装载图表数据失败', err)
-      message.error('图表数据装载失败，请关闭窗口后重新打开文件')
+      message.error(t('chart.loadFailed'))
     }
   }
   // 通知主进程解锁窗口并注册关闭确认
@@ -405,7 +411,7 @@ const loadChartData = (data) => {
       return JSON.parse(data.value)
     } catch (e) {
       console.error('文件内容解析失败', e)
-      message.error('文件内容已损坏或格式不正确，无法打开')
+      message.error(t('error.contentInvalid'))
       return null
     }
   })()
@@ -416,13 +422,13 @@ const loadChartData = (data) => {
     !Array.isArray(chart.links) ||
     chart.nodes.some((n) => !n || typeof n !== 'object')
   ) {
-    message.error('文件内容已损坏或格式不正确，无法打开')
+    message.error(t('error.contentInvalid'))
     return
   }
   // 与主进程 fileService 对齐：悬空边（source/target 不在任何节点上）同样视为损坏
   const names = new Set(chart.nodes.map((n) => n.name))
   if (chart.links.some((l) => !l || !names.has(l?.source) || !names.has(l?.target))) {
-    message.error('文件内容已损坏或格式不正确，无法打开')
+    message.error(t('error.contentInvalid'))
     return
   }
   xkContext.value.chartData = chart
@@ -476,6 +482,15 @@ watch(
 // saveNodeVisible，这里统一上报；红条警示已删，标题圆点是唯一未保存提示
 watch(saveNodeVisible, (v) => {
   window.electronAPI.fileDirty({ dirty: v }).catch((err) => {
+    console.error('未保存状态上报失败', err)
+  })
+})
+
+// 语言切换重报当前未保存状态：主进程 refreshTitles 只覆盖已登记文件窗口，
+// 未命名窗口（无登记项）靠这条重报走 file:dirty 的未命名标题分支，
+// 「未保存圆点 + 新语言标题」才能即时刷新（与 dirty 翻转共用同一条管道）
+watch(locale, () => {
+  window.electronAPI.fileDirty({ dirty: saveNodeVisible.value }).catch((err) => {
     console.error('未保存状态上报失败', err)
   })
 })
@@ -672,7 +687,7 @@ const onOutlineImport = ({ nodes, links }) => {
   )
 
   if (!addedNodes.length && !addedLinks.length) {
-    message.info('没有可导入的内容（节点均已存在且无新连接）')
+    message.info(t('outline.nothingToImport'))
     return
   }
 
@@ -777,7 +792,7 @@ const createNewFile = () => {
     .newChartWindow({ content: JSON.stringify({ version: 2, nodes: [], links: [] }), path: '' })
     .catch((err) => {
       console.error('新建图表窗口失败', err)
-      message.error('新建图表窗口失败')
+      message.error(t('chart.newWindowFailed'))
     })
 }
 
@@ -790,17 +805,17 @@ const openFile = async () => {
     const res = await window.electronAPI.openFile()
     if (res.canceled) return
     if (res.alreadyOpen) {
-      message.info('该文件已在打开的窗口中')
+      message.info(t('chart.alreadyOpen'))
       return
     }
     window.electronAPI.newChartWindow({ content: res.content, path: res.path }).catch((err) => {
       console.error('打开失败', err)
-      message.error('打开失败')
+      message.error(t('chart.openFailed'))
     })
   } catch (err) {
     console.error('打开失败', err)
     // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
-    message.error('打开失败：文件读取失败或已损坏')
+    message.error(t('common.openFailedDetail'))
   }
 }
 
@@ -840,7 +855,7 @@ const persistFile = async () => {
    */
   if (!xkContext.value.chartData) {
     // 装载失败的窗口没有可保存内容，禁止把字面量 "null" 写成损坏文件
-    message.error('没有可保存的图表内容')
+    message.error(t('chart.nothingToSave'))
     return false
   }
   try {
@@ -861,12 +876,12 @@ const persistFile = async () => {
     // 按主进程错误里的稳定 token 区分冲突场景
     if (String(err?.message).includes('[FILE_CONFLICT]')) {
       autoSaveSuspended = true // 冲突未解决前不再自动保存，避免每分钟重复报错
-      message.error('文件已被其他窗口或外部程序修改，请使用“另存为”保留修改')
+      message.error(t('chart.fileConflictHint'))
     } else if (String(err?.message).includes('[EXAMPLE_PROTECTED]')) {
       // 另存对话框里选到了示例目录内（示例是内置资产，不允许覆盖）
-      message.error('示例文件不允许修改，请选择其他位置保存')
+      message.error(t('chart.exampleProtectedHint'))
     } else {
-      message.error('保存失败')
+      message.error(t('chart.saveFailed'))
     }
     saveNodeVisible.value = true
     return false
@@ -892,7 +907,7 @@ const saveAs = async () => {
    * 实现文件另存为。
    */
   if (!xkContext.value.chartData) {
-    message.error('没有可保存的图表内容')
+    message.error(t('chart.nothingToSave'))
     return
   }
   try {
@@ -910,9 +925,9 @@ const saveAs = async () => {
   } catch (err) {
     console.error('另存为失败', err)
     if (String(err?.message).includes('[EXAMPLE_PROTECTED]')) {
-      message.error('示例文件不允许修改，请选择其他位置保存')
+      message.error(t('chart.exampleProtectedHint'))
     } else {
-      message.error('另存为失败')
+      message.error(t('chart.saveAsFailed'))
     }
   }
 }
@@ -1039,13 +1054,16 @@ const deleteSelection = () => {
   xkContext.value.updateChart = !xkContext.value.updateChart
   resetSider()
   resetRefData()
-  message.info(`已删除 ${deletedNodes.length} 个节点、${removedLinks.length} 条连接`)
+  message.info(
+    t('chart.deletedSummary', { nodes: deletedNodes.length, edges: removedLinks.length })
+  )
 }
 
-const buttonList = ref([
-  { src: DeleteNodeIcon, name: '删除节点', click: deleteNode },
-  { src: DeleteEdgeIcon, name: '删除连接', click: deleteEdge },
-  { src: EditIcon, name: '编辑栏', click: toggleSider }
+// 按钮名语言相关：computed 让语言切换后即时跟随（ref 常量不会刷新）
+const buttonList = computed(() => [
+  { src: DeleteNodeIcon, name: t('chart.deleteNode'), click: deleteNode },
+  { src: DeleteEdgeIcon, name: t('chart.deleteEdge'), click: deleteEdge },
+  { src: EditIcon, name: t('chart.editSider'), click: toggleSider }
 ])
 
 // 图表区宽度不在此设定：由 antd flex 布局撑开；3D 图组件经

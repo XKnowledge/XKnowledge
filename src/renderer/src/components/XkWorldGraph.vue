@@ -4,7 +4,7 @@
     <!-- 3D 库独占挂载点（同 XkGraph3D 的冷启动坑：覆盖层放外面） -->
     <div ref="containerRef" class="world-graph-container"></div>
     <div v-if="initFailed" class="world-graph-fallback">
-      3D 视图初始化失败（显卡驱动异常？），世界层不可用
+      {{ $t('world.initFailed') }}
     </div>
   </div>
 </template>
@@ -16,6 +16,8 @@ import SpriteText from 'three-spritetext'
 import { forceX, forceY, forceZ } from 'd3-force-3d'
 import { assignCategoryColors } from '../utils/categoryColor.js'
 import { effective } from '../store/themeStore.js'
+import { locale } from '../store/localeStore.js'
+import { t } from '../i18n.js'
 import { SCENE_COLORS } from '../utils/graphData.js'
 import { superNodeVal, ANCHOR_STRENGTH } from '../utils/worldGraph.js'
 
@@ -116,6 +118,12 @@ const applyLabels = () => {
   })
 }
 
+// 语言切换重设底部导航提示（同 XkGraph3D 手法）
+watch(locale, () => {
+  const navInfo = containerRef.value?.querySelector?.('.scene-nav-info')
+  if (navInfo) navInfo.textContent = t('world.navInfo')
+})
+
 onMounted(() => {
   try {
     graph = new ForceGraph3D(containerRef.value, {
@@ -145,7 +153,11 @@ onMounted(() => {
     )
     .nodeRelSize(1)
     .nodeColor(nodeColorOf)
-    .nodeLabel((n) => (n.__kind === 'graph' ? `${n.title}（${n.nodeCount} 节点）` : n.name))
+    .nodeLabel((n) =>
+      n.__kind === 'graph'
+        ? t('world.superNodeLabel', { title: n.title, count: n.nodeCount })
+        : n.name
+    )
     .linkColor(linkColorOf)
     .linkWidth((l) => (l.__kind === 'stitch' ? 0.5 : 1))
     .onNodeClick((n) =>
@@ -179,7 +191,7 @@ onMounted(() => {
     )
 
   const navInfo = containerRef.value.querySelector('.scene-nav-info')
-  if (navInfo) navInfo.textContent = '左键：旋转　滚轮/中键：缩放　右键：平移'
+  if (navInfo) navInfo.textContent = t('world.navInfo')
 
   applyVisibility()
   // 滑杆语义对齐（同 XkGraph3D）：视图面板默认 100 → charge -10；不设则库默认

@@ -5,41 +5,41 @@
     </a>
     <template #overlay>
       <a-menu style="width: 200px">
-        <a-menu-item key="1" @click="createNewFile"> 新建文件 </a-menu-item>
-        <a-menu-item key="2" @click="openFile"> 打开文件 </a-menu-item>
-        <a-menu-item key="12" @click="closeFile"> 关闭文件 </a-menu-item>
+        <a-menu-item key="1" @click="createNewFile"> {{ $t('menu.newFile') }} </a-menu-item>
+        <a-menu-item key="2" @click="openFile"> {{ $t('menu.openFile') }} </a-menu-item>
+        <a-menu-item key="12" @click="closeFile"> {{ $t('menu.closeFile') }} </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="3" @click="undo">
           <a-row>
-            <a-col flex="120px">撤销</a-col>
+            <a-col flex="120px">{{ $t('keybinding.names.undo') }}</a-col>
             <a-col flex="auto">{{ undoLabel }}</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-item key="4" @click="redo">
           <a-row>
-            <a-col flex="120px">重做</a-col>
+            <a-col flex="120px">{{ $t('keybinding.names.redo') }}</a-col>
             <a-col flex="auto">{{ redoLabel }}</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="7" @click="deleteNode">
           <a-row>
-            <a-col flex="120px">删除节点</a-col>
+            <a-col flex="120px">{{ $t('chart.deleteNode') }}</a-col>
             <a-col flex="auto">Delete</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="9" @click="deleteEdge"> 删除连接 </a-menu-item>
+        <a-menu-item key="9" @click="deleteEdge"> {{ $t('chart.deleteEdge') }} </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="10" @click="saveFile">
           <a-row>
-            <a-col flex="120px">保存</a-col>
+            <a-col flex="120px">{{ $t('keybinding.names.save') }}</a-col>
             <a-col flex="auto">{{ saveLabel }}</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="11" @click="saveAs"> 另存为... </a-menu-item>
+        <a-menu-item key="11" @click="saveAs"> {{ $t('menu.saveAs') }} </a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="14" @click="importOutline"> 从大纲导入... </a-menu-item>
-        <a-menu-item key="13" @click="openSettings"> 设置 </a-menu-item>
+        <a-menu-item key="14" @click="importOutline"> {{ $t('menu.importOutline') }} </a-menu-item>
+        <a-menu-item key="13" @click="openSettings"> {{ $t('common.settings') }} </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>

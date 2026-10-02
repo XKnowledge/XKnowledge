@@ -14,6 +14,7 @@ import {
   setWindowTitle
 } from './windowManager'
 import { computeTitles, composeWindowTitles } from './titleService'
+import { setCurrentLocale, t } from './i18nMain'
 import { IPC } from '../shared/ipc-channels'
 
 /**
@@ -65,13 +66,13 @@ export const registerIpc = () => {
   ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
     // 示例文件永不写回：path 指向 examples 内时视同无路径，弹另存让用户存副本
     if (!path || isExamplePath(path)) {
-      return fileService.saveChartFileAs(senderWindow(event), content, '将文件保存到...')
+      return fileService.saveChartFileAs(senderWindow(event), content, t('dialog.saveTo'))
     }
     return fileService.writeChartFile(path, content)
   })
 
   ipcMain.handle(IPC.FILE_SAVE_AS, async (event, { content }) => {
-    return fileService.saveChartFileAs(senderWindow(event), content, '将文件另存为...')
+    return fileService.saveChartFileAs(senderWindow(event), content, t('dialog.saveAsTo'))
   })
 
   ipcMain.handle(IPC.FILE_OPEN, async (event) => {
@@ -143,7 +144,7 @@ export const registerIpc = () => {
       refreshTitles()
     } else {
       // 未命名窗口没有登记项：直接设未命名标题（干净/带圆点）
-      const { display, taskbar } = composeWindowTitles('未命名', !!dirty)
+      const { display, taskbar } = composeWindowTitles(t('common.untitled'), !!dirty)
       setWindowTitle(BrowserWindow.fromWebContents(event.sender), display, taskbar)
     }
     return { ok: true }
@@ -217,9 +218,9 @@ export const registerIpc = () => {
     // A 窗口的确认框上误关掉 B 窗口的修改
     const { response } = await dialog.showMessageBox(senderWindow(event), {
       type: 'info',
-      title: '确认退出',
-      message: '文件未保存，是否退出？',
-      buttons: ['保存', '放弃', '取消'],
+      title: t('dialog.confirmExit'),
+      message: t('dialog.unsavedExit'),
+      buttons: [t('common.save'), t('common.discard'), t('common.cancel')],
       cancelId: 2 // 直接关闭提示框视为"取消"
     })
     return ['save', 'discard', 'cancel'][response]
@@ -227,6 +228,12 @@ export const registerIpc = () => {
 
   ipcMain.handle(IPC.APP_THEME_APPLIED, (event, payload) => {
     applyTheme(payload)
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.APP_LOCALE_APPLIED, (event, { locale } = {}) => {
+    setCurrentLocale(locale)
+    refreshTitles() // 已登记窗口标题重算（「未命名」等语言相关）
     return { ok: true }
   })
 

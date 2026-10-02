@@ -1,7 +1,9 @@
 import { sep } from 'path'
+import { t } from './i18nMain'
 
 export const DEFAULT_TITLE = 'XKnowledge'
-export const UNTITLED_TITLE = '未命名 — XKnowledge'
+/** 未命名标题（语言相关：主进程 locale 随 app:locale-applied 变化） */
+export const untitledTitle = () => `${t('common.untitled')} — ${DEFAULT_TITLE}`
 
 // Electron 对话框在 Windows 返回 \ 分隔路径，dev/测试常见 /，两种都按分隔符切
 const segmentsOf = (p) => p.split(/[\\/]/).filter(Boolean)

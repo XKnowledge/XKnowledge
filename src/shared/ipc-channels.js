@@ -27,6 +27,7 @@ export const IPC = {
   APP_REQUEST_CLOSE: 'app:request-close',
   APP_TITLE_CHANGED: 'app:title-changed',
   APP_THEME_APPLIED: 'app:theme-applied',
+  APP_LOCALE_APPLIED: 'app:locale-applied',
 
   // 自绘窗口控制按钮（XkWindowControls，替代原生 titleBarOverlay）
   APP_WINDOW_MINIMIZE: 'app:window-minimize',

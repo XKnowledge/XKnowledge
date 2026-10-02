@@ -5,7 +5,7 @@ vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: vi.fn(), fromId: vi.fn() },
   dialog: { showMessageBox: vi.fn() },
   // examplePaths 经 app.getAppPath() 定位 examples 目录
-  app: { getAppPath: vi.fn(() => 'C:/mock-app') }
+  app: { getLocale: vi.fn(() => 'zh-CN'), getAppPath: vi.fn(() => 'C:/mock-app') }
 }))
 
 vi.mock('../../src/main/fileService', () => ({

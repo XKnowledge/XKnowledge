@@ -24,7 +24,7 @@
             ref="nameRef"
             v-model:value="nodeName"
             class="xk-canvas-editor-name"
-            placeholder="节点名称"
+            :placeholder="$t('editor.nodeName')"
             size="small"
             @keydown.enter="onNameEnter"
           />
@@ -33,13 +33,13 @@
             v-model:value="category"
             :open="catOpen"
             class="xk-canvas-editor-cat"
-            placeholder="类目"
+            :placeholder="$t('editor.categoryPlaceholder')"
             size="small"
             placement="topLeft"
             :options="localCategories.map((c) => ({ value: c }))"
             :dropdown-match-select-width="false"
             @keydown.enter.capture="onCatEnter"
-            @dropdownVisibleChange="onCatOpenChange"
+            @dropdown-visible-change="onCatOpenChange"
             @change="submitNode"
           >
             <template #dropdownRender="{ menuNode: menu }">
@@ -49,12 +49,14 @@
                 <a-input
                   ref="newCatRef"
                   v-model:value="newCategory"
-                  placeholder="新类目"
+                  :placeholder="$t('editor.newCategory')"
                   size="small"
                   style="width: 100px"
                   @keydown.enter="onNewCatEnter"
                 />
-                <a-button type="text" size="small" @click="addCategory">新增</a-button>
+                <a-button type="text" size="small" @click="addCategory">{{
+                  $t('common.add')
+                }}</a-button>
               </a-space>
             </template>
           </a-select>
@@ -70,9 +72,15 @@
             button-style="solid"
             class="xk-canvas-editor-size"
           >
-            <a-radio-button :value="30"><i class="xk-size-dot xk-dot-s" />小</a-radio-button>
-            <a-radio-button :value="50"><i class="xk-size-dot xk-dot-m" />中</a-radio-button>
-            <a-radio-button :value="80"><i class="xk-size-dot xk-dot-l" />大</a-radio-button>
+            <a-radio-button :value="30"
+              ><i class="xk-size-dot xk-dot-s" />{{ $t('editor.small') }}</a-radio-button
+            >
+            <a-radio-button :value="50"
+              ><i class="xk-size-dot xk-dot-m" />{{ $t('editor.medium') }}</a-radio-button
+            >
+            <a-radio-button :value="80"
+              ><i class="xk-size-dot xk-dot-l" />{{ $t('editor.large') }}</a-radio-button
+            >
           </a-radio-group>
           <!-- 自定义大小数框：与档位 radio 共用 sizeTier（参照侧栏节点大小
                1~100）——点档位同步数框，改数框即脱离档位（radio 全灭） -->
@@ -90,7 +98,7 @@
           <a-textarea
             v-model:value="nodeDes"
             class="xk-canvas-editor-des"
-            placeholder="描述（可选）"
+            :placeholder="$t('editor.descriptionOptional')"
             size="small"
             :rows="1"
           />
@@ -102,7 +110,7 @@
       ref="nameRef"
       v-model:value="edgeName"
       class="xk-canvas-editor-edge"
-      placeholder="连接名称（留空建无名边），回车确认"
+      :placeholder="$t('editor.edgeNamePlaceholder')"
       size="small"
       @keydown.enter="onEdgeEnter"
     />

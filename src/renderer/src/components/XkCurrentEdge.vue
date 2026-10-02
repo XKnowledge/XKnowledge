@@ -1,13 +1,13 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item label="名称">
+    <a-form-item :label="$t('common.name')">
       <a-textarea v-model:value="currentEdge.name" />
     </a-form-item>
-    <a-form-item label="描述">
+    <a-form-item :label="$t('common.description')">
       <a-textarea v-model:value="currentEdge.des" />
     </a-form-item>
     <a-form-item>
-      <a-button @click="currentEdgeSubmit">修改连接</a-button>
+      <a-button @click="currentEdgeSubmit">{{ $t('edge.submit') }} </a-button>
     </a-form-item>
   </a-form>
 </template>

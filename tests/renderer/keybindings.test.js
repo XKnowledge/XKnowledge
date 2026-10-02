@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   DEFAULT_BINDINGS,
   KEYBINDING_IDS,
-  ACTION_NAMES,
+  actionName,
   isValidBinding,
   normalizeRecordedEvent,
   matchEvent,
@@ -22,9 +22,12 @@ describe('DEFAULT_BINDINGS：5 键位默认值', () => {
       search: { modifiers: ['primary'], key: 'f' }
     })
   })
-  it('KEYBINDING_IDS 与 ACTION_NAMES 覆盖同一组键位', () => {
+  it('actionName 对每个键位都有名称（字典覆盖同一组键位）', () => {
     expect(KEYBINDING_IDS).toEqual(['save', 'undo', 'redo', 'delete', 'search'])
-    expect(Object.keys(ACTION_NAMES)).toEqual(KEYBINDING_IDS)
+    // 每个键位都能取到非 key 回吐的名称（缺字典项会返回 key 本身）
+    for (const id of KEYBINDING_IDS) {
+      expect(actionName(id)).not.toBe(`keybinding.names.${id}`)
+    }
   })
 })
 

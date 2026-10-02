@@ -5,7 +5,7 @@ import { join } from 'path'
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() },
-  app: { getAppPath: vi.fn() }
+  app: { getLocale: vi.fn(() => 'zh-CN'), getAppPath: vi.fn() }
 }))
 
 import { dialog, app } from 'electron'
@@ -44,39 +44,39 @@ describe('validateChartStructure', () => {
   })
 
   it('顶层不是对象被拒绝', () => {
-    expect(validateChartStructure([1, 2])).toMatch(/不是 JSON 对象/)
-    expect(validateChartStructure('str')).toMatch(/不是 JSON 对象/)
-    expect(validateChartStructure(null)).toMatch(/不是 JSON 对象/)
+    expect(validateChartStructure([1, 2])).toBe('not_json_object')
+    expect(validateChartStructure('str')).toBe('not_json_object')
+    expect(validateChartStructure(null)).toBe('not_json_object')
   })
 
   it('缺少 version 或 version 不是 2 被拒绝', () => {
     const noVersion = JSON.parse(VALID_CHART)
     delete noVersion.version
-    expect(validateChartStructure(noVersion)).toMatch(/version/)
+    expect(validateChartStructure(noVersion)).toBe('no_version')
     const oldVersion = JSON.parse(VALID_CHART)
     oldVersion.version = 1
-    expect(validateChartStructure(oldVersion)).toMatch(/version/)
+    expect(validateChartStructure(oldVersion)).toBe('no_version')
   })
 
   it('缺少 nodes / nodes 含无效项被拒绝', () => {
     const noNodes = JSON.parse(VALID_CHART)
     delete noNodes.nodes
-    expect(validateChartStructure(noNodes)).toMatch(/nodes/)
+    expect(validateChartStructure(noNodes)).toBe('missing_nodes')
     const nullNode = JSON.parse(VALID_CHART)
     nullNode.nodes.push(null)
-    expect(validateChartStructure(nullNode)).toMatch(/节点/)
+    expect(validateChartStructure(nullNode)).toBe('invalid_node_item')
   })
 
   it('缺少 links 被拒绝', () => {
     const noLinks = JSON.parse(VALID_CHART)
     delete noLinks.links
-    expect(validateChartStructure(noLinks)).toMatch(/links/)
+    expect(validateChartStructure(noLinks)).toBe('missing_links')
   })
 
   it('link 的 source/target 引用不存在的节点被拒绝（悬空边）', () => {
     const dangling = JSON.parse(VALID_CHART)
     dangling.links.push({ source: '幽灵节点', target: '节点1', name: '边2', des: '' })
-    expect(validateChartStructure(dangling)).toMatch(/引用/)
+    expect(validateChartStructure(dangling)).toBe('dangling_edge')
   })
 })
 

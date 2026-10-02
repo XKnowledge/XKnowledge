@@ -13,7 +13,11 @@
     <a-layout>
       <a-layout-content class="world-content">
         <a-spin v-if="loading" class="world-loading" />
-        <a-empty v-else-if="!index?.graphs?.length" class="world-loading" description="世界为空" />
+        <a-empty
+          v-else-if="!index?.graphs?.length"
+          class="world-loading"
+          :description="$t('world.empty')"
+        />
         <XkWorldGraph
           v-else
           ref="graphRef"
@@ -28,13 +32,17 @@
         />
         <!-- 已展开域浮动列表：逐个收拢 + 全部收拢；「−」收成小按钮（同视图面板折叠模式） -->
         <div v-if="expandedList.length && expandedBarOpen" class="world-expanded-bar">
-          <button class="world-expanded-fold" title="收起" @click="expandedBarOpen = false">
+          <button
+            class="world-expanded-fold"
+            :title="$t('common.collapse')"
+            @click="expandedBarOpen = false"
+          >
             −
           </button>
           <a-tag v-for="g in expandedList" :key="g.id" closable @close="collapse(g.id)">
             {{ g.title }}
           </a-tag>
-          <a-button size="small" @click="collapseAll">全部收拢</a-button>
+          <a-button size="small" @click="collapseAll">{{ $t('world.collapseAll') }}</a-button>
         </div>
         <!-- 收起态：数量小按钮，点击恢复浮条 -->
         <a-button
@@ -43,7 +51,7 @@
           class="world-expanded-toggle"
           @click="expandedBarOpen = true"
         >
-          已展开 {{ expandedList.length }}
+          {{ $t('world.expandedCount', { count: expandedList.length }) }}
         </a-button>
         <!-- 视图调节：排斥力 + 聚焦模式（会话级浮动卡片，默认收起）。
              data-focus-node/data-focus-mode 是冒烟断言锚点（同图表页 focus-row） -->
@@ -53,16 +61,22 @@
           :data-focus-node="focusNodeId"
           :data-focus-mode="focusMode"
         >
-          <a-button v-if="!viewPanelOpen" size="small" @click="viewPanelOpen = true">视图</a-button>
+          <a-button v-if="!viewPanelOpen" size="small" @click="viewPanelOpen = true">{{
+            $t('chart.view')
+          }}</a-button>
           <div v-else class="world-view-panel-body">
             <div class="world-view-panel-head">
-              <span>视图调节</span>
-              <button class="world-view-panel-fold" title="收起" @click="viewPanelOpen = false">
+              <span>{{ $t('world.viewSettings') }}</span>
+              <button
+                class="world-view-panel-fold"
+                :title="$t('common.collapse')"
+                @click="viewPanelOpen = false"
+              >
                 −
               </button>
             </div>
             <div class="world-view-panel-row">
-              <span class="world-view-label">排斥力</span>
+              <span class="world-view-label">{{ $t('world.repulsion') }}</span>
               <a-slider
                 v-model:value="repulsion"
                 class="world-view-slider"
@@ -80,19 +94,19 @@
               />
             </div>
             <div class="world-view-panel-row">
-              <span class="world-view-label">聚焦</span>
+              <span class="world-view-label">{{ $t('world.focus') }}</span>
               <a-select
                 v-model:value="focusMode"
                 size="small"
                 class="world-view-select"
                 :options="[
-                  { value: 'off', label: '关闭' },
-                  { value: 'focus', label: '灰化' },
-                  { value: 'deep', label: '隐藏' }
+                  { value: 'off', label: $t('chart.focusOff') },
+                  { value: 'focus', label: $t('chart.focusDim') },
+                  { value: 'deep', label: $t('chart.focusHide') }
                 ]"
                 @change="onFocusModeChange"
               />
-              <span class="world-view-label">跳数</span>
+              <span class="world-view-label">{{ $t('chart.focusHops') }}</span>
               <a-select
                 v-model:value="focusHops"
                 size="small"
@@ -129,15 +143,19 @@
       <a-layout-sider v-show="cardOpen" class="world-card-sider">
         <div class="world-card-title" :title="selected?.title">{{ selected?.title }}</div>
         <p v-if="selected">
-          节点 {{ selected.nodeCount }} 个 · 来源：{{
-            selected.source === 'example' ? '内置示例' : '用户图库'
+          {{
+            $t('world.nodeCountSource', {
+              count: selected.nodeCount,
+              source:
+                selected.source === 'example' ? $t('world.sourceExample') : $t('world.sourceUser')
+            })
           }}
         </p>
         <a-space direction="vertical" style="width: 100%">
           <a-button type="primary" block :loading="expanding" @click="expand(selected?.id)">
-            展开此图
+            {{ $t('world.expand') }}
           </a-button>
-          <a-button block @click="openFull(selected)">打开完整编辑</a-button>
+          <a-button block @click="openFull(selected)">{{ $t('world.openFullEdit') }}</a-button>
         </a-space>
       </a-layout-sider>
     </a-layout>
@@ -153,6 +171,7 @@ import XkWorldMenu from '../components/XkWorldMenu.vue'
 import XkWorldSearch from '../components/XkWorldSearch.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 import { setPendingChart } from '../store/chartStore'
+import { t } from '../i18n.js'
 import { shortcutModifierActive } from '../utils/platformModifier.js'
 import {
   createWorldState,
@@ -259,18 +278,18 @@ const loadIndex = async () => {
   try {
     const res = await window.electronAPI.worldLoadIndex()
     if (res.brokenCount) {
-      message.warning(`世界索引：${res.brokenCount} 个损坏文件已跳过`)
+      message.warning(t('world.corruptSkipped', { count: res.brokenCount }))
     }
     // spec §6：用户目录配置了却没扫到图（不存在/无权限/为空）须有界面提示，
     // 否则选错目录的用户只看到无声的空操作
     if (res.userDir && !res.graphs.some((g) => g.source === 'user')) {
-      message.warning(`图库目录未发现任何图谱：${res.userDir}`)
+      message.warning(t('world.emptyDir', { dir: res.userDir }))
     }
     index.value = res
     worldState.value = createWorldState(res.graphs, res.stitches)
   } catch (err) {
     console.error('世界索引加载失败', err)
-    message.error('世界索引加载失败')
+    message.error(t('world.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -286,7 +305,7 @@ const expand = async (graphId) => {
     worldState.value = applyExpansion(worldState.value, graphId, JSON.parse(content), anchor)
   } catch (err) {
     console.error('展开失败', err)
-    message.error('展开失败：文件读取失败或已损坏')
+    message.error(t('world.expandFailed'))
   } finally {
     expanding.value = false
   }
@@ -331,7 +350,7 @@ const openFull = async (g) => {
     }
   } catch (err) {
     console.error('打开失败', err)
-    message.error('打开失败：文件读取失败或已损坏')
+    message.error(t('common.openFailedDetail'))
   }
 }
 
@@ -357,12 +376,12 @@ const pickUserDir = async () => {
   try {
     const res = await window.electronAPI.worldSetUserDir('pick')
     if (res.ok) {
-      message.success('图库目录已更新')
+      message.success(t('world.dirUpdated'))
       await loadIndex()
     }
   } catch (err) {
     console.error('设置图库目录失败', err)
-    message.error('设置图库目录失败')
+    message.error(t('world.setDirFailed'))
   } finally {
     picking.value = false
   }

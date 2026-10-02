@@ -4,7 +4,8 @@ vi.mock('electron', () => ({
   BrowserWindow: Object.assign(vi.fn(), { getAllWindows: vi.fn(() => []) }),
   Menu: { setApplicationMenu: vi.fn() },
   shell: { openExternal: vi.fn() },
-  nativeTheme: { themeSource: 'system' }
+  nativeTheme: { themeSource: 'system' },
+  app: { getLocale: vi.fn(() => 'zh-CN') }
 }))
 
 import { nativeTheme } from 'electron'

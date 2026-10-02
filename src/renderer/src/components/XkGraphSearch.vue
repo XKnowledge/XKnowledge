@@ -6,7 +6,7 @@
         class="graph-search-input"
         type="text"
         :value="keyword"
-        placeholder="搜索节点名/描述"
+        :placeholder="$t('search.placeholder')"
         @input="$emit('keyword', $event.target.value)"
         @keydown.enter.prevent="$emit('next')"
         @keydown.down.prevent="$emit('next')"
@@ -14,7 +14,9 @@
         @keydown.esc="$emit('close')"
       />
       <span class="graph-search-count">{{ hitTotal ? `${activeIndex + 1}/${hitTotal}` : '' }}</span>
-      <button class="graph-search-close" title="关闭 (Esc)" @click="$emit('close')">✕</button>
+      <button class="graph-search-close" :title="$t('common.closeEsc')" @click="$emit('close')">
+        ✕
+      </button>
     </div>
     <div v-if="hits.length" class="graph-search-list">
       <!-- mousedown.prevent：点列表项不让输入框失焦（点完还能继续 Enter） -->
@@ -40,9 +42,11 @@
           </template>
         </span>
       </div>
-      <div v-if="hitTotal > hits.length" class="graph-search-more">…共 {{ hitTotal }} 个命中</div>
+      <div v-if="hitTotal > hits.length" class="graph-search-more">
+        …{{ $t('chart.searchHits', { count: hitTotal }) }}
+      </div>
     </div>
-    <div v-else-if="keyword" class="graph-search-empty">无匹配节点</div>
+    <div v-else-if="keyword" class="graph-search-empty">{{ $t('search.noMatch') }}</div>
   </div>
 </template>
 

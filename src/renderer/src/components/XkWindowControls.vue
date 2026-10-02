@@ -3,19 +3,19 @@
        无法上下居中也无法与右缘留隙）。绝对定位于 53px 头部内：上下居中、
        右缘留隙。macOS 不渲染——那里保留原生红绿灯按钮，自绘会重复 -->
   <div v-if="!isDarwin" class="xk-window-controls">
-    <button v-if="sizable" class="xk-wc-btn" title="最小化" @click="onMinimize">
+    <button v-if="sizable" class="xk-wc-btn" :title="$t('common.minimize')" @click="onMinimize">
       <MinusOutlined />
     </button>
     <button
       v-if="sizable"
       class="xk-wc-btn"
-      :title="maximized ? '向下还原' : '最大化'"
+      :title="maximized ? $t('common.restore') : $t('common.maximize')"
       @click="onToggleMaximize"
     >
       <CopyOutlined v-if="maximized" />
       <BorderOutlined v-else />
     </button>
-    <button class="xk-wc-btn" title="关闭" @click="onClose">
+    <button class="xk-wc-btn" :title="$t('common.close')" @click="onClose">
       <CloseOutlined />
     </button>
   </div>

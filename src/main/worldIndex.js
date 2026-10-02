@@ -3,6 +3,7 @@ import path from 'path'
 import { app, dialog } from 'electron'
 import { examplesDir } from './examplePaths'
 import { readChartFile } from './fileService'
+import { t } from './i18nMain'
 
 /**
  * 世界树索引：双源（examples/ + 用户图目录）扫描 .xk，聚合跨图同名缝合线，
@@ -178,7 +179,7 @@ const insideDir = (filePath, dir) => {
  */
 export const readWorldGraph = async (id) => {
   if (typeof id !== 'string' || !id || !path.isAbsolute(id)) {
-    throw Object.assign(new Error('[WORLD_PATH_REJECTED] 无效的图谱路径'), {
+    throw Object.assign(new Error(`[WORLD_PATH_REJECTED] ${t('error.worldPathRejected')}`), {
       code: 'WORLD_PATH_REJECTED',
       detail: String(id)
     })
@@ -186,7 +187,7 @@ export const readWorldGraph = async (id) => {
   const userDir = await readWorldUserDir()
   const allowed = insideDir(id, examplesDir()) || (userDir ? insideDir(id, userDir) : false)
   if (!allowed) {
-    throw Object.assign(new Error('[WORLD_PATH_REJECTED] 路径不在世界树图库范围内'), {
+    throw Object.assign(new Error(`[WORLD_PATH_REJECTED] ${t('error.worldPathOutside')}`), {
       code: 'WORLD_PATH_REJECTED',
       detail: id
     })
@@ -204,7 +205,7 @@ export const readWorldGraph = async (id) => {
 export const setWorldUserDir = async (dir, window) => {
   if (dir === 'pick') {
     const res = await dialog.showOpenDialog(window, {
-      title: '选择图库目录',
+      title: t('dialog.pickWorldDir'),
       properties: ['openDirectory']
     })
     if (res.canceled || !res.filePaths?.length) {
@@ -217,7 +218,7 @@ export const setWorldUserDir = async (dir, window) => {
     return { ok: true, userDir: null }
   }
   if (typeof dir !== 'string' || !path.isAbsolute(dir)) {
-    throw Object.assign(new Error('[WORLD_DIR_REJECTED] 无效的图库目录'), {
+    throw Object.assign(new Error(`[WORLD_DIR_REJECTED] ${t('error.worldDirRejected')}`), {
       code: 'WORLD_DIR_REJECTED',
       detail: String(dir)
     })

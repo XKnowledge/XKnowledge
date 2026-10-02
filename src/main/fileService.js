@@ -10,6 +10,7 @@ const guard = createPathGuard()
 // 校验逻辑独立为无 electron 依赖的纯模块（见 chartValidation.mjs 头注释），
 // 转发导出保持既有 import 路径不变；本模块内部也直接使用
 import { validateChartStructure } from './chartValidation.mjs'
+import { t } from './i18nMain'
 export { validateChartStructure }
 
 /**
@@ -53,7 +54,7 @@ const recordWritten = async (filePath) => {
 }
 
 const wrapWriteError = (err, filePath) =>
-  Object.assign(new Error('文件写入失败'), {
+  Object.assign(new Error(t('error.writeFailed')), {
     code: 'WRITE_FAILED',
     detail: String(err),
     path: filePath
@@ -66,7 +67,7 @@ const wrapWriteError = (err, filePath) =>
  */
 const assertNotExample = (filePath) => {
   if (!isExamplePath(filePath)) return
-  throw Object.assign(new Error('[EXAMPLE_PROTECTED] 示例文件不允许修改，请保存到其他位置'), {
+  throw Object.assign(new Error(`[EXAMPLE_PROTECTED] ${t('error.exampleProtected')}`), {
     code: 'EXAMPLE_PROTECTED',
     path: filePath
   })
@@ -78,7 +79,7 @@ const assertNotExample = (filePath) => {
  */
 export const showOpenDialog = (window) =>
   dialog.showOpenDialog(window, {
-    title: '打开',
+    title: t('dialog.open'),
     properties: ['openFile'],
     filters: FILE_FILTERS
   })
@@ -97,7 +98,7 @@ export const readChartFile = async (filePath) => {
   try {
     data = await fs.promises.readFile(filePath, 'utf-8')
   } catch (err) {
-    throw Object.assign(new Error('文件读取失败'), {
+    throw Object.assign(new Error(t('error.readFailed')), {
       code: 'READ_FAILED',
       detail: String(err),
       path: filePath
@@ -109,7 +110,7 @@ export const readChartFile = async (filePath) => {
   try {
     parsed = JSON.parse(data)
   } catch {
-    throw Object.assign(new Error('文件已损坏或不是有效的 XKnowledge 文件'), {
+    throw Object.assign(new Error(t('error.notValidFile')), {
       code: 'INVALID_JSON',
       detail: filePath,
       path: filePath
@@ -120,14 +121,14 @@ export const readChartFile = async (filePath) => {
   // 渲染端引发白屏，一并拦截
   const structureError = validateChartStructure(parsed)
   if (structureError) {
-    throw Object.assign(
-      new Error(`文件结构不完整（${structureError}），不是有效的 XKnowledge 图谱文件`),
-      {
-        code: 'INVALID_STRUCTURE',
-        detail: structureError,
-        path: filePath
-      }
-    )
+    // structureError 为稳定错误码，即字典 error.validation.<code> 的键；
+    // 校验模块保持纯 node 可 import，翻译集中在此
+    const detail = t(`error.validation.${structureError}`)
+    throw Object.assign(new Error(t('error.incompleteChart', { detail })), {
+      code: 'INVALID_STRUCTURE',
+      detail,
+      path: filePath
+    })
   }
 
   try {

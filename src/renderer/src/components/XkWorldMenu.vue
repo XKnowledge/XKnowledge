@@ -5,10 +5,12 @@
     </a>
     <template #overlay>
       <a-menu style="width: 200px">
-        <a-menu-item key="1" :disabled="picking" @click="emit('pickDir')"> 增加目录 </a-menu-item>
-        <a-menu-item key="2" @click="emit('refresh')"> 刷新视图 </a-menu-item>
+        <a-menu-item key="1" :disabled="picking" @click="emit('pickDir')">
+          {{ $t('menu.addDir') }}
+        </a-menu-item>
+        <a-menu-item key="2" @click="emit('refresh')"> {{ $t('menu.refresh') }} </a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="3" @click="emit('close')"> 返回首页 </a-menu-item>
+        <a-menu-item key="3" @click="emit('close')"> {{ $t('menu.backHome') }} </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>

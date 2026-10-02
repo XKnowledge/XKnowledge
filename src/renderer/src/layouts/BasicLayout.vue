@@ -7,17 +7,17 @@
       <div class="sider-buttons sider-top">
         <a-button id="openWorld" @click="router.push('/world')">
           <template #icon><Network :size="16" /></template>
-          世界树
+          {{ $t('menu.worldTree') }}
         </a-button>
       </div>
       <div class="sider-buttons sider-bottom">
         <a-button id="openSettings" @click="settingsRef?.open()">
           <template #icon><Settings :size="16" /></template>
-          设置
+          {{ $t('common.settings') }}
         </a-button>
         <a-button id="uploadFile" @click="openFile">
           <template #icon><FolderOpen :size="16" /></template>
-          打开本地文件
+          {{ $t('menu.openLocalFile') }}
         </a-button>
       </div>
       <XkSettings ref="settingsRef" />
@@ -42,6 +42,7 @@ import { FolderOpen, Network, Settings } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ref } from 'vue'
+import { t } from '../i18n.js'
 import { setPendingChart } from '../store/chartStore'
 import XkTitleText from '../components/XkTitleText.vue'
 import XkSettings from '../components/XkSettings.vue'
@@ -60,12 +61,12 @@ const openFile = async () => {
   } catch (err) {
     console.error('打开失败', err)
     // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
-    message.error('打开失败：文件读取失败或已损坏')
+    message.error(t('common.openFailedDetail'))
     return // 留在首页，用户可重试打开其他文件
   }
   if (res.canceled) return
   if (res.alreadyOpen) {
-    message.info('该文件已在打开的窗口中')
+    message.info(t('chart.alreadyOpen'))
     return
   }
   setPendingChart({ value: res.content, path: res.path })

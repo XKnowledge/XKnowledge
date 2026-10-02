@@ -1,6 +1,6 @@
 import { BrowserWindow, Menu, nativeTheme, shell } from 'electron'
 import { join } from 'path'
-import { DEFAULT_TITLE, UNTITLED_TITLE } from './titleService'
+import { DEFAULT_TITLE, untitledTitle } from './titleService'
 import { IPC } from '../shared/ipc-channels'
 
 // 会话内最近生效主题：新窗口 backgroundColor 预设依据
@@ -252,7 +252,7 @@ export const enterChartMode = (current_window) => {
   unlockSizing(current_window)
   // 进图表页先给默认标题；装载/保存上报路径后由 ipc 层按登记簿覆盖为文件名。
   // 放这里而非渲染端：标题消歧需要跨窗口全局视角
-  setWindowTitle(current_window, UNTITLED_TITLE)
+  setWindowTitle(current_window, untitledTitle())
 
   current_window.on('close', closeHandler)
   current_window.on('closed', closedHandler)

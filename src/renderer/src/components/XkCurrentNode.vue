@@ -1,43 +1,48 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item label="名称">
+    <a-form-item :label="$t('common.name')">
       <a-textarea v-model:value="currentNode.name" />
     </a-form-item>
-    <a-form-item label="描述">
+    <a-form-item :label="$t('common.description')">
       <a-textarea v-model:value="currentNode.des" />
     </a-form-item>
-    <a-form-item label="所属类目">
+    <a-form-item :label="$t('node.category')">
       <a-select
         v-model:value="currentNode.category"
-        placeholder="请选择类目"
+        :placeholder="$t('node.categoryPlaceholder')"
         :options="categoryItems.map((item) => ({ value: item }))"
       >
         <template #dropdownRender="{ menuNode: menu }">
           <v-nodes :vnodes="menu" />
           <a-divider style="margin: 4px 0" />
           <a-space style="padding: 4px 8px">
-            <a-input ref="inputRef" v-model:value="categoryName" placeholder="类目名" />
+            <a-input
+              ref="inputRef"
+              v-model:value="categoryName"
+              :placeholder="$t('node.categoryNamePlaceholder')"
+            />
             <a-button type="text" @click="addCategory">
               <template #icon>
                 <plus-outlined />
               </template>
-              新增类目
+              {{ $t('node.newCategory') }}
             </a-button>
           </a-space>
         </template>
       </a-select>
     </a-form-item>
-    <a-form-item label="节点大小">
+    <a-form-item :label="$t('node.size')">
       <a-input-number v-model:value="currentNode.symbolSize" :min="1" :max="100" />
     </a-form-item>
     <a-form-item>
-      <a-button @click="currentNodeSubmit">修改节点</a-button>
+      <a-button @click="currentNodeSubmit">{{ $t('node.submit') }}</a-button>
     </a-form-item>
   </a-form>
 </template>
 
 <script setup>
 import { defineComponent, ref } from 'vue'
+import { t } from '../i18n.js'
 import { addHistory, jsonReactive } from '../utils/XkUtils'
 
 const currentNode = defineModel('currentNode', { type: Object })
@@ -91,7 +96,7 @@ const currentNodeSubmit = () => {
     // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
     const hasDuplicate = data.some((node) => node.name === newName)
     if (hasDuplicate) {
-      xkContext.value.errorMessage = '不能创建同名节点'
+      xkContext.value.errorMessage = t('validation.duplicateNode')
       return
     }
 

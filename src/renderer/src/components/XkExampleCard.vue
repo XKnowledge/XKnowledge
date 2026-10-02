@@ -24,7 +24,9 @@
         +{{ example.categories.length - MAX_DOTS }}
       </span>
     </div>
-    <div class="stats">{{ example.nodeCount }} 节点 · {{ example.linkCount }} 边</div>
+    <div class="stats">
+      {{ $t('example.nodeEdgeCount', { nodes: example.nodeCount, edges: example.linkCount }) }}
+    </div>
     <div class="desc" :title="example.description">{{ example.description }}</div>
   </div>
 </template>
