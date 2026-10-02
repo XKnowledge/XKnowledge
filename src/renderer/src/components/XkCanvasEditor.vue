@@ -283,12 +283,12 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
   gap: 6px;
 }
 
-/* 描述：行3 整行（356 与行1 内容宽对齐：150 名称+6 gap+200 类目），可拖角双向
+/* 描述：行3 整行（318 与行1 内容宽对齐：150 名称+6 gap+162 类目），可拖角双向
    拉伸（antd reset 只给 textarea resize:vertical，这里放开 both——长描述先拉大
    再写）；min 兜住拖拽下限不至拖没了，宽高超出后编辑器占地随之增长
    （clampEditorPos 的估算不追手改尺寸，只管初定位） */
 .xk-canvas-editor-des {
-  width: 356px;
+  width: 318px;
   min-width: 120px;
   min-height: 24px;
   resize: both;
@@ -302,14 +302,14 @@ defineExpose({ focusName: () => nameRef.value?.focus() })
 }
 
 /* 连边态单框独占一行：加宽到整句提示可见（14px 字号、17 个全角字符最坏
-   238px + 14px 内边距，取 260）；仍窄于建点态 ~374px，右缘钳制 EDITOR_W
+   238px + 14px 内边距，取 260）；仍窄于建点态 ~336px，右缘钳制 EDITOR_W
    按宽态估计不受影响 */
 .xk-canvas-editor-edge {
   width: 260px;
 }
 
 .xk-canvas-editor-cat {
-  width: 200px;
+  width: 162px;
 }
 
 /* 档位圆点示意 3D 球体大小：直径 6/9/12px，色随文字（未选中主题色/选中反白） */
