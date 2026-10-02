@@ -362,6 +362,22 @@ INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载�
   侧栏「设置」按钮与图表页菜单「设置」项（经 shortcut 管道 `open_settings` 动作）
   两个入口各挂一份。
 
+### 6.6 快捷键自定义
+
+5 个键盘键位（save/undo/redo/delete/search）可用户自定义，判定纯函数在
+`utils/keybindings.js`、状态在 `store/keybindingStore.js`（themeStore 同构：localStorage
+`xk-keybindings` 只存改过键位、生效视图 = 默认 ⊕ 覆盖、`storage` 事件跨窗口同步，
+`initKeybindingSync()` 由 `main.ts` mount 前调用）。要点：
+
+- 绑定模型 `{ modifiers: ['primary'|'shift'|'alt'], key }`：`primary` 为 Ctrl/⌘ 归一
+  抽象（保持键盘快捷键双收惯例），判定 `matchEvent` 精确匹配（未列修饰键按下不触发）。
+- ChartView shortcutMap / XkSettings 录制（window keydown capture 独占，Esc 只取消
+ 录制不关弹窗）/ XkMenu 菜单标注三方共用同一生效视图；录制经 `validateRecording`
+  拒绝黑名单（Esc/Tab/F5/Ctrl(⌘)+R）与冲突（`findConflict`），search 必须带修饰键
+  （无输入框守卫，裸键会打断打字）。
+- `isTypingContext` 守卫跟动作走、不跟键走——改键不改变守卫行为；鼠标手势
+  （双击建点/Shift+拖框选/Ctrl(⌘)+拖连线）固定不可改，设置中只读展示。
+
 ## 7. 核心数据流
 
 ### 7.1 图表数据的两条装载路径
