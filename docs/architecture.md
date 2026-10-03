@@ -533,8 +533,9 @@ path，装载链路带 `name` 字段传图库名），空名回退 `composeFileN
 XkGraph3D——导出物与编辑器一份语义，修一处两处受益。水印为 DOM/CSS 叠加
 （`By XKnowledge`、底部 5%、粗体、字号 `max(18px, 2.2vh)`），视觉参数对齐 PNG
 导出的 `computeWatermarkStyle`（语义对齐非代码共享——一个是 canvas 绘制一个是
-CSS）。viewer 文案内嵌 zh/en 双语，按接收方 `navigator.language` 自适应，不可判
-时回退导出时应用语言（data.lang）。
+CSS）。viewer 文案内嵌 zh/en 双语，**跟随导出时应用语言**（`pickViewerLang`
+里 data.lang 优先——导出者所见即接收方所得），data.lang 缺失/被改坏时才按
+接收方 `navigator.language` 自适应。
 
 **测试**：`graphViewerData`（白名单剥离/端点归一/空图 null）、`exportHtml`
 （占位符全替换/`<` 转义后 JSON 仍可解析/title XSS 实体转义/坏数据拒绝/

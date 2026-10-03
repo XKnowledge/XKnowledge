@@ -96,6 +96,11 @@ check(
 )
 const viewerNodes = await vp.evaluate(() => window.__XK_VIEWER__.graph.graphData().nodes.length)
 check('viewer-graph-nodes', viewerNodes === nodeCount, `${viewerNodes} vs ${nodeCount}`)
+// 底部导航提示跟随导出语言（导出环境为中文）：不再是库内置英文
+check(
+  'viewer-nav-lang',
+  (await vp.locator('.scene-nav-info').textContent()).includes('旋转')
+)
 await vp.screenshot({ path: path.join(SHOT_DIR, 'viewer-01-open.png') })
 
 // 6. 搜索：命中计数 + Enter 步进（active 变化经 viewer 状态断言）
@@ -118,8 +123,10 @@ await vp.fill('[data-testid="xk-search-input"]', '')
 await vp.waitForTimeout(300)
 
 // 7. 点击节点 → 详情面板：冻结力模拟（cooldownTicks(0)，防漂移导致投影点
-//    落空）→ 搜索第一个节点并 flyTo（相机对准命中，屏幕中心即节点）→ 点中心。
-//    3D 拾取按深度，中心附近可能被更近节点截获——断言「面板开或选中非空」
+//    落空）→ 搜索第一个节点并 flyTo（相机对准命中）→ 投影矩阵换算球心屏幕
+//    坐标 → 先悬停再点击。悬停必不可少：three-render-objects 的 click 判定
+//    读 hoverObj（渲染循环按 pointerPos 做 raycast 的缓存值），冻结态下
+//    move→down→up 瞬时完成时 hoverObj 尚未更新、点击会被当成背景点击
 await vp.evaluate(() => {
   const v = window.__XK_VIEWER__
   v.graph.cooldownTicks(0) // 冻结布局（点击冒烟专用；正常使用不受影响）
@@ -127,7 +134,33 @@ await vp.evaluate(() => {
   v.flyTo(v.getState().searchHits[0], 700)
 })
 await vp.waitForTimeout(1_200) // 相机飞行动画完成
-await vp.mouse.click(640, 400) // 窗口 1280×800 中心 = flyTo 目标
+// 直接点 searchActive 的屏幕投影：BrowserWindow 1280×800 含原生标题栏，
+// 视口实际 ~1266×763，固定点 (640,400) 距投影球心 ~19px 处于球投影边缘、
+// 命中与否看深度上有没有更近节点，天然 flaky——投影矩阵换算点球心
+const projInfo = await vp.evaluate(() => {
+  const v = window.__XK_VIEWER__
+  const g = v.graph
+  const st = v.getState()
+  const n = g.graphData().nodes.find((x) => x.name === st.searchActive)
+  const cam = g.camera()
+  const mul = (m, vec) => [
+    m[0] * vec[0] + m[4] * vec[1] + m[8] * vec[2] + m[12] * vec[3],
+    m[1] * vec[0] + m[5] * vec[1] + m[9] * vec[2] + m[13] * vec[3],
+    m[2] * vec[0] + m[6] * vec[1] + m[10] * vec[2] + m[14] * vec[3],
+    m[3] * vec[0] + m[7] * vec[1] + m[11] * vec[2] + m[15] * vec[3]
+  ]
+  const eye = mul(cam.matrixWorldInverse.elements, [n.x, n.y, n.z, 1])
+  const clip = mul(cam.projectionMatrix.elements, eye)
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  return {
+    px: Math.round(((clip[0] / clip[3] + 1) / 2) * vw),
+    py: Math.round(((1 - clip[1] / clip[3]) / 2) * vh)
+  }
+})
+await vp.mouse.move(projInfo.px, projInfo.py) // 悬停：pointermove 唤醒渲染帧更新 hoverObj
+await vp.waitForTimeout(600)
+await vp.mouse.click(projInfo.px, projInfo.py)
 await vp.waitForTimeout(600)
 const panelOpen = await vp.evaluate(
   () => document.querySelector('[data-testid="xk-panel"]').dataset.open
@@ -180,7 +213,21 @@ if (chipCount > 0) {
   await vp.waitForTimeout(500)
 }
 
-// 10. 主题切换：body data-theme 翻转 + 背景色变化
+// 10. 视图卡片展开/收起：收起后控件不可见，再点恢复
+await vp.click('[data-testid="xk-ctrl-toggle"]')
+await vp.waitForTimeout(200)
+const ctrlHidden = await vp.evaluate(
+  () => document.querySelector('.xk-ctrl-body').offsetParent === null
+)
+check('viewer-ctrl-collapse', ctrlHidden, String(ctrlHidden))
+await vp.click('[data-testid="xk-ctrl-toggle"]')
+await vp.waitForTimeout(200)
+const ctrlShown = await vp.evaluate(
+  () => document.querySelector('.xk-ctrl-body').offsetParent !== null
+)
+check('viewer-ctrl-expand', ctrlShown, String(ctrlShown))
+
+// 11. 主题切换：body data-theme 翻转 + 背景色变化
 const bgBefore = await vp.evaluate(() => getComputedStyle(document.body).backgroundColor)
 await vp.click('[data-testid="xk-theme-btn"]')
 await vp.waitForTimeout(800)

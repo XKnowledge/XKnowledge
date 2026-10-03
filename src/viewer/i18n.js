@@ -1,7 +1,7 @@
 // src/viewer/i18n.js
-// viewer 双语文案：导出的 HTML 在任意接收方浏览器打开，语言无法预知，
-// 按 navigator.language 选（zh 开头 → zh），不可判时回退导出时应用语言
-//（data.lang，导出者语言偏好传递）。独立于 app locales——单文件必须自包含。
+// viewer 双语文案：语言跟随**导出时的应用语言**（data.lang，导出者所见即
+// 接收方所得）；data.lang 缺失/被手工改坏时才按接收方 navigator.language
+// 自适应（zh 开头 → zh）。独立于 app locales——单文件必须自包含。
 export const VIEWER_I18N = {
   zh: {
     nodes: '节点',
@@ -17,6 +17,8 @@ export const VIEWER_I18N = {
     reset: '复位视图',
     neighbors: '个连接',
     category: '类目',
+    view: '视图',
+    navHint: '左键：旋转　右键：平移　滚轮：缩放　拖节点：移动',
     nodeLabelSep: '：'
   },
   en: {
@@ -33,14 +35,16 @@ export const VIEWER_I18N = {
     reset: 'Reset view',
     neighbors: ' links',
     category: 'Category',
+    view: 'View',
+    navHint: 'Left: rotate  Right: pan  Wheel: zoom  Drag node: move',
     nodeLabelSep: ': '
   }
 }
 
-/** navigator.language 优先（zh* → zh，其余 → en），不可判回退导出语言 */
-export const pickViewerLang = (navLang, dataLang) => {
-  if (typeof navLang === 'string' && navLang) {
-    return navLang.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+/** 导出语言（data.lang）优先（zh* → zh，其余 → en），缺失才看接收方浏览器语言 */
+export const pickViewerLang = (dataLang, navLang) => {
+  if (typeof dataLang === 'string' && dataLang) {
+    return dataLang.toLowerCase().startsWith('zh') ? 'zh' : 'en'
   }
-  return dataLang === 'en-US' ? 'en' : 'zh'
+  return typeof navLang === 'string' && navLang.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 }

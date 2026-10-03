@@ -19,7 +19,7 @@ const boot = () => {
     return
   }
   injectStyles()
-  const lang = pickViewerLang(navigator.language, data.lang)
+  const lang = pickViewerLang(data.lang, navigator.language)
   document.documentElement.lang = lang === 'en' ? 'en' : 'zh'
 
   // UI 在 viewer 之后创建，节点点击回调经可变引用接线

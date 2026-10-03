@@ -69,8 +69,32 @@ export const createUi = (root, data, viewer, { lang = 'zh' } = {}) => {
     legend.appendChild(chip)
   }
 
+  // ---- 右侧栏：视图卡片（可展开/收起）+ 详情面板 ----
+  // 对齐软件观感：图例在左上角卡片，视图控件归右侧一张卡片；详情面板挂在
+  // 同一右侧栏里（卡片收起时面板自动上移，不重叠）
+  const side = div('xk-side')
+  const ctrl = div('xk-ctrl', side)
+  ctrl.setAttribute('data-testid', 'xk-ctrl')
+  const ctrlHead = div('xk-ctrl-head', ctrl)
+  const ctrlTitle = document.createElement('span')
+  ctrlTitle.textContent = L.view
+  const ctrlToggle = document.createElement('button')
+  ctrlToggle.className = 'xk-ctrl-toggle'
+  ctrlToggle.textContent = '‹'
+  ctrlToggle.setAttribute('data-testid', 'xk-ctrl-toggle')
+  ctrlToggle.setAttribute('aria-expanded', 'true')
+  ctrlHead.appendChild(ctrlTitle)
+  ctrlHead.appendChild(ctrlToggle)
+  const ctrlBody = div('xk-ctrl-body', ctrl)
+  ctrlHead.addEventListener('click', () => {
+    const collapsed = ctrl.dataset.collapsed === '1'
+    ctrl.dataset.collapsed = collapsed ? '' : '1'
+    ctrlToggle.textContent = collapsed ? '‹' : '›'
+    ctrlToggle.setAttribute('aria-expanded', collapsed ? 'true' : 'false')
+  })
+
   // ---- 详情面板（点节点滑出；边不选中——边只有悬停提示）----
-  const panel = div('xk-panel')
+  const panel = div('xk-panel', side)
   panel.setAttribute('data-testid', 'xk-panel')
   const panelName = document.createElement('h3')
   panel.appendChild(panelName)
@@ -90,8 +114,7 @@ export const createUi = (root, data, viewer, { lang = 'zh' } = {}) => {
     panel.dataset.open = '1'
   }
 
-  // ---- 底部工具条：标签开关 / 聚焦三态+跳数 / 复位 ----
-  const tools = div('xk-tools')
+  // ---- 视图卡片内容：标签开关 / 聚焦三态+跳数 / 复位 ----
   const labelsBox = document.createElement('label')
   const labelsCb = document.createElement('input')
   labelsCb.type = 'checkbox'
@@ -140,16 +163,23 @@ export const createUi = (root, data, viewer, { lang = 'zh' } = {}) => {
   resetBtn.setAttribute('data-testid', 'xk-reset-btn')
   resetBtn.addEventListener('click', () => viewer.zoomToFit())
 
-  tools.appendChild(labelsBox)
-  tools.appendChild(focusLabel)
-  tools.appendChild(focusSel)
-  tools.appendChild(hopsSel)
-  tools.appendChild(resetBtn)
+  ctrlBody.appendChild(labelsBox)
+  const focusRow = div('xk-ctrl-row', ctrlBody)
+  focusRow.appendChild(focusLabel)
+  focusRow.appendChild(focusSel)
+  focusRow.appendChild(hopsSel)
+  ctrlBody.appendChild(resetBtn)
 
   // ---- 水印（对齐 PNG：By XKnowledge）----
   const watermark = div('xk-watermark')
   watermark.setAttribute('data-testid', 'xk-watermark')
   watermark.textContent = 'By XKnowledge'
+
+  // 底部导航提示：three-render-objects 硬编码英文且无配置项，覆盖为
+  // viewer 语言（编辑器 navInfo 同模式；类名随库版本锁定 ^1.80）。
+  // viewer 只读，只提示漫游操作（无建点/连线/框选）
+  const navInfo = document.querySelector('.scene-nav-info')
+  if (navInfo) navInfo.textContent = L.navHint
 
   // ---- 搜索：命中计数 + Enter 步进（循环）----
   let hitIndex = 0
