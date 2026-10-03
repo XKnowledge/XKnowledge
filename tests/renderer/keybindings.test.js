@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import {
   DEFAULT_BINDINGS,
   KEYBINDING_IDS,
@@ -11,6 +11,13 @@ import {
   formatBindingLabel,
   validateRecording
 } from '../../src/renderer/src/utils/keybindings'
+import { i18n } from '../../src/renderer/src/i18n.js'
+
+// validateRecording 的拒绝文案走 t()，初始语言跟随 navigator.language——
+// 中文 Windows 本地跑是 zh-CN，CI 英文 runner 是 en-US，中文断言必挂。钉死 zh-CN。
+beforeAll(() => {
+  i18n.global.locale.value = 'zh-CN'
+})
 
 describe('DEFAULT_BINDINGS：5 键位默认值', () => {
   it('save/undo/redo/search 带 primary，delete 裸键', () => {
