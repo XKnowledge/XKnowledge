@@ -317,6 +317,9 @@ vitest、生成脚本三方直接 import 同一份逻辑；`exampleService.js` �
 工具栏按钮、`XkMenu` 菜单项、全局快捷键、60 秒自动保存定时器**四种来源**统一走同一条
 分发链：来源方设置 `shortcutActive`（动作名）并翻转 `shortcutWatch` → ChartView 的
 `watch(shortcutWatch)` 按 `actionMap` 分发到 `saveFile / deleteNode / undo / ...`。
+导出子菜单四项（图片/HTML/环绕/录屏）同走此通道（`export_png` 等，无键盘键位、
+不进 keybindingStore，仅菜单入口）；菜单项的禁用/文案/danger 态由 ChartView 的
+录制状态经 props 单向下发（XkMenu 只读展示）。
 
 快捷键（`window.keydown`）：Ctrl+S 保存、Ctrl+Z 撤销、Ctrl+Y 重做、
 Delete **框选集优先**——有框选（Shift+拖，见 §8 手势层）时批量删（`delete_selection`，
@@ -442,6 +445,12 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
   画布 pointerdown/move/wheel（库层监听均为 bubble），`Esc` 中途取消丢弃产物。
 - **实时录屏**（`startScreenRecording`/`stopScreenRecording`）：同管线但不锁
   交互不转相机；`Esc` 不参与停止（避免与画布编辑器等既有 Esc 语义冲突）。
+  录屏中画布上悬浮**控制卡片**（`XkRecordingCard.vue`，DOM 覆盖层不在录制
+  画面内）：暂停/继续（`MediaRecorder.pause/resume`，state 守卫幂等；暂停段
+  不产生帧、恢复后时间轴跳过）与结束（红色，走 `stopScreenRecording` 同路），
+  整卡 pointer 拖动（首次拖动把右下角初始定位换算为 left/top 并 clamp 在
+  画布区内）；暂停态由 ChartView 持有（`screenPaused`，与录制状态同源），
+  卡片经 props 只读 + emit 上抛，菜单「停止录屏」仍保留为第二停止入口。
 - **落盘走主进程**：渲染层 `a.download` 对 MB 级视频不可用（dataURL 有 ~2MB
   上限——PNG 182KB 可过、视频不行；`blob:` URL 在 Electron 下不触发下载），
   故 blob → ArrayBuffer 经 `video:save` IPC 传主进程，`fileService.saveVideoFile`
@@ -449,7 +458,8 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
   取消静默返回）。`XK_SMOKE_VIDEO_DIR` 环境变量注入时跳过模态保存框直写
   指定目录——冒烟专用后门（无人值守环境系统保存框会挂死）。
 - **互斥**：两种录制状态由 ChartView 持有（`exportingVideo`/`screenRecording`
-  单一来源），按钮 disabled 双向互斥；XkGraph3D 根节点 `data-video-recording`
+  单一来源），导出子菜单项（`XkMenu`「导出」）disabled 双向互斥、录屏项
+  danger+「停止录屏」文案切换；XkGraph3D 根节点 `data-video-recording`
   锚点（''/orbit/screen）供冒烟断言。
 - **测试**：纯函数（探测/命名/水印样式）单测 + `fileService.saveVideoFile`
   3 用例（取消/写入/冒烟后门）+ `scripts/smoke-video-export.mjs` 冒烟（状态机

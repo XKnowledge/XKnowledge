@@ -38,6 +38,33 @@
         </a-menu-item>
         <a-menu-item key="11" @click="saveAs"> {{ $t('menu.saveAs') }} </a-menu-item>
         <a-menu-divider />
+        <!-- 导出子菜单（桌面软件惯例）：四种导出的禁用/文案态与原侧栏按钮
+             一致——录制状态经 props 从 ChartView（单一来源）传入；
+             data-* 锚点随按钮迁到菜单项上供冒烟定位 -->
+        <a-sub-menu key="15" :title="$t('menu.export')">
+          <a-menu-item key="15-1" @click="exportPng"> {{ $t('chart.exportPng') }} </a-menu-item>
+          <a-menu-item key="15-2" data-export-html @click="exportHtml">
+            {{ $t('chart.exportHtml') }}
+          </a-menu-item>
+          <a-menu-item
+            key="15-3"
+            data-export-video
+            :disabled="exportingVideo || screenRecording"
+            @click="exportVideo"
+          >
+            {{ exportingVideo ? $t('chart.recording') : $t('chart.exportVideo') }}
+          </a-menu-item>
+          <a-menu-item
+            key="15-4"
+            data-screen-record
+            :danger="screenRecording"
+            :disabled="exportingVideo"
+            @click="screenRecord"
+          >
+            {{ screenRecording ? $t('chart.stopRecord') : $t('chart.screenRecord') }}
+          </a-menu-item>
+        </a-sub-menu>
+        <a-menu-divider />
         <a-menu-item key="14" @click="importOutline"> {{ $t('menu.importOutline') }} </a-menu-item>
         <a-menu-item key="13" @click="openSettings"> {{ $t('common.settings') }} </a-menu-item>
       </a-menu>
@@ -57,6 +84,12 @@ const undoLabel = computed(() => formatBindingLabel(keybindings.value.undo, isDa
 const redoLabel = computed(() => formatBindingLabel(keybindings.value.redo, isDarwin))
 const saveLabel = computed(() => formatBindingLabel(keybindings.value.save, isDarwin))
 const menuTrigger = isDarwin ? ['click'] : ['hover']
+// 录制状态（导出子菜单的禁用/文案/danger 态）：ChartView 是单一来源，
+// 这里只读展示——菜单动作本身走 shortcutActive 分发回 ChartView 执行
+defineProps({
+  exportingVideo: { type: Boolean, default: false },
+  screenRecording: { type: Boolean, default: false }
+})
 const shortcutActive = defineModel('shortcutActive', { type: String })
 const shortcutWatch = defineModel('shortcutWatch', { type: Boolean })
 
@@ -112,6 +145,28 @@ const openSettings = () => {
 
 const importOutline = () => {
   shortcutActive.value = 'import_outline'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+// 导出子菜单四项：无键盘键位（不进 keybindingStore），仅菜单入口，
+// 经 shortcutActive 通道分发到 ChartView 的 actionMap
+const exportPng = () => {
+  shortcutActive.value = 'export_png'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const exportHtml = () => {
+  shortcutActive.value = 'export_html'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const exportVideo = () => {
+  shortcutActive.value = 'export_video'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const screenRecord = () => {
+  shortcutActive.value = 'screen_record'
   shortcutWatch.value = !shortcutWatch.value
 }
 </script>

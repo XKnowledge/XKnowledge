@@ -1,4 +1,5 @@
-// 冒烟驱动：生产构建启动应用，双击首页示例卡进入图表页，点「导出 HTML」，
+// 冒烟驱动：生产构建启动应用，双击首页示例卡进入图表页，经左上角菜单
+// 「导出 → 导出 HTML」触发导出，
 // 产物经 XK_SMOKE_HTML_DIR 后门落盘（模态保存框在无人值守环境会挂死）。
 // 随后经主进程开新 BrowserWindow 以 file:// 加载导出产物——真实浏览器
 // 环境验证 viewer：canvas 渲染、搜索步进、点击详情、聚焦灰化/隐藏、
@@ -48,9 +49,15 @@ await page.locator('.xk-example-card', { hasText: 'CANN知识体系' }).first().
 await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
 await page.waitForTimeout(2_000)
 
-// 2. 开侧栏（编辑栏按钮 nth(2)，同 smoke-video-export 惯例）→ 点导出 HTML
-await page.locator('.no-move-button').nth(2).click()
-await page.waitForTimeout(500)
+// 2. 左上角菜单 →「导出」→「导出 HTML」：hover 触发器展开下拉（Windows 平台
+//    trigger=hover，防隐藏实例同 smoke-outline-import），再 hover「导出」子菜单
+//    标题展开二级（antd 子菜单弹出层 .ant-dropdown-menu-submenu-popup），
+//    点锚点项；保存框经 XK_SMOKE_HTML_DIR 后门跳过
+await page.locator('.sider-menu-style .no-move').hover()
+const dropdown = page.locator('.ant-dropdown:not(.ant-dropdown-hidden)')
+await dropdown.waitFor({ state: 'visible', timeout: 5_000 })
+await dropdown.locator('.ant-dropdown-menu-submenu-title', { hasText: '导出' }).hover()
+await page.locator('[data-export-html]').waitFor({ state: 'visible', timeout: 5_000 })
 await page.locator('[data-export-html]').click()
 
 // 3. 产物落盘 + 静态断言

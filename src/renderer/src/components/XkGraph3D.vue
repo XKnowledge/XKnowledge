@@ -1070,11 +1070,21 @@ const stopScreenRecording = async () => {
   screenSession = null
   videoMode.value = '' // 先清态：停 rAF 循环
   cancelAnimationFrame(session.raf)
+  // paused 态下 stop 合法（规范允许 paused→inactive，已录分片正常封包）
   const blob = await session.rec.stop()
   session.restoreScale()
   const res = await saveVideoBlob(blob, session.ext)
   if (!res?.canceled) message.info(t('chart.recordingSaved'))
 }
+
+/** 录屏暂停/恢复（控制卡片用）：透传给 recorder 的 state 守卫幂等实现，
+ *  成功转换返回 true；暂停期间 rAF 合成循环照跑（画布显示不受影响），
+ *  只是 recorder 不再收帧 */
+const pauseScreenRecording = () =>
+  videoMode.value === 'screen' && !!screenSession && screenSession.rec.pause()
+
+const resumeScreenRecording = () =>
+  videoMode.value === 'screen' && !!screenSession && screenSession.rec.resume()
 
 defineExpose({
   setRepulsion,
@@ -1082,6 +1092,8 @@ defineExpose({
   exportVideo,
   startScreenRecording,
   stopScreenRecording,
+  pauseScreenRecording,
+  resumeScreenRecording,
   resetView,
   focusCamera,
   openSearch,

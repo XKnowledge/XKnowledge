@@ -7,6 +7,8 @@
             <XkMenu
               v-model:shortcut-active="shortcutActive"
               v-model:shortcut-watch="shortcutWatch"
+              :exporting-video="exportingVideo"
+              :screen-recording="screenRecording"
             />
           </a-layout-sider>
           <!-- 窗口标题：紧挨菜单图标右侧（与首页标题条共用 XkTitleText，主进程统一推送） -->
@@ -54,6 +56,14 @@
             @canvas-create-node="onCanvasCreateNode"
             @canvas-create-edge="onCanvasCreateEdge"
             @marquee-select="onGraphMarqueeSelect"
+          />
+          <!-- 录屏控制卡片：悬浮画布上（仅录屏态出现），暂停/继续 + 结束，
+               可拖动；组件自身不持录屏状态（ChartView 单一来源经 props 下发） -->
+          <XkRecordingCard
+            v-if="screenRecording"
+            :paused="screenPaused"
+            @toggle-pause="onToggleRecordPause"
+            @stop="onToggleScreenRecord"
           />
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
@@ -142,16 +152,10 @@
                  滑块），不进 undo/redo；绑定经 computed 兜底，见脚本区注释 -->
             <a-textarea v-model:value="chartDescription" :rows="4" @change="onDescriptionChange" />
             <a-divider orientation="left">{{ $t('chart.view') }}</a-divider>
-            <!-- space-evenly：2 个 flex 项产生 3 段等宽空隙，按钮中心落在
-                 1/3 与 2/3 处；静照类（导出图片/复位）与视频类（环绕/录屏）
-                 各一排 -->
+            <!-- 四种导出（图片/HTML/环绕/录屏）已收进左上角菜单「导出」子菜单
+                 （桌面软件惯例），本区只留复位视图；环绕录制中禁用（复位飞
+                 相机+取景会毁掉录制画面） -->
             <a-row justify="space-evenly">
-              <a-button size="small" @click="graph3dRef?.exportPng()">{{
-                $t('chart.exportPng')
-              }}</a-button>
-              <a-button size="small" data-export-html @click="onExportHtml">
-                {{ $t('chart.exportHtml') }}
-              </a-button>
               <a-button
                 size="small"
                 data-reset-view
@@ -159,25 +163,6 @@
                 @click="graph3dRef?.resetView()"
               >
                 {{ $t('chart.resetView') }}
-              </a-button>
-            </a-row>
-            <a-row justify="space-evenly" style="margin-top: 8px">
-              <a-button
-                size="small"
-                data-export-video
-                :disabled="exportingVideo || screenRecording"
-                @click="onExportVideo"
-              >
-                {{ exportingVideo ? $t('chart.recording') : $t('chart.exportVideo') }}
-              </a-button>
-              <a-button
-                size="small"
-                data-screen-record
-                :danger="screenRecording"
-                :disabled="exportingVideo"
-                @click="onToggleScreenRecord"
-              >
-                {{ screenRecording ? $t('chart.stopRecord') : $t('chart.screenRecord') }}
               </a-button>
             </a-row>
           </div>
@@ -237,6 +222,7 @@ import XkTitleText from '../components/XkTitleText.vue'
 import XkSettings from '../components/XkSettings.vue'
 import XkOutlineImport from '../components/XkOutlineImport.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
+import XkRecordingCard from '../components/XkRecordingCard.vue'
 
 import DeleteNodeIcon from '../assets/delete_node.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
@@ -264,6 +250,8 @@ const repulsion = ref(100)
 // 组件层仅兜底
 const exportingVideo = ref(false)
 const screenRecording = ref(false)
+// 录屏暂停态（控制卡片 icon 切换依据）：与 screenRecording 同源同生命周期
+const screenPaused = ref(false)
 
 /** 导出交互式单文件 HTML：白名单序列化（动态成形不带坐标）→ 主进程
  *  读 viewer 模板拼装落盘（VIDEO_SAVE 同模式，不进 guard/mtime）。
@@ -304,10 +292,20 @@ const onToggleScreenRecord = async () => {
   if (screenRecording.value) {
     await graph3dRef.value?.stopScreenRecording()
     screenRecording.value = false
+    screenPaused.value = false
     return
   }
   if (exportingVideo.value) return
   screenRecording.value = graph3dRef.value?.startScreenRecording() ?? false
+}
+
+/** 录屏暂停/继续（控制卡片）：组件层 state 守卫幂等，转换成功才翻状态
+ *  （重复暂停/未暂停就恢复时下层返回 false，状态不动） */
+const onToggleRecordPause = () => {
+  const ok = screenPaused.value
+    ? graph3dRef.value?.resumeScreenRecording()
+    : graph3dRef.value?.pauseScreenRecording()
+  if (ok) screenPaused.value = !screenPaused.value
 }
 
 const currentNodeVisible = ref(false)
@@ -710,7 +708,12 @@ watch(shortcutWatch, () => {
     undo: undo,
     redo: redo,
     open_settings: () => settingsRef.value?.open(),
-    import_outline: () => outlineImportRef.value?.open()
+    import_outline: () => outlineImportRef.value?.open(),
+    // 导出子菜单四项（无键盘键位，仅菜单入口）：与原侧栏按钮同一批函数
+    export_png: () => graph3dRef.value?.exportPng(),
+    export_html: onExportHtml,
+    export_video: onExportVideo,
+    screen_record: onToggleScreenRecord
   }
 
   const actionName = shortcutActive.value
@@ -1229,6 +1232,11 @@ const buttonList = computed(() => [
 .echarts-style {
   width: 100%;
   height: 100%;
+}
+
+/* 录屏控制卡片的绝对定位上下文（卡片悬浮在画布区右下角） */
+.xk-chart-content {
+  position: relative;
 }
 
 .move-show {

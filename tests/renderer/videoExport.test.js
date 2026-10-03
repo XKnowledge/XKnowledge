@@ -120,6 +120,12 @@ describe('videoExport：MediaRecorder 组装', () => {
         this.startedWith = timeslice
         this.state = 'recording'
       }
+      pause() {
+        this.state = 'paused'
+      }
+      resume() {
+        this.state = 'recording'
+      }
       stop() {
         this.state = 'inactive'
         this.onstop?.()
@@ -190,6 +196,53 @@ describe('videoExport：MediaRecorder 组装', () => {
     // MediaStreamTrack.stop 自身幂等，无害）
     expect(innerStopCalls).toHaveLength(1)
     expect(inner.state).toBe('inactive')
+  })
+
+  it('pause/resume：state 守卫幂等——合法转换返回 true，非法转换 false 不抛错', () => {
+    const canvas = makeCanvas({ getTracks: () => [] })
+    const FakeMediaRecorder = makeRecorderClass()
+    vi.stubGlobal('MediaRecorder', FakeMediaRecorder)
+    const recorder = createRecorder({ canvas, mimeType: 'video/webm' })
+    const inner = FakeMediaRecorder.instances[0]
+
+    // 录制中 → 暂停成功；重复暂停（state 已 paused）返回 false
+    expect(recorder.pause()).toBe(true)
+    expect(inner.state).toBe('paused')
+    expect(recorder.pause()).toBe(false)
+    expect(inner.state).toBe('paused')
+
+    // 暂停中 → 恢复成功；录制中直接 resume 返回 false
+    expect(recorder.resume()).toBe(true)
+    expect(inner.state).toBe('recording')
+    expect(recorder.resume()).toBe(false)
+    expect(inner.state).toBe('recording')
+  })
+
+  it('pause/resume：已 stop（inactive）后两者均返回 false', async () => {
+    const canvas = makeCanvas({ getTracks: () => [] })
+    const FakeMediaRecorder = makeRecorderClass()
+    vi.stubGlobal('MediaRecorder', FakeMediaRecorder)
+    const recorder = createRecorder({ canvas, mimeType: 'video/webm' })
+    await recorder.stop()
+    expect(recorder.pause()).toBe(false)
+    expect(recorder.resume()).toBe(false)
+  })
+
+  it('暂停中 stop：paused→inactive 合法转换，已录分片正常封包出 Blob', async () => {
+    const canvas = makeCanvas({ getTracks: () => [] })
+    const FakeMediaRecorder = makeRecorderClass()
+    vi.stubGlobal('MediaRecorder', FakeMediaRecorder)
+    const recorder = createRecorder({ canvas, mimeType: 'video/mp4' })
+    const inner = FakeMediaRecorder.instances[0]
+
+    inner.ondataavailable({ data: new Blob(['rec']) })
+    expect(recorder.pause()).toBe(true)
+    // 暂停期间浏览器停发 timeslice 分片（不会有新的 dataavailable），直接 stop
+
+    const blob = await recorder.stop()
+    expect(inner.state).toBe('inactive')
+    expect(await blob.text()).toBe('rec')
+    expect(blob.type).toBe('video/mp4')
   })
 })
 

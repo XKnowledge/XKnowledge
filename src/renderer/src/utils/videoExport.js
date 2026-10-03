@@ -77,6 +77,19 @@ export const createRecorder = ({ canvas, mimeType, fps = 30, bitsPerSecond = 16_
   })
   recorder.start(250)
   return {
+    /** 暂停/恢复采集（录屏控制卡片用）：state 守卫保证幂等，非法转换
+     *  （重复暂停/未暂停就恢复）返回 false 不抛错。暂停期间不产生帧，
+     *  恢复后时间轴跳过暂停段（MediaRecorder 标准行为） */
+    pause: () => {
+      if (recorder.state !== 'recording') return false
+      recorder.pause()
+      return true
+    },
+    resume: () => {
+      if (recorder.state !== 'paused') return false
+      recorder.resume()
+      return true
+    },
     stop: async () => {
       if (recorder.state !== 'inactive') recorder.stop()
       await stopped
