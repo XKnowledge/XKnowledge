@@ -218,6 +218,8 @@ import { applyUndo, applyRedo } from '../utils/historyActions'
 import { defaultFocusNode, focusNeighborhood, reconcileNodeHighlight } from '../utils/graphData.js'
 import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { matchEvent } from '../utils/keybindings.js'
+import { collectCopySelection, mergeGraphBatch } from '../utils/graphMerge.js'
+import { serializeGraphSelection, parseGraphSelection } from '../../../shared/graphClipboard.js'
 import { bindings as keybindings } from '../store/keybindingStore.js'
 import { locale } from '../store/localeStore.js'
 import { t } from '../i18n.js'
@@ -585,7 +587,7 @@ const shortcut = (event) => {
   const isTypingContext =
     target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
-  // 快捷键配置映射表：5 个可自定义键位读 keybindingStore（设置里录制改键），
+  // 快捷键配置映射表：7 个可自定义键位读 keybindingStore（设置里录制改键），
   // 判定经 keybindings.matchEvent 精确匹配（primary=Ctrl/⌘ 双收）；
   // isTypingContext 守卫跟动作走、不跟键走——改键不改变守卫行为
   const shortcutMap = {
@@ -630,6 +632,16 @@ const shortcut = (event) => {
     redo: {
       match: () => !isTypingContext && matchEvent(event, keybindings.value.redo),
       action: () => triggerShortcut('redo')
+    },
+    copy: {
+      // 三路分发在 copySelection 内部（三条路径汇到同一序列化出口，不拆
+      // actionMap 多条目）；输入框内放行走浏览器原生文本复制
+      match: () => !isTypingContext && matchEvent(event, keybindings.value.copy),
+      action: () => triggerShortcut('copy')
+    },
+    paste: {
+      match: () => !isTypingContext && matchEvent(event, keybindings.value.paste),
+      action: () => triggerShortcut('paste')
     }
   }
 
@@ -659,6 +671,8 @@ watch(shortcutWatch, () => {
     delete_node: deleteNode,
     delete_edge: deleteEdge,
     delete_selection: deleteSelection,
+    copy: copySelection,
+    paste: pasteSelection,
     undo: undo,
     redo: redo,
     open_settings: () => settingsRef.value?.open(),
@@ -724,32 +738,23 @@ const onCanvasCreateEdge = ({ source, target, name }) => {
   if (!result.ok) message.error(result.error)
 }
 
-/** 大纲导入：追加合并进当前图（同名节点跳过、边按无向端点对去重且端点须在
- *  图内），整批一条 importOutline 历史（一步撤销）。history.data 持有 push 进
- *  chartData 的同一批对象引用——undo 按引用移除，redo 按 push 复原 */
+/** 大纲导入：追加合并进当前图，整批一条 importOutline 历史（一步撤销）。
+ *  合并语义（同名跳过、边无向端点对去重且端点须在并集内）在
+ *  graphMerge.mergeGraphBatch——与粘贴共用同一份代码。history.data 持有
+ *  push 进 chartData 的同一批对象引用——undo 按引用移除，redo 按 push 复原 */
 const onOutlineImport = ({ nodes, links }) => {
   const chart = xkContext.value.chartData
-  const existing = new Set(chart.nodes.map((n) => n.name))
-  const addedNodes = nodes.filter((n) => !existing.has(n.name))
-  const nameSet = new Set([...existing, ...addedNodes.map((n) => n.name)])
-  const pairKey = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`)
-  const existingPairs = new Set(chart.links.map((l) => pairKey(l.source, l.target)))
-  const addedLinks = links.filter(
-    (l) =>
-      nameSet.has(l.source) &&
-      nameSet.has(l.target) &&
-      !existingPairs.has(pairKey(l.source, l.target))
+  const { nodes: addedNodes, links: addedLinks } = mergeGraphBatch(
+    chart.nodes,
+    chart.links,
+    nodes,
+    links
   )
-
   if (!addedNodes.length && !addedLinks.length) {
     message.info(t('outline.nothingToImport'))
     return
   }
-
-  const batch = {
-    nodes: jsonReactive(addedNodes),
-    links: jsonReactive(addedLinks.filter((l) => nameSet.has(l.source) && nameSet.has(l.target)))
-  }
+  const batch = { nodes: jsonReactive(addedNodes), links: jsonReactive(addedLinks) }
   chart.nodes.push(...batch.nodes)
   chart.links.push(...batch.links)
   addHistory(xkContext, { act: 'importOutline', data: batch })
@@ -1111,6 +1116,67 @@ const deleteSelection = () => {
   resetRefData()
   message.info(
     t('chart.deletedSummary', { nodes: deletedNodes.length, edges: removedLinks.length })
+  )
+}
+
+const copySelection = async () => {
+  /**
+   * 复制（三路分发与 Delete 对称：框选集优先→直选边→最后点击节点）：
+   * collectCopySelection 收集自洽子图（边端点必在集内）→ 白名单序列化
+   * （剥离力布局坐标）→ 系统剪贴板——跨窗口/跨文件/应用重启后仍在。
+   * 复制不动数据，选中态保留（Delete 才清）
+   */
+  const chart = xkContext.value.chartData
+  if (!chart) return
+  const picked = collectCopySelection(
+    chart.nodes,
+    chart.links,
+    selectionNodeNames.value,
+    selectionLinkIndexes.value,
+    currentEdgeDataIndex.value,
+    currentNodeDataIndex.value
+  )
+  if (!picked) return
+  await window.electronAPI.writeGraphClipboard(serializeGraphSelection(picked.nodes, picked.links))
+  message.info(t('chart.copiedSummary', { nodes: picked.nodes.length, edges: picked.links.length }))
+}
+
+const pasteSelection = async () => {
+  /**
+   * 粘贴（合并语义，与大纲导入共用 mergeGraphBatch）：读系统剪贴板 →
+   * 严格解析（非本应用格式提示后中止——用户剪贴板通常是任意文本）→
+   * 同名节点跳过并合并（其边仍接上）、边端点须在「现有 ∪ 新增」并集且
+   * 无向端点对不与现有重复。空批次不进历史。整批一条 pasteGraph 历史
+   * （data 持有 push 进 chartData 的同一批对象引用，一步撤销）
+   */
+  const chart = xkContext.value.chartData
+  if (!chart) return
+  const { text } = await window.electronAPI.readGraphClipboard()
+  const parsed = parseGraphSelection(text)
+  if (!parsed) {
+    message.info(t('chart.clipboardEmpty'))
+    return
+  }
+  const merged = mergeGraphBatch(chart.nodes, chart.links, parsed.nodes, parsed.links)
+  if (!merged.nodes.length && !merged.links.length) {
+    message.info(t('chart.pasteNothing'))
+    return
+  }
+  const batch = { nodes: jsonReactive(merged.nodes), links: jsonReactive(merged.links) }
+  chart.nodes.push(...batch.nodes)
+  chart.links.push(...batch.links)
+  addHistory(xkContext, { act: 'pasteGraph', data: batch })
+  xkContext.value.updateChart = !xkContext.value.updateChart
+  resetSider()
+  resetRefData()
+  message.info(
+    merged.skippedCount > 0
+      ? t('chart.pastedSummarySkipped', {
+          nodes: merged.nodes.length,
+          edges: merged.links.length,
+          skipped: merged.skippedCount
+        })
+      : t('chart.pastedSummary', { nodes: merged.nodes.length, edges: merged.links.length })
   )
 }
 

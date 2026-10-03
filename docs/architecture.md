@@ -450,6 +450,44 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
   3 用例（取消/写入/冒烟后门）+ `scripts/smoke-video-export.mjs` 冒烟（状态机
   + Esc 取消 + 互斥 + toast + 经冒烟后门硬断言两个非空视频文件落盘）。
 
+### 6.9 跨文件复制/粘贴（系统剪贴板）
+
+**选型**：走系统剪贴板（主进程 `electron.clipboard`，两通道 IPC 只透传文本）。
+多窗口 = 多个独立 renderer 进程，窗口间不共享内存；系统剪贴板让选区内容跨窗口/
+跨文件可用、窗口关闭与应用重启后仍在、用户还能在外部编辑器看到带标记的 JSON。
+
+- **格式层**（`src/shared/graphClipboard.js`，纯模块双端可用）：带
+  `app: 'xknowledge'` + `type: 'graph-selection'` 标记的 JSON。**字段白名单**——
+  节点只留 `name/des/symbolSize/category`、边只留 `source/target/name/des`，
+  **刻意剥离 x/y/z 与 d3 内部速度字段**：力布局坐标属源图坐标系，跨文件粘贴
+  无意义，新节点不带坐标由 d3 重新摆放（与大纲导入的节点形态一致）。
+  `parseGraphSelection` 严格校验（坏 JSON/无标记/数组缺失/骨架键空串 → null），
+  用户剪贴板通常是任意文本，非本格式提示后中止。
+- **收集层**（`src/renderer/src/utils/graphMerge.js`）：`collectCopySelection`
+  与 Delete 同款三路分发（框选集优先→直选边→最后点击节点），收集**自洽子图**
+  ——边端点节点必在集内（框住两个球没框住中间连线时互连边仍在子图里，与
+  删除的「删节点连带删邻边」对称）。`mergeGraphBatch` 是**大纲导入与粘贴共用**
+  的合并语义：同名节点跳过并合并（其边仍接上）、边端点须在「现有 ∪ 新增」
+  并集、无向端点对不与现有重复——两入口一份代码，修一处两处受益。
+- **Electron 44 陷阱**：clipboard API 是**异步的**（`readText` 返回 Promise）。
+  主进程 handler 必须 await 后返回纯值——同步返回 `{ text: Promise }` 会在
+  结构化克隆时失败，渲染端 invoke **永久挂起而非 reject**（本节落地时实测
+  踩坑：write 通路 fire-and-forget 恰好无害、read 通路挂死，排查良久）。
+- **历史**：新 act `pasteGraph`，undo/redo 与 `importOutline` 同构（节点按名、
+  边按对象引用——`data` 持有 push 进 chartData 的同一批 jsonReactive 产物，
+  同键手建边不误伤，多重边安全），一条历史一步撤销整批。
+- **快捷键**：`copy`/`paste` 进 `DEFAULT_BINDINGS`（7 键位，默认 primary+C/V），
+  设置页遍历 `KEYBINDING_IDS` 自动出现；isTypingContext 守卫放行输入框内的
+  原生文本复制/粘贴。
+- **同文件推论**（设计使然）：合并语义下同图粘贴全同名、全端点对重复，必为
+  「没有可粘贴的新内容」；要副本先改名。
+- **测试**：`graphClipboard`（序列化白名单/坐标剥离/坏数据拒绝）、`graphMerge`
+  （三路分发/合并语义/多重边）、`historyActions` 补 `pasteGraph`、ipc/preload
+  桥接面各补用例；`scripts/smoke-copy-paste.mjs` 冒烟——真实路径（框选 →
+  Ctrl+C → 剪贴板内容 Node 侧校验）+ 注入路径（evaluate 经 preload 写入
+  「来自另一文件」的选区再 Ctrl+V），剪贴板是 OS 级全局，注入后的读取/解析/
+  合并与真实跨窗口复制完全同代码路径。
+
 ## 7. 核心数据流
 
 ### 7.1 图表数据的两条装载路径

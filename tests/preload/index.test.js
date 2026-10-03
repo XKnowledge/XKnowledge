@@ -80,6 +80,9 @@ describe('preload：electronAPI 桥接面 → IPC 通道映射', () => {
 
     exposed.closeWindowRequest()
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.APP_CLOSE_WINDOW_REQUEST)
+
+    exposed.readGraphClipboard()
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.CLIPBOARD_READ_GRAPH)
   })
 
   it('带 payload 的 API 原样透传（参数序列化跨 IPC 边界）', () => {
@@ -124,6 +127,11 @@ describe('preload：electronAPI 桥接面 → IPC 通道映射', () => {
 
     exposed.worldSetUserDir('D:/graphs')
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.WORLD_SET_USER_DIR, { dir: 'D:/graphs' })
+
+    exposed.writeGraphClipboard('{"app":"xknowledge"}')
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.CLIPBOARD_WRITE_GRAPH, {
+      text: '{"app":"xknowledge"}'
+    })
   })
 
   it('主进程推送三件套：注册到对应通道、回调剥掉 event 只传 payload、返回解绑函数', () => {

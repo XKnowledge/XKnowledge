@@ -4,6 +4,7 @@ vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
   BrowserWindow: { fromWebContents: vi.fn(), fromId: vi.fn() },
   dialog: { showMessageBox: vi.fn() },
+  clipboard: { writeText: vi.fn(), readText: vi.fn() },
   // examplePaths 经 app.getAppPath() 定位 examples 目录
   app: { getLocale: vi.fn(() => 'zh-CN'), getAppPath: vi.fn(() => 'C:/mock-app') }
 }))
@@ -42,7 +43,7 @@ vi.mock('../../src/main/worldIndex', () => ({
   setWorldUserDir: vi.fn(async (dir) => ({ ok: true, userDir: dir }))
 }))
 
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, clipboard } from 'electron'
 import * as fileService from '../../src/main/fileService'
 import { listExamples, openExample } from '../../src/main/exampleService'
 import * as worldIndex from '../../src/main/worldIndex'
@@ -569,5 +570,28 @@ describe('世界域通道', () => {
     await handlerOf(IPC.APP_EXIT_WORLD_MODE)(senderOf(1))
     expect(windowManager.enterWorldMode).toHaveBeenCalledWith(win)
     expect(windowManager.exitWorldMode).toHaveBeenCalledWith(win)
+  })
+})
+
+describe('剪贴板域（跨文件复制/粘贴，只透传文本）', () => {
+  it('clipboard:write-graph 透传文本调 clipboard.writeText', async () => {
+    clipboard.writeText.mockReset()
+    const handler = handlerOf(IPC.CLIPBOARD_WRITE_GRAPH)
+    await handler(senderOf(1), { text: '{"app":"xknowledge"}' })
+    expect(clipboard.writeText).toHaveBeenCalledWith('{"app":"xknowledge"}')
+  })
+
+  it('clipboard:write-graph 非字符串入参归一空串（防御，不让 clipboard 抛错）', async () => {
+    clipboard.writeText.mockReset()
+    const handler = handlerOf(IPC.CLIPBOARD_WRITE_GRAPH)
+    await handler(senderOf(1), { text: 42 })
+    expect(clipboard.writeText).toHaveBeenCalledWith('')
+  })
+
+  it('clipboard:read-graph 返回 clipboard.readText 的 { text }', async () => {
+    clipboard.readText.mockReset().mockReturnValue('剪贴板内容')
+    const handler = handlerOf(IPC.CLIPBOARD_READ_GRAPH)
+    // handler 同步返回对象（Promise 包装是 ipcMain.handle 的事，单测直调拿原值）
+    expect(await handler()).toEqual({ text: '剪贴板内容' })
   })
 })

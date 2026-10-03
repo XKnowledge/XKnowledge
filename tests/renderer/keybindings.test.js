@@ -19,18 +19,20 @@ beforeAll(() => {
   i18n.global.locale.value = 'zh-CN'
 })
 
-describe('DEFAULT_BINDINGS：5 键位默认值', () => {
-  it('save/undo/redo/search 带 primary，delete 裸键', () => {
+describe('DEFAULT_BINDINGS：7 键位默认值', () => {
+  it('save/undo/redo/copy/paste/search 带 primary，delete 裸键', () => {
     expect(DEFAULT_BINDINGS).toEqual({
       save: { modifiers: ['primary'], key: 's' },
       undo: { modifiers: ['primary'], key: 'z' },
       redo: { modifiers: ['primary'], key: 'y' },
       delete: { modifiers: [], key: 'delete' },
+      copy: { modifiers: ['primary'], key: 'c' },
+      paste: { modifiers: ['primary'], key: 'v' },
       search: { modifiers: ['primary'], key: 'f' }
     })
   })
   it('actionName 对每个键位都有名称（字典覆盖同一组键位）', () => {
-    expect(KEYBINDING_IDS).toEqual(['save', 'undo', 'redo', 'delete', 'search'])
+    expect(KEYBINDING_IDS).toEqual(['save', 'undo', 'redo', 'delete', 'copy', 'paste', 'search'])
     // 每个键位都能取到非 key 回吐的名称（缺字典项会返回 key 本身）
     for (const id of KEYBINDING_IDS) {
       expect(actionName(id)).not.toBe(`keybinding.names.${id}`)

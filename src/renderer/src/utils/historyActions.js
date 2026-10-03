@@ -85,6 +85,16 @@ export const applyUndo = (chartData, currentHistory) => {
     deleteSelection: () => {
       chartData.nodes.push(...currentHistory.data.nodes)
       chartData.links.push(...currentHistory.data.links)
+    },
+
+    // 粘贴整批的撤销（与 importOutline 撤销同构——节点按名：中途单点操作后
+    // 引用会失效而名字可命中；边按对象引用：data 持有的就是 push 进去的
+    // 同一批 jsonReactive 产物，同键手建边不误伤，多重边安全）
+    pasteGraph: () => {
+      const names = new Set(currentHistory.data.nodes.map((n) => n.name))
+      chartData.nodes = chartData.nodes.filter((n) => !names.has(n.name))
+      const own = new Set(currentHistory.data.links)
+      chartData.links = chartData.links.filter((l) => !own.has(l))
     }
   }
 
@@ -155,6 +165,12 @@ export const applyRedo = (chartData, currentHistory) => {
       const own = new Set(currentHistory.data.links)
       chartData.nodes = chartData.nodes.filter((n) => !names.has(n.name))
       chartData.links = chartData.links.filter((l) => !own.has(l))
+    },
+
+    // 粘贴整批的重做：整批 push 回（与 importOutline 重做同构）
+    pasteGraph: () => {
+      chartData.nodes.push(...currentHistory.data.nodes)
+      chartData.links.push(...currentHistory.data.links)
     }
   }
 

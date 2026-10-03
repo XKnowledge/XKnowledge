@@ -13,6 +13,11 @@ export const IPC = {
   // 导出视频落盘（MB 级二进制，渲染层 a.download 通路不可用，走主进程保存框）
   VIDEO_SAVE: 'video:save',
 
+  // 剪贴板域（跨文件复制/粘贴：主进程 electron.clipboard 只透传文本，
+  // 格式知识全在 shared/graphClipboard.js）
+  CLIPBOARD_WRITE_GRAPH: 'clipboard:write-graph',
+  CLIPBOARD_READ_GRAPH: 'clipboard:read-graph',
+
   // 内置示例域（examples/ 目录即图库）
   EXAMPLE_LIST: 'example:list',
   EXAMPLE_OPEN: 'example:open',

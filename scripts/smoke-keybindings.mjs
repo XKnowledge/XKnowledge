@@ -131,7 +131,7 @@ const marqueeSelectAll = async () => {
 
 // 2. 开设置：5 键位行 + 3 手势行 + 默认文案（冒烟跑在 Windows：Ctrl）
 await openSettings()
-expectEq('快捷键行数', String(await page.locator('[data-keybinding-row]').count()), '5')
+expectEq('快捷键行数', String(await page.locator('[data-keybinding-row]').count()), '7')
 expectEq('鼠标手势行数', String(await page.locator('[data-gesture-row]').count()), '3')
 expectEq('save 默认文案', await rowBtn('save').innerText(), 'Ctrl+S')
 expectEq('delete 默认文案', await rowBtn('delete').innerText(), 'Delete')

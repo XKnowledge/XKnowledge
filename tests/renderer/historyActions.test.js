@@ -297,3 +297,37 @@ describe('deleteSelection（框选批量删除）', () => {
     expect(chart.links.map((l) => l.name)).toEqual(['e1', 'e3'])
   })
 })
+
+describe('pasteGraph（粘贴整批，与 importOutline 同构）', () => {
+  const batch = {
+    nodes: [{ name: 'P', des: '', symbolSize: 50, category: 'c' }],
+    links: [{ source: 'P', target: 'Q', name: 'pq', des: '' }]
+  }
+
+  it('undo：节点按名移除、边按对象引用移除', () => {
+    const chart = {
+      nodes: [{ name: 'A' }, batch.nodes[0]],
+      links: [{ source: 'A', target: 'B', name: 'ab' }, batch.links[0]]
+    }
+    expect(applyUndo(chart, { act: 'pasteGraph', data: batch })).toBe(true)
+    expect(chart.nodes).toEqual([{ name: 'A' }])
+    expect(chart.links).toEqual([{ source: 'A', target: 'B', name: 'ab' }])
+  })
+
+  it('undo 边按引用：同键不同对象的既有边不误伤（粘贴后用户手建同键边）', () => {
+    const lookalike = { source: 'P', target: 'Q', name: 'pq', des: '手建' } // 同键不同对象
+    const chart = { nodes: [{ name: 'A' }, ...batch.nodes], links: [lookalike, batch.links[0]] }
+    applyUndo(chart, { act: 'pasteGraph', data: batch })
+    expect(chart.links).toEqual([lookalike])
+  })
+
+  it('redo：整批 push 回', () => {
+    const chart = { nodes: [{ name: 'A' }], links: [] }
+    expect(applyRedo(chart, { act: 'pasteGraph', data: batch })).toBe(true)
+    expect(chart.nodes).toEqual([
+      { name: 'A' },
+      { name: 'P', des: '', symbolSize: 50, category: 'c' }
+    ])
+    expect(chart.links).toEqual([{ source: 'P', target: 'Q', name: 'pq', des: '' }])
+  })
+})

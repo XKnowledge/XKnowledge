@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
 import * as worldIndex from './worldIndex'
@@ -79,6 +79,17 @@ export const registerIpc = () => {
     // 渲染层传 Uint8Array（结构化克隆），转 Buffer 后写盘
     fileService.saveVideoFile(senderWindow(event), Buffer.from(bytes), defaultName, ext)
   )
+
+  // 剪贴板透传：序列化/解析在渲染层走 shared/graphClipboard，主进程只做
+  // 系统剪贴板读写。Electron 44 的 clipboard API 是异步的（readText 返回
+  // Promise）：handler 必须 await 后返回纯值——同步返回 { text: Promise }
+  // 会在结构化克隆时失败，渲染端 invoke 永久挂起（不 reject）。writeText
+  // 同样 await：连续写后立即读的竞态下保证读到新值
+  ipcMain.handle(IPC.CLIPBOARD_WRITE_GRAPH, async (_event, { text }) => {
+    await clipboard.writeText(typeof text === 'string' ? text : '')
+  })
+
+  ipcMain.handle(IPC.CLIPBOARD_READ_GRAPH, async () => ({ text: await clipboard.readText() }))
 
   ipcMain.handle(IPC.FILE_OPEN, async (event) => {
     const res = await fileService.showOpenDialog(senderWindow(event))

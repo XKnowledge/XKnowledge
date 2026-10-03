@@ -65,6 +65,8 @@ export const enUS = {
       undo: 'Undo',
       redo: 'Redo',
       delete: 'Delete',
+      copy: 'Copy',
+      paste: 'Paste',
       search: 'In-graph Search'
     },
     reject: {
@@ -149,6 +151,14 @@ export const enUS = {
     editSider: 'Edit Panel',
     deletedSummary:
       'Deleted {nodes} {nodes, plural, =1 {node} other {nodes}} and {edges} {edges, plural, =1 {edge} other {edges}}',
+    copiedSummary:
+      'Copied {nodes} {nodes, plural, =1 {node} other {nodes}} and {edges} {edges, plural, =1 {edge} other {edges}}',
+    pastedSummary:
+      'Pasted {nodes} {nodes, plural, =1 {node} other {nodes}} and {edges} {edges, plural, =1 {edge} other {edges}}',
+    pastedSummarySkipped:
+      'Pasted {nodes} {nodes, plural, =1 {node} other {nodes}} and {edges} {edges, plural, =1 {edge} other {edges}} ({skipped} existing {skipped, plural, =1 {node} other {nodes}} skipped)',
+    clipboardEmpty: 'No graph selection on the clipboard',
+    pasteNothing: 'Nothing to paste (all nodes already exist and no new links)',
     searchHits: '{count} {count, plural, =1 {match} other {matches}}',
     init3dFailed: '3D view failed to initialize (GPU driver issue?); sidebar editing still works',
     navInfo3d:

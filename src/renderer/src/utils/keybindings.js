@@ -16,12 +16,14 @@
 
 import { t } from '../i18n.js'
 
-/** 5 个可自定义键位及默认绑定（delete=三路分发整体：框选集优先→直选边→最后点击节点） */
+/** 7 个可自定义键位及默认绑定（delete/copy=三路分发整体：框选集优先→直选边→最后点击节点） */
 export const DEFAULT_BINDINGS = {
   save: { modifiers: ['primary'], key: 's' },
   undo: { modifiers: ['primary'], key: 'z' },
   redo: { modifiers: ['primary'], key: 'y' },
   delete: { modifiers: [], key: 'delete' },
+  copy: { modifiers: ['primary'], key: 'c' },
+  paste: { modifiers: ['primary'], key: 'v' },
   search: { modifiers: ['primary'], key: 'f' }
 }
 

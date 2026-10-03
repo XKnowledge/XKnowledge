@@ -61,7 +61,15 @@ export const zhCN = {
     gestureNote: '鼠标手势暂不支持自定义'
   },
   keybinding: {
-    names: { save: '保存', undo: '撤销', redo: '重做', delete: '删除', search: '图内搜索' },
+    names: {
+      save: '保存',
+      undo: '撤销',
+      redo: '重做',
+      delete: '删除',
+      copy: '复制',
+      paste: '粘贴',
+      search: '图内搜索'
+    },
     reject: {
       esc: 'Esc 是录制取消键，不能作为快捷键',
       tab: 'Tab 是焦点移动键，不能作为快捷键',
@@ -141,6 +149,11 @@ export const zhCN = {
     deleteEdge: '删除连接',
     editSider: '编辑栏',
     deletedSummary: '已删除 {nodes} 个节点、{edges} 条连接',
+    copiedSummary: '已复制 {nodes} 个节点、{edges} 条边',
+    pastedSummary: '已粘贴 {nodes} 个节点、{edges} 条边',
+    pastedSummarySkipped: '已粘贴 {nodes} 个节点、{edges} 条边（跳过 {skipped} 个已存在节点）',
+    clipboardEmpty: '剪贴板没有可粘贴的图谱内容',
+    pasteNothing: '没有可粘贴的新内容（节点均已存在且无新连接）',
     searchHits: '共 {count} 个命中',
     init3dFailed: '3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用',
     navInfo3d:
