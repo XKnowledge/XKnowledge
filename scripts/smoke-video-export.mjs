@@ -1,8 +1,8 @@
 // 冒烟驱动：生产构建启动应用，双击首页示例卡进入图表页，验证视频导出/
 // 录屏全链路状态机——环绕（orbit 锚点 + 菜单项态 + Esc 取消 + 跑满成功 toast）、
-// 录屏（screen 锚点 + danger 菜单项 + 控制卡片拖动/暂停恢复/结束 + toast）、
+// 录屏（screen 锚点 + danger 菜单项 + 控制卡片本体不可拖/手柄拖动/暂停恢复/结束 + toast）、
 // 两态互斥 disabled、渲染进程零错误。导出入口在左上角菜单「导出」子菜单
-// （hover 两级展开）；录屏中画布上悬浮可拖动控制卡片（暂停/结束）。
+// （hover 两级展开）；录屏中画布上悬浮控制卡片（暂停/结束 + ⠿ 拖动手柄）。
 // 录制中的旋转视觉与水印由截图人工复核（02b/02c 两帧对比）。
 // 用法：node scripts/smoke-video-export.mjs   （需先 npm run build）
 import { _electron as electron } from 'playwright-core'
@@ -163,16 +163,31 @@ await recordItem.click()
 await page.waitForTimeout(500)
 check('screen-anchor', (await recordingState()) === 'screen')
 
-// 6.1 控制卡片：录屏中出现（悬浮画布右下角，暂停/结束两 icon 按钮）
+// 6.1 控制卡片：录屏中出现（悬浮画布右下角，暂停/结束两 icon 按钮 + ⠿ 手柄）
 const card = page.locator('[data-recording-card]')
 await card.waitFor({ state: 'visible', timeout: 5_000 })
 check('card-paused-initial', (await card.getAttribute('data-paused')) === 'false')
-// 拖动：卡片左缘 padding 区按下（避开按钮），向左上位移 (-120, -40)
-// （初始在右下角，向右/下会被父容器 clamp 吃掉位移）
-const box1 = await card.boundingBox()
-await page.mouse.move(box1.x + 3, box1.y + box1.height / 2)
+// 卡片本体（左缘 padding 区，避开按钮/手柄）按下拖动不位移——拖动只认手柄
+const bodyBox = await card.boundingBox()
+await page.mouse.move(bodyBox.x + 3, bodyBox.y + bodyBox.height / 2)
 await page.mouse.down()
-await page.mouse.move(box1.x + 3 - 120, box1.y + box1.height / 2 - 40, { steps: 5 })
+await page.mouse.move(bodyBox.x + 3 - 60, bodyBox.y + bodyBox.height / 2 - 20, { steps: 3 })
+await page.mouse.up()
+await page.waitForTimeout(200)
+const bodyBoxAfter = await card.boundingBox()
+check(
+  'card-body-not-draggable',
+  Math.abs(bodyBoxAfter.x - bodyBox.x) < 1 && Math.abs(bodyBoxAfter.y - bodyBox.y) < 1,
+  `body ${bodyBox.x},${bodyBox.y} -> ${bodyBoxAfter.x},${bodyBoxAfter.y}`
+)
+// 手柄拖动：向左上位移 (-120, -40)（初始在右下角，向右/下会被父容器
+// clamp 吃掉位移）；位移后宽高须不变（left/right 约束并存会把卡片拉宽）
+const handle = page.locator('[data-record-drag]')
+const hBox = await handle.boundingBox()
+const box1 = await card.boundingBox()
+await page.mouse.move(hBox.x + hBox.width / 2, hBox.y + hBox.height / 2)
+await page.mouse.down()
+await page.mouse.move(hBox.x + hBox.width / 2 - 120, hBox.y + hBox.height / 2 - 40, { steps: 5 })
 await page.mouse.up()
 await page.waitForTimeout(200)
 const box2 = await card.boundingBox()
@@ -180,6 +195,11 @@ check(
   'card-draggable',
   Math.abs(box2.x - (box1.x - 120)) < 4 && Math.abs(box2.y - (box1.y - 40)) < 4,
   `${box1.x},${box1.y} -> ${box2.x},${box2.y}`
+)
+check(
+  'card-drag-size-unchanged',
+  Math.abs(box2.width - box1.width) < 1 && Math.abs(box2.height - box1.height) < 1,
+  `${box1.width}x${box1.height} -> ${box2.width}x${box2.height}`
 )
 
 // 6.2 暂停 → 继续：data-paused 锚点翻转（icon 随之切换暂停/继续）

@@ -139,6 +139,7 @@ export const enUS = {
     stopRecord: 'Stop Recording',
     pauseRecording: 'Pause',
     resumeRecording: 'Resume',
+    dragCard: 'Drag card',
     videoExported: 'Orbit video exported',
     videoUnsupported: 'Video recording is not supported in this environment',
     recordingSaved: 'Screen recording saved',

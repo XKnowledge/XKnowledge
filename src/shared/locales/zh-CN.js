@@ -139,6 +139,7 @@ export const zhCN = {
     stopRecord: '停止录屏',
     pauseRecording: '暂停',
     resumeRecording: '继续',
+    dragCard: '拖动卡片',
     videoExported: '环绕视频已导出',
     videoUnsupported: '当前环境不支持视频录制',
     recordingSaved: '录屏已保存',

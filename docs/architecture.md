@@ -448,9 +448,12 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
   录屏中画布上悬浮**控制卡片**（`XkRecordingCard.vue`，DOM 覆盖层不在录制
   画面内）：暂停/继续（`MediaRecorder.pause/resume`，state 守卫幂等；暂停段
   不产生帧、恢复后时间轴跳过）与结束（红色，走 `stopScreenRecording` 同路），
-  整卡 pointer 拖动（首次拖动把右下角初始定位换算为 left/top 并 clamp 在
-  画布区内）；暂停态由 ChartView 持有（`screenPaused`，与录制状态同源），
-  卡片经 props 只读 + emit 上抛，菜单「停止录屏」仍保留为第二停止入口。
+  仅右侧 ⠿ 拖动手柄（HolderOutlined，`data-record-drag` 锚点）pointer 拖动，
+  卡片本体不触发（pointerdown 只绑在手柄上）；首次拖动把右下角初始定位换算
+  为 left/top 时须同清 right/bottom（左右/上下约束并存会把 auto 宽高的
+  卡片拉伸变宽），并 clamp 在画布区内。暂停态由 ChartView 持有
+  （`screenPaused`，与录制状态同源），卡片经 props 只读 + emit 上抛，
+  菜单「停止录屏」仍保留为第二停止入口。
 - **落盘走主进程**：渲染层 `a.download` 对 MB 级视频不可用（dataURL 有 ~2MB
   上限——PNG 182KB 可过、视频不行；`blob:` URL 在 Electron 下不触发下载），
   故 blob → ArrayBuffer 经 `video:save` IPC 传主进程，`fileService.saveVideoFile`
