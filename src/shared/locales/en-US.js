@@ -29,6 +29,7 @@ export const enUS = {
     saveTo: 'Save file to...',
     saveAsTo: 'Save file as...',
     videoSaveAs: 'Save video to...',
+    htmlSaveAs: 'Save web page to...',
     open: 'Open',
     pickWorldDir: 'Choose gallery folder'
   },
@@ -127,6 +128,9 @@ export const enUS = {
     description: 'Description',
     view: 'View',
     exportPng: 'Export PNG',
+    exportHtml: 'Export HTML',
+    htmlExported: 'Interactive graph exported',
+    emptyGraphNoExport: 'Nothing to export: the graph is empty',
     resetView: 'Reset View',
     exportVideo: 'Auto Orbit',
     recording: 'Recording…',

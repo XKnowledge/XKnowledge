@@ -72,11 +72,16 @@ XKnowledge/
 │  │  ├─ chartValidation.mjs    # validateChartStructure 纯函数（无 electron 依赖，.mjs 供纯 node 脚本直 import）
 │  │  ├─ exampleService.js      # 示例图库对外门面：定位 examples/ 目录并转发
 │  │  ├─ exampleManifest.mjs    # 示例元数据清单：快慢两层（§5.6），零 electron 依赖
+│  │  ├─ exportHtml.js          # 交互式 HTML 导出：读 viewer 模板拼装 + 保存框落盘（§6.10）
 │  │  └─ fileGuard.js           # createPathGuard：路径授权与 mtime 冲突检测
 │  ├─ preload/
 │  │  └─ index.js               # contextBridge 暴露 window.electronAPI
 │  ├─ shared/
-│  │  └─ ipc-channels.js        # IPC 通道名单（唯一出处，禁止裸字符串）
+│  │  ├─ ipc-channels.js        # IPC 通道名单（唯一出处，禁止裸字符串）
+│  │  └─ graphViewerData.js     # 导出 HTML 的数据白名单序列化（纯函数，§6.10）
+│  ├─ viewer/                   # 交互式 HTML 导出的查看器源码（§6.10，纯 JS 无框架，
+│  │                            #   构建为单 IIFE 内嵌进 resources/viewer/index.html）
+│  └─ renderer/
 │  └─ renderer/
 │     ├─ index.html
 │     └─ src/
@@ -101,7 +106,7 @@ XKnowledge/
 │  └─ renderer/categoryColor.test.js
 ├─ examples/金融.xk              # 金融学习示例图谱
 ├─ data/                        # 早期 v1 格式测试数据（应用不使用）
-├─ resources/                   # 应用图标
+├─ resources/                   # 应用图标；viewer/ 为导出 HTML 的单文件模板（构建产物入库，§6.10）
 ├─ release/                     # electron-builder 打包输出
 ├─ out/                         # electron-vite 构建产物
 ├─ plan.txt                     # 2026-09 依赖升级评估报告（历史文档）
@@ -488,6 +493,56 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
   「来自另一文件」的选区再 Ctrl+V），剪贴板是 OS 级全局，注入后的读取/解析/
   合并与真实跨窗口复制完全同代码路径。
 
+### 6.10 交互式 HTML 导出（viewer 单文件）
+
+把当前图谱导出为**双击即可在浏览器打开的单文件 HTML**：数据与 3D 渲染器全部
+内嵌，接收方零安装漫游（C 档全功能只读：搜索/图例显隐/聚焦三态/边悬停/深浅色/
+水印）。IPC 走 `export:html-save`（载荷 `{ data, defaultName }`，返回 `{ path }` \|
+`{ canceled }`；一次性导出产物，同 `video:save` 不进 guard/mtime 体系）。
+
+**选型——为什么是独立 IIFE 构建而非其他**：打包后 `node_modules` 不进 app
+（build.files 显式排除）、产品要求纯离线，CDN 与运行时读依赖都不可行；renderer
+多入口（viewer.html 页面）的产物是 ES module 多 chunk 且 dev（dev-server）与
+build（out 路径）两套读取路径，不可控。最终路线：`src/viewer/` 独立源码（纯 JS
+无框架，UI 全 DOM API 创建、文案一律 `textContent`——图谱名/描述是用户数据，
+无 innerHTML 拼接天然防 XSS），`scripts/build-viewer.mjs` 用 vite JS API 打成单
+IIFE（minify、`write: false` 内存产物），内联进 `src/viewer/template.html` 的
+bundle 占位注释后落 `resources/viewer/index.html`——**模板与 bundle 构建期绑定
+成单文件**，主进程运行时只做数据替换，杜绝版本错配。产物入库 + prebuild 重
+生成（examples.manifest 同模式），`resources/**/*` 已在 files 清单自动进包，
+主进程按 `getAppPath()/resources/viewer/index.html` 读取（asar 内可读，dev 与
+打包态同一路径）。注意两个 replace 陷阱：bundle 内联用**函数形式** replace
+（`$&`/`$1` 是 replacement 特殊序列）；模板内不得在占位注释之外重复该字符串
+（replace 命中第一处）。
+
+**数据注入与转义**（`src/shared/graphViewerData.js` 序列化 + `src/main/exportHtml.js`
+拼装，均纯函数有单测）：字段白名单与 graphClipboard 同哲学（节点
+`name/des/symbolSize/category`、边 `source/target/name/des`，**刻意剥坐标**——
+viewer 是动态成形，打开时力导向重新聚合，源图坐标跨文件无意义；0 节点返回
+null 由入口拒绝）。注入 `<script type="application/json" id="xk-data">`，JSON
+序列化后 `<` 全部转义为 `\\u003c`（合法 JSON 转义、解析还原，比只替换
+`</script>` 更彻底——连 `<!--` 解析歧义一并消除）；title 经 HTML 实体转义进
+`<title>`。默认文件名 = 图谱名（发送场景文件名应有意义；图库打开的示例无
+path，装载链路带 `name` 字段传图库名），空名回退 `composeFileName` 单源。
+
+**渲染语义与编辑器单源**：viewer 直接 import renderer 纯函数——
+`assignCategoryColors`（类目 20 色）、`SCENE_COLORS`、`labelThreshold`（小节点
+标签/大图预算封顶）、`focusNeighborhood`/`defaultFocusNode`（聚焦）、
+`searchGraphNodes`（搜索）、`planHighlightRepaint`（增量重着色 diff），构图参数
+（`nodeVal = symbolSize³/2500`、SpriteText 标签、>2000 节点模拟加速）对齐
+XkGraph3D——导出物与编辑器一份语义，修一处两处受益。水印为 DOM/CSS 叠加
+（`By XKnowledge`、底部 5%、粗体、字号 `max(18px, 2.2vh)`），视觉参数对齐 PNG
+导出的 `computeWatermarkStyle`（语义对齐非代码共享——一个是 canvas 绘制一个是
+CSS）。viewer 文案内嵌 zh/en 双语，按接收方 `navigator.language` 自适应，不可判
+时回退导出时应用语言（data.lang）。
+
+**测试**：`graphViewerData`（白名单剥离/端点归一/空图 null）、`exportHtml`
+（占位符全替换/`<` 转义后 JSON 仍可解析/title XSS 实体转义/坏数据拒绝/
+`XK_SMOKE_HTML_DIR` 冒烟后门）、ipc/preload 桥接面用例；`scripts/smoke-export-html.mjs`
+冒烟——真实路径导出落盘后经主进程开新 BrowserWindow 以 `file://` 加载产物，
+在真实浏览器环境断言 canvas 渲染/搜索步进/点击详情/聚焦灰化（邻域外材质色
+计数）与隐藏/图例显隐/主题切换/水印，双窗口零渲染错误。
+
 ## 7. 核心数据流
 
 ### 7.1 图表数据的两条装载路径
@@ -664,8 +719,8 @@ undo/redo 时会重放与当前状态不符的操作。撤销/重做的逆操作
   向导按钮「翻页式」布局——GUIINIT 时机（`MUI_CUSTOMFUNCTION_GUIINIT`）一次
   定位：「上一步」独居左下角（左缘与「取消」的右边距对称），「下一步」「取消」
   保持右下角，「下一步」按 DPI 加宽容纳 UAC 盾牌图标 + 中文文字）。
-prebuild 自动重新生成示例清单；改/增/删 `examples/` 内
-  `.xk` 后也可手动 `yarn generate:examples`。
+prebuild 自动重新生成示例清单与 viewer 单文件模板（§6.10）；改/增/删 `examples/` 内
+  `.xk` 后也可手动 `yarn generate:examples`，改 viewer 源码后手动 `yarn build:viewer`。
 - **包管理器用 yarn**：请勿混用 npm（会静默丢依赖）；国内网络下 Electron 二进制下载
   失败时，手动执行 install.js 需显式携带 `ELECTRON_MIRROR` 环境变量（`.npmrc` 对该
   路径不生效）。

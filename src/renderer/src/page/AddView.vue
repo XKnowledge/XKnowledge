@@ -122,7 +122,8 @@ const createBlankFile = () => {
 const openExampleChart = async (ex) => {
   try {
     const { content } = await window.electronAPI.openExample({ fileName: ex.fileName })
-    setPendingChart({ value: content, path: '' })
+    // name 携带图库名：path 为空的副本没有文件名可依，导出 HTML 标题用它
+    setPendingChart({ value: content, path: '', name: ex.title || ex.fileName.replace(/\.xk$/i, '') })
     router.push('/chart')
   } catch (err) {
     console.error('打开示例失败', err)

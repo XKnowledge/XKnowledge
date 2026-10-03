@@ -43,8 +43,13 @@ vi.mock('../../src/main/worldIndex', () => ({
   setWorldUserDir: vi.fn(async (dir) => ({ ok: true, userDir: dir }))
 }))
 
+vi.mock('../../src/main/exportHtml', () => ({
+  saveHtmlFile: vi.fn(async () => ({ path: 'C:/out.html' }))
+}))
+
 import { ipcMain, BrowserWindow, clipboard } from 'electron'
 import * as fileService from '../../src/main/fileService'
+import { saveHtmlFile } from '../../src/main/exportHtml'
 import { listExamples, openExample } from '../../src/main/exampleService'
 import * as worldIndex from '../../src/main/worldIndex'
 import { createChartWindow, takePendingChart, setWindowTitle } from '../../src/main/windowManager'
@@ -593,5 +598,18 @@ describe('剪贴板域（跨文件复制/粘贴，只透传文本）', () => {
     const handler = handlerOf(IPC.CLIPBOARD_READ_GRAPH)
     // handler 同步返回对象（Promise 包装是 ipcMain.handle 的事，单测直调拿原值）
     expect(await handler()).toEqual({ text: '剪贴板内容' })
+  })
+})
+
+describe('EXPORT_HTML_SAVE：交互式 HTML 导出', () => {
+  it('透传 data/defaultName 到 saveHtmlFile（一次性产物，不走 guard）', async () => {
+    saveHtmlFile.mockClear()
+    const payload = { data: { title: 't', nodes: [] }, defaultName: 't.html' }
+    const res = await handlerOf(IPC.EXPORT_HTML_SAVE)(senderOf(1), payload)
+    expect(res).toEqual({ path: 'C:/out.html' })
+    // window 参数来自 senderWindow（fromWebContents mock 未命中时为 undefined），
+    // 断言聚焦在载荷透传
+    expect(saveHtmlFile).toHaveBeenCalledTimes(1)
+    expect(saveHtmlFile.mock.calls[0][1]).toEqual(payload)
   })
 })

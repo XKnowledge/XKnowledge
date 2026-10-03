@@ -149,6 +149,9 @@
               <a-button size="small" @click="graph3dRef?.exportPng()">{{
                 $t('chart.exportPng')
               }}</a-button>
+              <a-button size="small" data-export-html @click="onExportHtml">
+                {{ $t('chart.exportHtml') }}
+              </a-button>
               <a-button
                 size="small"
                 data-reset-view
@@ -220,6 +223,7 @@ import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { matchEvent } from '../utils/keybindings.js'
 import { collectCopySelection, mergeGraphBatch } from '../utils/graphMerge.js'
 import { serializeGraphSelection, parseGraphSelection } from '../../../shared/graphClipboard.js'
+import { serializeGraphForViewer } from '../../../shared/graphViewerData.js'
 import { bindings as keybindings } from '../store/keybindingStore.js'
 import { locale } from '../store/localeStore.js'
 import { t } from '../i18n.js'
@@ -260,6 +264,31 @@ const repulsion = ref(100)
 // 组件层仅兜底
 const exportingVideo = ref(false)
 const screenRecording = ref(false)
+
+/** 导出交互式单文件 HTML：白名单序列化（动态成形不带坐标）→ 主进程
+ *  读 viewer 模板拼装落盘（VIDEO_SAVE 同模式，不进 guard/mtime）。
+ *  默认文件名 = 图谱名（发送场景文件名应有意义；PNG/视频是自留档走
+ *  时间戳单源）；空图直接提示不导出 */
+const onExportHtml = async () => {
+  const chart = xkContext.value.chartData
+  const graphTitle = filePath
+    ? filePath.split(/[\\/]/).pop().replace(/\.xk$/i, '')
+    : chartName || t('common.untitled')
+  const data = serializeGraphForViewer(chart, graphTitle, locale.value)
+  if (!data) {
+    message.info(t('chart.emptyGraphNoExport'))
+    return
+  }
+  const safeName = (data.title || 'xknowledge').replace(/[\\/:*?"<>|]/g, '_').trim() || 'xknowledge'
+  try {
+    const res = await window.electronAPI.exportHtmlFile({ data, defaultName: `${safeName}.html` })
+    if (res?.path) message.success(t('chart.htmlExported'))
+  } catch (err) {
+    // 主进程 throw（模板缺失/写盘失败）经 invoke 变 reject：静默记录，
+    // 不虚构 i18n key（与项目其他导出错误路径一致）
+    console.error('导出 HTML 失败', err)
+  }
+}
 
 const onExportVideo = async () => {
   if (exportingVideo.value || screenRecording.value) return
@@ -383,6 +412,8 @@ watch(
 )
 
 let filePath = ''
+// 图库名（示例副本无 path 时的显示名；见 loadChartData 的 name 登记）
+let chartName = ''
 const shortcutActive = ref('')
 const shortcutWatch = ref(false)
 
@@ -491,6 +522,9 @@ const loadChartData = (data) => {
   xkContext.value.chartData = chart
 
   filePath = data.path
+  // 图库名（示例副本 path 为空时唯一可用的图名，导出 HTML 标题用）；
+  // 打开本地文件/另存后有 filePath，标题以文件名优先
+  chartName = typeof data.name === 'string' ? data.name : ''
   // 向主进程登记"本窗口正在编辑该文件"：再次打开同一文件时聚焦本窗口
   window.electronAPI.fileOpened({ path: filePath }).catch((err) => {
     console.error('登记文件打开状态失败', err)

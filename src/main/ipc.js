@@ -14,6 +14,7 @@ import {
   setWindowTitle
 } from './windowManager'
 import { computeTitles, composeWindowTitles } from './titleService'
+import { saveHtmlFile } from './exportHtml'
 import { setCurrentLocale, t } from './i18nMain'
 import { IPC } from '../shared/ipc-channels'
 
@@ -78,6 +79,11 @@ export const registerIpc = () => {
   ipcMain.handle(IPC.VIDEO_SAVE, (event, { bytes, defaultName, ext }) =>
     // 渲染层传 Uint8Array（结构化克隆），转 Buffer 后写盘
     fileService.saveVideoFile(senderWindow(event), Buffer.from(bytes), defaultName, ext)
+  )
+
+  ipcMain.handle(IPC.EXPORT_HTML_SAVE, (event, payload) =>
+    // 一次性导出产物：读 viewer 模板拼装（数据注入）后弹保存框写盘
+    saveHtmlFile(senderWindow(event), payload)
   )
 
   // 剪贴板透传：序列化/解析在渲染层走 shared/graphClipboard，主进程只做

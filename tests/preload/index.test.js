@@ -111,6 +111,10 @@ describe('preload：electronAPI 桥接面 → IPC 通道映射', () => {
     exposed.saveVideoFile(video)
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.VIDEO_SAVE, video)
 
+    const html = { data: { title: 't', nodes: [] }, defaultName: 't.html' }
+    exposed.exportHtmlFile(html)
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.EXPORT_HTML_SAVE, html)
+
     const newChart = { content: '{}', path: '' }
     exposed.newChartWindow(newChart)
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.APP_NEW_CHART_WINDOW, newChart)

@@ -27,6 +27,8 @@ docs/superpowers/
 .smoke-shots*/
 # 冒烟视频产物目录（smoke-video-export 经 XK_SMOKE_VIDEO_DIR 落盘）
 .smoke-video/
+# 冒烟导出 HTML 产物目录（smoke-export-html 经 XK_SMOKE_HTML_DIR 落盘）
+.smoke-html/
 
 # 未来开发计划
 docs/future-features.md

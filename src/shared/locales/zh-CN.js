@@ -30,6 +30,7 @@ export const zhCN = {
     saveTo: '将文件保存到…',
     saveAsTo: '将文件另存为…',
     videoSaveAs: '视频保存到…',
+    htmlSaveAs: '网页保存到…',
     open: '打开',
     pickWorldDir: '选择图库目录'
   },
@@ -127,6 +128,9 @@ export const zhCN = {
     description: '图谱简介',
     view: '视图',
     exportPng: '导出图片',
+    exportHtml: '导出 HTML',
+    htmlExported: '交互式图谱已导出',
+    emptyGraphNoExport: '空图谱无需导出',
     resetView: '复位视图',
     exportVideo: '环绕录制',
     recording: '录制中…',
