@@ -11,10 +11,10 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SHOT_DIR = path.join(APP_DIR, '.smoke-shots')
+const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
-const HTML_DIR = path.join(APP_DIR, '.smoke-html')
+const HTML_DIR = path.join(APP_DIR, '.artifacts', 'smoke-html')
 fs.rmSync(HTML_DIR, { recursive: true, force: true })
 fs.mkdirSync(HTML_DIR, { recursive: true })
 

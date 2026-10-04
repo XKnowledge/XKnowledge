@@ -16,7 +16,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SHOT_DIR = path.join(APP_DIR, '.smoke-shots-autosave')
+const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots-autosave')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 // 自动保存的落盘目标（放截图专属目录内：清场天然覆盖，且已被 gitignore）。

@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SHOT_DIR = process.env.SMOKESHOT_DIR
   ? path.resolve(APP_DIR, process.env.SMOKESHOT_DIR)
-  : path.join(APP_DIR, '.smoke-shots-copy-paste')
+  : path.join(APP_DIR, '.artifacts', 'smoke-shots-copy-paste')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 

@@ -3,7 +3,7 @@
 // :root[data-theme='dark'] 增加 invert(1) 反色规则。本冒烟走真实用户流全链路
 // 验证：首页设置弹窗显式切深色 → 双击示例进图表页 → 断言 data-theme / 标题栏
 // 底色 / 全部图标 filter= invert → 经图表页菜单「设置」入口切回浅色（顺带覆盖
-// 该入口）→ 断言 filter 复原 none。截图存 .smoke-shots-theme-icons/（专属目录
+// 该入口）→ 断言 filter 复原 none。截图存 .artifacts/smoke-shots-theme-icons/（专属目录
 // 防与其他脚本互相清场）供人工目检深浅两版标题栏。
 // 用法：node scripts/smoke-theme-icons.mjs   （需先 yarn build）
 import { _electron as electron } from 'playwright-core'
@@ -12,7 +12,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SHOT_DIR = path.join(APP_DIR, '.smoke-shots-theme-icons')
+const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots-theme-icons')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 

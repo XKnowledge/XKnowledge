@@ -11,12 +11,12 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SHOT_DIR = path.join(APP_DIR, '.smoke-shots')
+const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 // 视频落盘目录：主进程 saveVideoFile 见 XK_SMOKE_VIDEO_DIR 时跳过系统
 // 保存框（模态框在无人值守环境挂死）直接写这里——冒烟借此硬断言产物
-const VIDEO_DIR = path.join(APP_DIR, '.smoke-video')
+const VIDEO_DIR = path.join(APP_DIR, '.artifacts', 'smoke-video')
 fs.rmSync(VIDEO_DIR, { recursive: true, force: true })
 fs.mkdirSync(VIDEO_DIR, { recursive: true })
 

@@ -38,11 +38,11 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-// 专属截图目录（可用 SMOKESHOT_DIR 覆盖）：.smoke-shots 被多脚本共用且清场，
+// 专属截图目录（可用 SMOKESHOT_DIR 覆盖）：.artifacts/smoke-shots 被多脚本共用且清场，
 // 并行跑会互相删图
 const SHOT_DIR = process.env.SMOKESHOT_DIR
   ? path.resolve(APP_DIR, process.env.SMOKESHOT_DIR)
-  : path.join(APP_DIR, '.smoke-shots-canvas-edit')
+  : path.join(APP_DIR, '.artifacts', 'smoke-shots-canvas-edit')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 

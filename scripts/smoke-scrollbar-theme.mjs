@@ -7,7 +7,7 @@
 //   1. 浅色主题：滚动条轨道浅色、滑块可见且浅灰
 //   2. 深色主题：滚动条轨道深色（≤60 通道值）、滑块深灰且与轨道可区分
 //   3. .inner-div 的 scrollbar-color 计算值非 auto 且按主题切换
-// 截图存 .smoke-shots-scrollbar-theme/ 供人工目检。
+// 截图存 .artifacts/smoke-shots-scrollbar-theme/ 供人工目检。
 // 用法：node scripts/smoke-scrollbar-theme.mjs   （需先 yarn build）
 import { _electron as electron } from 'playwright-core'
 import * as fs from 'node:fs'
@@ -15,7 +15,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SHOT_DIR = path.join(APP_DIR, '.smoke-shots-scrollbar-theme')
+const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots-scrollbar-theme')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 

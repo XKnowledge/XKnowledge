@@ -8,7 +8,7 @@
 //   1. 深色主题：输入框区域主色为深色（≤60 通道值），修复前为 ~rgb(255,255,255)
 //   2. 浅色主题：输入框区域主色为浅色（≥200），不回归
 //   3. 计算样式：深色主题下输入框 backgroundColor 不再是纯白
-// 截图存 .smoke-shots-search-theme/ 供人工目检。
+// 截图存 .artifacts/smoke-shots-search-theme/ 供人工目检。
 // 用法：node scripts/smoke-search-theme.mjs   （需先 npm run build）
 import { _electron as electron } from 'playwright-core'
 import * as fs from 'node:fs'
@@ -16,7 +16,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SHOT_DIR = path.join(APP_DIR, '.smoke-shots-search-theme')
+const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots-search-theme')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 

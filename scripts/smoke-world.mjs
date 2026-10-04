@@ -11,7 +11,7 @@ const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // 专属截图目录（避免与其他冒烟脚本并行互删，同 smoke-search 惯例）
 const SHOT_DIR = process.env.SMOKESHOT_DIR
   ? path.resolve(APP_DIR, process.env.SMOKESHOT_DIR)
-  : path.join(APP_DIR, '.smoke-shots-world')
+  : path.join(APP_DIR, '.artifacts', 'smoke-shots-world')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 

@@ -9,11 +9,11 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-// 专属截图目录：.smoke-shots 被多个冒烟脚本共用且都会 rmSync 清场，
+// 专属截图目录：.artifacts/smoke-shots 被多个冒烟脚本共用且都会 rmSync 清场，
 // 并行跑时会互相删图，故本脚本默认用独立目录（可用 SMOKESHOT_DIR 覆盖）
 const SHOT_DIR = process.env.SMOKESHOT_DIR
   ? path.resolve(APP_DIR, process.env.SMOKESHOT_DIR)
-  : path.join(APP_DIR, '.smoke-shots-search')
+  : path.join(APP_DIR, '.artifacts', 'smoke-shots-search')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 
