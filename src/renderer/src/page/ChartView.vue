@@ -262,7 +262,7 @@ const onExportHtml = async () => {
   const graphTitle = filePath
     ? filePath.split(/[\\/]/).pop().replace(/\.xk$/i, '')
     : chartName || t('common.untitled')
-  const data = serializeGraphForViewer(chart, graphTitle, locale.value)
+  const data = serializeGraphForViewer(chart, graphTitle, locale.value, repulsion.value)
   if (!data) {
     message.info(t('chart.emptyGraphNoExport'))
     return

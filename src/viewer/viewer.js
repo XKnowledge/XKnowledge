@@ -54,6 +54,14 @@ export const createViewer = (
     graph.d3AlphaDecay(0.0228).cooldownTime(15000)
   }
 
+  // 斥力随导出携带：编辑器 XkGraph3D setRepulsion 同映射（charge 强度 =
+  // -repulsion/10），接收方按导出时的滑杆值重排布局；旧版导出物无此字段
+  // → 不动，保持库默认斥力。先于 graphData 设置，首 tick 即生效
+  const charge = graph.d3Force('charge')
+  if (Number.isFinite(data.repulsion) && data.repulsion > 0 && charge) {
+    charge.strength(-data.repulsion / 10)
+  }
+
   // 画布初始即容器尺寸（编辑器同款：防库默认 window 尺寸撑出滚动条）
   const W = container.clientWidth
   const H = container.clientHeight

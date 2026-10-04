@@ -73,10 +73,13 @@ check(
   !html.includes('"__XK_DATA__"') && !html.includes('<title>__XK_TITLE__')
 )
 check('html-has-bundle', html.includes('By XKnowledge')) // 水印文案在 bundle 内联字符串里
-const nodeCount = JSON.parse(
+const exportData = JSON.parse(
   html.match(/<script type="application\/json" id="xk-data">([\s\S]*?)<\/script>/)[1]
-).nodes.length
+)
+const nodeCount = exportData.nodes.length
 check('html-node-count', nodeCount > 0, String(nodeCount))
+// 斥力随导出携带：冒烟不触碰滑杆，导出时为默认 100
+check('html-repulsion-carried', exportData.repulsion === 100, String(exportData.repulsion))
 
 // 4. 主进程开新 BrowserWindow 加载导出产物（file:// + WebGL 真实环境）
 const winPromise = app.waitForEvent('window', { timeout: 20_000 })
@@ -103,6 +106,13 @@ check(
 )
 const viewerNodes = await vp.evaluate(() => window.__XK_VIEWER__.graph.graphData().nodes.length)
 check('viewer-graph-nodes', viewerNodes === nodeCount, `${viewerNodes} vs ${nodeCount}`)
+// 斥力复现：viewer 以编辑器同映射（charge 强度 = -repulsion/10）应用导出值；
+// d3 的 strength() 返回访问器函数（常量场景调用即得值），两种形态都兜住
+const chargeStrength = await vp.evaluate(() => {
+  const s = window.__XK_VIEWER__.graph.d3Force('charge').strength()
+  return typeof s === 'function' ? s(null) : s
+})
+check('viewer-charge-from-export', chargeStrength === -10, String(chargeStrength))
 // 底部导航提示跟随导出语言（导出环境为中文）：不再是库内置英文
 check(
   'viewer-nav-lang',

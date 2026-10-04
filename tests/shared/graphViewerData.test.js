@@ -69,4 +69,15 @@ describe('serializeGraphForViewer', () => {
     expect(serializeGraphForViewer({ nodes: [], links: [] }, 'T', 'zh-CN')).toBeNull()
     expect(serializeGraphForViewer(null, 'T', 'zh-CN')).toBeNull()
   })
+
+  it('repulsion 随导出携带：正数原样带出（导出时滑杆值，viewer 复现布局尺度）', () => {
+    expect(serializeGraphForViewer(chart, 'T', 'zh-CN', 250).repulsion).toBe(250)
+    expect(serializeGraphForViewer(chart, 'T', 'zh-CN', 100).repulsion).toBe(100)
+  })
+
+  it('repulsion 未传/非正数/非数值省略键：旧版导出物语义（viewer 库默认斥力）', () => {
+    for (const bad of [undefined, null, 0, -5, NaN, Infinity, '100']) {
+      expect('repulsion' in serializeGraphForViewer(chart, 'T', 'zh-CN', bad)).toBe(false)
+    }
+  })
 })
