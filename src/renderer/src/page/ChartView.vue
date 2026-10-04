@@ -216,6 +216,7 @@ import { takePendingChart } from '../store/chartStore'
 import { useRecording } from '../composables/useRecording'
 import { useChartAttrs } from '../composables/useChartAttrs'
 import { useFocusMode } from '../composables/useFocusMode'
+import { useSelection } from '../composables/useSelection'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
@@ -320,24 +321,6 @@ const {
 } = useChartAttrs({ xkContext, graph3dRef, markDirty: () => (saveNodeVisible.value = true) })
 const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「设置」入口
 const outlineImportRef = ref(null) // XkOutlineImport 实例（expose open/close）
-// 高亮边 index（-1 表示无）；原 `let highlightEdge` 变量由此 ref 替代
-const highlightEdgeIndex = ref(-1)
-// 选中高亮节点名（''=无）。name 键：增删后 index 漂移，name 全图唯一稳定；
-// 与 highlightEdgeIndex 互斥——同一时刻图上最多一个高亮对象
-const highlightNodeName = ref('')
-// Shift+拖框选的批量选中集：节点名 + 边 index（chartData.links 索引，选择时
-// 快照；后续任何单击选中/结构变更都会清空，index 不会失配）。与单击高亮
-// （highlightNodeName/highlightEdgeIndex）互斥——Delete 按框选优先分发的
-// 语义只能有一个「当前删除对象」
-const selectionNodeNames = ref([])
-const selectionLinkIndexes = ref([])
-const highlightEdgeObj = computed(() => {
-  const i = highlightEdgeIndex.value
-  const links = xkContext.value.chartData?.links
-  return i > -1 && links?.[i]
-    ? { source: links[i].source, target: links[i].target, name: links[i].name }
-    : null
-})
 
 /** 按名同步选中态（默认焦点/焦点删除回退时用）：index 与 currentNode 对齐 */
 const syncCurrentNodeByName = (name) => {
@@ -356,6 +339,17 @@ const { focusMode, focusHops, focusNodeId, focusNodeNames, onFocusModeChange } =
   currentNode,
   syncCurrentNodeByName
 })
+
+// 单击高亮与框选选中态（互斥语义与注释见 composable 头）
+const {
+  highlightEdgeIndex,
+  highlightNodeName,
+  highlightEdgeObj,
+  selectionNodeNames,
+  selectionLinkIndexes,
+  downplayAllHightlight,
+  clearSelection
+} = useSelection(xkContext)
 
 let filePath = ''
 // 图库名（示例副本无 path 时的显示名；见 loadChartData 的 name 登记）
@@ -638,11 +632,6 @@ watch(shortcutWatch, () => {
   }
 })
 
-const downplayAllHightlight = () => {
-  highlightEdgeIndex.value = -1
-  highlightNodeName.value = ''
-}
-
 const resetRefData = () => {
   /**
    * 重置各种ref，配合侧边栏显示一块用
@@ -654,8 +643,7 @@ const resetRefData = () => {
   resetEdgeRef(currentEdge)
   // 框选集同步清空：删除/撤销/重做/保存/切换侧栏后选中集已失效
   // （节点可能已不在图内、边 index 已漂移）
-  selectionNodeNames.value = []
-  selectionLinkIndexes.value = []
+  clearSelection()
 }
 
 const resetSider = () => {
