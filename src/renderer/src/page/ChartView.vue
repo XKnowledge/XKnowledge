@@ -213,6 +213,7 @@ import { bindings as keybindings } from '../store/keybindingStore.js'
 import { locale } from '../store/localeStore.js'
 import { t } from '../i18n.js'
 import { takePendingChart } from '../store/chartStore'
+import { useRecording } from '../composables/useRecording'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
@@ -246,13 +247,6 @@ const attributeVisible = ref(true)
 const checkedValues = ref([])
 const repulsion = ref(100)
 
-// 视频导出/录屏状态（ChartView 单一来源）：互斥由按钮 disabled 表达，
-// 组件层仅兜底
-const exportingVideo = ref(false)
-const screenRecording = ref(false)
-// 录屏暂停态（控制卡片 icon 切换依据）：与 screenRecording 同源同生命周期
-const screenPaused = ref(false)
-
 /** 导出交互式单文件 HTML：白名单序列化（动态成形不带坐标）→ 主进程
  *  读 viewer 模板拼装落盘（VIDEO_SAVE 同模式，不进 guard/mtime）。
  *  默认文件名 = 图谱名（发送场景文件名应有意义；PNG/视频是自留档走
@@ -278,36 +272,6 @@ const onExportHtml = async () => {
   }
 }
 
-const onExportVideo = async () => {
-  if (exportingVideo.value || screenRecording.value) return
-  exportingVideo.value = true
-  try {
-    await graph3dRef.value?.exportVideo()
-  } finally {
-    exportingVideo.value = false
-  }
-}
-
-const onToggleScreenRecord = async () => {
-  if (screenRecording.value) {
-    await graph3dRef.value?.stopScreenRecording()
-    screenRecording.value = false
-    screenPaused.value = false
-    return
-  }
-  if (exportingVideo.value) return
-  screenRecording.value = graph3dRef.value?.startScreenRecording() ?? false
-}
-
-/** 录屏暂停/继续（控制卡片）：组件层 state 守卫幂等，转换成功才翻状态
- *  （重复暂停/未暂停就恢复时下层返回 false，状态不动） */
-const onToggleRecordPause = () => {
-  const ok = screenPaused.value
-    ? graph3dRef.value?.resumeScreenRecording()
-    : graph3dRef.value?.pauseScreenRecording()
-  if (ok) screenPaused.value = !screenPaused.value
-}
-
 const currentNodeVisible = ref(false)
 const currentNode = ref({
   name: '',
@@ -331,6 +295,16 @@ const categoryItems = ref([])
 const categoryName = ref()
 
 const graph3dRef = ref(null) // XkGraph3D 组件实例（expose setRepulsion/exportPng/resetView）
+// 视频导出/录屏状态机（单一来源）：状态与动作收在 useRecording，
+// 互斥由按钮 disabled 表达，组件层仅兜底
+const {
+  exportingVideo,
+  screenRecording,
+  screenPaused,
+  onExportVideo,
+  onToggleScreenRecord,
+  onToggleRecordPause
+} = useRecording(graph3dRef)
 const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「设置」入口
 const outlineImportRef = ref(null) // XkOutlineImport 实例（expose open/close）
 const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
