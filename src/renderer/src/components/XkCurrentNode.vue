@@ -42,6 +42,7 @@
 
 <script setup>
 import { defineComponent, ref } from 'vue'
+import { PlusOutlined } from '@ant-design/icons-vue'
 import { t } from '../i18n.js'
 import { addHistory, jsonReactive } from '../utils/XkUtils'
 
