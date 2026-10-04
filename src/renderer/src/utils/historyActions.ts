@@ -8,15 +8,33 @@
  * 修改时改错对象）。查找用 findLastIndex 从后向前：后创建/后恢复的边
  * 在数组尾部，撤销时优先命中最近变更的那条。
  */
+import type { ChartData, GraphLink } from './graphData'
+
+/**
+ * 单条历史记录（XkUtils.addHistory 追加）。负载形状由 act 决定、消费端按
+ * act 分发后直接取字段，故 data/old/new 为 any：
+ * - createNode/deleteNode：data = 节点（deleteNode 另带 links = 连带删除的邻边）
+ * - createEdge/deleteEdge：data = 边
+ * - changeNode/changeEdge：old/new = 变更前后快照
+ * - importOutline/pasteGraph/deleteSelection：data = { nodes, links } 整批
+ */
+export interface HistoryEntry {
+  act: string
+  data?: any
+  old?: any
+  new?: any
+  links?: GraphLink[]
+}
 
 /** 三元组同键判断（与 isSameLink 一致：两端顺序敏感） */
-const sameEdge = (l, edge) =>
+const sameEdge = (l: GraphLink, edge: GraphLink): boolean =>
   l.source === edge.source && l.target === edge.target && l.name === edge.name
 
-const findEdgeIndex = (links, edge) => links.findLastIndex((l) => sameEdge(l, edge))
+const findEdgeIndex = (links: GraphLink[], edge: GraphLink): number =>
+  links.findLastIndex((l) => sameEdge(l, edge))
 
 /** 删除一条与 edge 同键的边（不动其他同端点边）；找不到时无操作 */
-const removeOneEdge = (chartData, edge) => {
+const removeOneEdge = (chartData: ChartData, edge: GraphLink): void => {
   const idx = findEdgeIndex(chartData.links, edge)
   if (idx > -1) chartData.links.splice(idx, 1)
 }
@@ -25,7 +43,7 @@ const removeOneEdge = (chartData, edge) => {
  * 撤销 currentHistory 记录的操作，直接修改 chartData。
  * 返回是否执行了已知操作（未知 act 返回 false，调用方据此跳过刷新）。
  */
-export const applyUndo = (chartData, currentHistory) => {
+export const applyUndo = (chartData: ChartData, currentHistory: HistoryEntry): boolean => {
   const actionHandlers = {
     createNode: () => {
       chartData.nodes = chartData.nodes.filter((node) => node.name !== currentHistory.data.name)
@@ -50,7 +68,7 @@ export const applyUndo = (chartData, currentHistory) => {
 
     deleteNode: () => {
       chartData.nodes.push(currentHistory.data)
-      chartData.links.push(...currentHistory.links)
+      chartData.links.push(...currentHistory.links!)
     },
 
     createEdge: () => removeOneEdge(chartData, currentHistory.data),
@@ -108,7 +126,7 @@ export const applyUndo = (chartData, currentHistory) => {
  * 重做 currentHistory 记录的操作（applyUndo 的逆变换），直接修改 chartData。
  * 返回是否执行了已知操作。
  */
-export const applyRedo = (chartData, currentHistory) => {
+export const applyRedo = (chartData: ChartData, currentHistory: HistoryEntry): boolean => {
   const actionHandlers = {
     createNode: () => {
       chartData.nodes.push(currentHistory.data)

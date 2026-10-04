@@ -6,10 +6,12 @@
  */
 
 /**
- * @param {Array<{title:string, fileName:string}>} examples listExamples 产出的卡片元数据
- * @returns {Array} 排序后的新数组（元素仍为原对象引用，渲染直接复用）
+ * @param examples listExamples 产出的卡片元数据（至少含 title/fileName，字段可缺）
+ * @returns 排序后的新数组（元素仍为原对象引用，渲染直接复用）
  */
-export const sortExamples = (examples) =>
+export const sortExamples = <T extends { title?: string; fileName?: string }>(
+  examples: T[]
+): T[] =>
   [...examples].sort(
     (a, b) =>
       String(a.title ?? '').localeCompare(String(b.title ?? ''), 'zh-CN') ||

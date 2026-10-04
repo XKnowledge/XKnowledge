@@ -2,7 +2,9 @@
 //（画布帧 + 水印，与 exportPng 单源）--> captureStream(30) --> MediaRecorder
 // --> Blob --> <a download>。格式探测 mp4 优先、逐级回退 webm（Electron 44
 // Chromium 支持 mp4 H.264 录制；全不支持时上层 toast 降级）
-const MIME_CANDIDATES = [
+import type { SaveResult } from '../electron-api'
+
+const MIME_CANDIDATES: Array<readonly [string, string]> = [
   ['video/mp4;codecs=avc1', 'mp4'],
   ['video/mp4', 'mp4'],
   ['video/webm;codecs=vp9', 'webm'],
@@ -13,8 +15,10 @@ const MIME_CANDIDATES = [
 /** 探测当前环境支持的录制格式，返回 [mimeType, ext] 元组；无 MediaRecorder
  *  或全不支持返回 null。isSupported 参数化注入便于单测（node 环境无全局） */
 export const pickMimeType = (
-  isSupported = globalThis.MediaRecorder?.isTypeSupported?.bind(globalThis.MediaRecorder)
-) => {
+  isSupported: ((mime: string) => boolean) | undefined = globalThis.MediaRecorder?.isTypeSupported?.bind(
+    globalThis.MediaRecorder
+  )
+): readonly [string, string] | null => {
   if (!isSupported) return null
   return MIME_CANDIDATES.find(([mime]) => isSupported(mime)) ?? null
 }
@@ -22,8 +26,8 @@ export const pickMimeType = (
 /** 本地时间戳（YYYY-MM-DD-HH-MM-SS）：toISOString 恒为 UTC，东八区下文件名
  *  会比实际慢 8 小时（凌晨导出显示前一天 17 点）——取本机本地时间分量拼装，
  *  全球用户各自得到电脑当前时区的时间。date 参数化注入便于单测 */
-export const formatLocalTimestamp = (date = new Date()) => {
-  const pad = (n) => String(n).padStart(2, '0')
+export const formatLocalTimestamp = (date: Date = new Date()): string => {
+  const pad = (n: number) => String(n).padStart(2, '0')
   return [
     date.getFullYear(),
     pad(date.getMonth() + 1),
@@ -35,11 +39,11 @@ export const formatLocalTimestamp = (date = new Date()) => {
 }
 
 /** 导出文件名：PNG（exportPng）与视频共用同一命名单源 */
-export const composeFileName = (ext) => `xknowledge-${formatLocalTimestamp()}.${ext}`
+export const composeFileName = (ext: string): string => `xknowledge-${formatLocalTimestamp()}.${ext}`
 
 /** 水印样式纯计算（PNG 导出与视频合成共用单源）：粗体、水平居中、底部约
  *  5% 处；字号下限 18 防小画布看不见 */
-export const computeWatermarkStyle = (w, h) => ({
+export const computeWatermarkStyle = (w: number, h: number): { fontSize: number; x: number; y: number } => ({
   fontSize: Math.max(18, Math.round(h * 0.022)),
   x: w / 2,
   y: h * 0.95
@@ -47,11 +51,14 @@ export const computeWatermarkStyle = (w, h) => ({
 
 /** 离屏合成 canvas：draw() = 源画布当前帧 + 水印。视频每帧 rAF 调 draw，
  *  PNG 导出调一次后 toDataURL——水印绘制单源 */
-export const createRecordingCanvas = (srcCanvas, watermarkColor) => {
+export const createRecordingCanvas = (
+  srcCanvas: HTMLCanvasElement,
+  watermarkColor: string
+): { canvas: HTMLCanvasElement; draw: () => void } => {
   const canvas = document.createElement('canvas')
   canvas.width = srcCanvas.width
   canvas.height = srcCanvas.height
-  const ctx = canvas.getContext('2d')
+  const ctx = canvas.getContext('2d')!
   const draw = () => {
     ctx.drawImage(srcCanvas, 0, 0)
     const { fontSize, x, y } = computeWatermarkStyle(canvas.width, canvas.height)
@@ -63,17 +70,37 @@ export const createRecordingCanvas = (srcCanvas, watermarkColor) => {
   return { canvas, draw }
 }
 
+/** 组装 MediaRecorder（canvas.captureStream）的入参 */
+export interface CreateRecorderOptions {
+  canvas: HTMLCanvasElement
+  mimeType: string
+  fps?: number
+  bitsPerSecond?: number
+}
+
+/** 录制器句柄：pause/resume 幂等，stop 释放轨道并返回完整 Blob */
+export interface RecorderHandle {
+  pause: () => boolean
+  resume: () => boolean
+  stop: () => Promise<Blob>
+}
+
 /** 组装 MediaRecorder（canvas.captureStream）。timeslice 250ms 分片收集让
  *  长录屏内存平稳；stop() 幂等并释放轨道，返回完整 Blob */
-export const createRecorder = ({ canvas, mimeType, fps = 30, bitsPerSecond = 16_000_000 }) => {
+export const createRecorder = ({
+  canvas,
+  mimeType,
+  fps = 30,
+  bitsPerSecond = 16_000_000
+}: CreateRecorderOptions): RecorderHandle => {
   const stream = canvas.captureStream(fps)
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitsPerSecond })
-  const chunks = []
+  const chunks: Blob[] = []
   recorder.ondataavailable = (e) => {
     if (e.data?.size) chunks.push(e.data)
   }
-  const stopped = new Promise((resolve) => {
-    recorder.onstop = resolve
+  const stopped = new Promise<void>((resolve) => {
+    recorder.onstop = () => resolve()
   })
   recorder.start(250)
   return {
@@ -103,7 +130,7 @@ export const createRecorder = ({ canvas, mimeType, fps = 30, bitsPerSecond = 16_
  *  a.download 通路对 MB 级视频不可用（dataURL 有 ~2MB 上限、blob: URL
  *  在 Electron 下不触发下载），主进程保存与「另存为」同构、跨环境确定。
  *  返回 { canceled } 或 { path }；默认文件名对齐 PNG 命名 */
-export const saveVideoBlob = async (blob, ext) => {
+export const saveVideoBlob = async (blob: Blob, ext: string): Promise<SaveResult> => {
   const bytes = new Uint8Array(await blob.arrayBuffer())
   return window.electronAPI.saveVideoFile({ bytes, defaultName: composeFileName(ext), ext })
 }

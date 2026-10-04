@@ -4,6 +4,7 @@
  * 与选中态，输出纯数据，不碰 xkContext/reactive——vitest 直测（项目惯例：
  * .vue 交互逻辑抽 utils 单测，组件层由冒烟覆盖）。
  */
+import type { GraphNode, GraphLink } from './graphData'
 
 /**
  * 复制对象收集（与 Delete 同款三路分发，子图自洽——边端点必在节点集内，
@@ -17,13 +18,13 @@
  * 无任何选中返回 null。
  */
 export const collectCopySelection = (
-  nodes,
-  links,
-  selNodeNames,
-  selLinkIndexes,
-  edgeIndex,
-  nodeIndex
-) => {
+  nodes: GraphNode[],
+  links: GraphLink[],
+  selNodeNames: string[] | null | undefined,
+  selLinkIndexes: number[] | null | undefined,
+  edgeIndex: number,
+  nodeIndex: number
+): { nodes: GraphNode[]; links: GraphLink[] } | null => {
   if (selNodeNames?.length || selLinkIndexes?.length) {
     const names = new Set(selNodeNames)
     for (const i of selLinkIndexes ?? []) {
@@ -58,11 +59,16 @@ export const collectCopySelection = (
  * ——元素是 incoming 的对象引用，调用方负责 jsonReactive 后再 push
  * （history.data 须持有 push 进 chartData 的同一批对象）。
  */
-export const mergeGraphBatch = (existingNodes, existingLinks, incomingNodes, incomingLinks) => {
+export const mergeGraphBatch = (
+  existingNodes: GraphNode[],
+  existingLinks: GraphLink[],
+  incomingNodes: GraphNode[],
+  incomingLinks: GraphLink[]
+): { nodes: GraphNode[]; links: GraphLink[]; skippedCount: number } => {
   const existing = new Set(existingNodes.map((n) => n.name))
   const nodes = incomingNodes.filter((n) => !existing.has(n.name))
   const nameSet = new Set([...existing, ...nodes.map((n) => n.name)])
-  const pairKey = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`)
+  const pairKey = (a: string, b: string) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`)
   const existingPairs = new Set(existingLinks.map((l) => pairKey(l.source, l.target)))
   const links = incomingLinks.filter(
     (l) =>

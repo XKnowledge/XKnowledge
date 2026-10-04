@@ -11,7 +11,7 @@ import { normalizeLocaleMode, resolveEffectiveLocale } from '../../../shared/loc
  */
 export const STORAGE_KEY = 'xk-locale'
 
-const readStoredMode = () => {
+const readStoredMode = (): string => {
   try {
     return normalizeLocaleMode(localStorage.getItem(STORAGE_KEY))
   } catch {
@@ -23,14 +23,14 @@ export const mode = ref(readStoredMode())
 /** 生效语言（auto 已消解为具体字典键），antd locale / i18n 实例共用 */
 export const locale = computed(() => resolveEffectiveLocale(mode.value, navigator.language))
 
-const apply = () => {
+const apply = (): void => {
   i18n.global.locale.value = locale.value
   Promise.resolve(window.electronAPI?.localeApplied?.({ locale: locale.value })).catch((err) => {
     console.error('语言上报失败', err) // 主进程对话框/标题降级：本窗口照常生效
   })
 }
 
-export const setLocaleMode = (next) => {
+export const setLocaleMode = (next: string): void => {
   mode.value = normalizeLocaleMode(next)
   try {
     localStorage.setItem(STORAGE_KEY, mode.value) // 其他窗口经 storage 事件跟随
@@ -46,7 +46,7 @@ let inited = false
  * 其他窗口改语言（storage 事件只在其他窗口触发，本窗口由 setLocaleMode 覆盖）。
  * 幂等：HMR/重复调用不叠加监听。
  */
-export const initLocaleSync = () => {
+export const initLocaleSync = (): void => {
   if (inited) return
   inited = true
   window.addEventListener('storage', (e) => {

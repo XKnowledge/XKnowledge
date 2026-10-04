@@ -4,18 +4,25 @@
  * 纯函数、大小写不敏感；空/纯空白关键字返回全量（视为未输入）。
  */
 
+/** 一张卡片参与匹配的字段约束（listExamples 产出的卡片元数据，字段可缺） */
+interface SearchableExample {
+  title?: string
+  description?: string
+  categories?: string[]
+}
+
 /** 拼出一张卡片参与匹配的全文；字段可能缺失（description 可为空串），统一兜底 */
-const searchableText = (ex) =>
+const searchableText = (ex: SearchableExample): string =>
   [ex.title, ex.description, ...(ex.categories ?? [])]
     .map((s) => String(s ?? '').toLowerCase())
     .join(' ')
 
 /**
- * @param {Array<{title:string, description:string, categories:string[]}>} examples
- * @param {string} keyword 用户原始输入
- * @returns {Array} 命中的原数组元素引用（不复制，卡片渲染直接复用）
+ * @param examples listExamples 产出的卡片元数据
+ * @param keyword 用户原始输入
+ * @returns 命中的原数组元素引用（不复制，卡片渲染直接复用）
  */
-export const filterExamples = (examples, keyword) => {
+export const filterExamples = <T extends SearchableExample>(examples: T[], keyword: string): T[] => {
   const kw = String(keyword ?? '')
     .trim()
     .toLowerCase()

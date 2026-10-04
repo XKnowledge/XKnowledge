@@ -4,13 +4,14 @@
  * 段落文本→描述。父 = 栈内最近的更浅者；相邻深度 1 根节点成链（后根挂前根）。
  * 规则见同目录测试与 user-guide「从大纲导入」章节。
  */
+import type { GraphNode, GraphLink } from './graphData'
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/
 const LIST_RE = /^(\s*)([-*+]|\d+\.)\s+(.*)$/
 const WIKI_RE = /\[\[([^\]]+)\]\]/g
 
 /** 结构行解析：返回 { depth, title } 或 null（非结构行） */
-const parseLine = (line, baseDepth) => {
+const parseLine = (line: string, baseDepth: number): { depth: number; title: string } | null => {
   const h = line.match(HEADING_RE)
   if (h) return { depth: h[1].length, title: h[2] }
   const l = line.match(LIST_RE)
@@ -22,8 +23,8 @@ const parseLine = (line, baseDepth) => {
 }
 
 /** 提取双链目标 + 剥离标记后的显示文本 */
-const splitWiki = (text) => {
-  const refs = []
+const splitWiki = (text: string): { refs: string[]; display: string } => {
+  const refs: string[] = []
   const display = text.replace(WIKI_RE, (_, name) => {
     refs.push(name.trim())
     return name.trim()
@@ -31,20 +32,22 @@ const splitWiki = (text) => {
   return { refs, display: display.trim() }
 }
 
-export const parseOutline = (text) => {
-  const nodes = new Map() // name → node
-  const links = []
-  const seenPair = new Set()
-  const stack = [] // { depth, name }
+export const parseOutline = (
+  text: string | null | undefined
+): { nodes: GraphNode[]; links: GraphLink[] } => {
+  const nodes = new Map<string, GraphNode>() // name → node
+  const links: GraphLink[] = []
+  const seenPair = new Set<string>()
+  const stack: Array<{ depth: number; name: string }> = []
 
-  const ensureNode = (name, category, symbolSize) => {
+  const ensureNode = (name: string, category: string, symbolSize: number): GraphNode => {
     if (!nodes.has(name)) {
       nodes.set(name, { name, des: '', category, symbolSize })
     }
-    return nodes.get(name)
+    return nodes.get(name)!
   }
 
-  const addLink = (source, target) => {
+  const addLink = (source: string, target: string): void => {
     if (!source || !target || source === target) return
     const key = source < target ? `${source}\u0000${target}` : `${target}\u0000${source}`
     if (seenPair.has(key)) return
@@ -53,8 +56,8 @@ export const parseOutline = (text) => {
   }
 
   let baseDepth = 0 // 最近标题的深度（列表项挂靠基准）
-  let currentRoot = null // 最近的深度 1 节点（非根节点的所属一级祖先）
-  let current = null // 最近的结构行节点（段落归属）
+  let currentRoot: string | null = null // 最近的深度 1 节点（非根节点的所属一级祖先）
+  let current: GraphNode | null = null // 最近的结构行节点（段落归属）
 
   for (const raw of String(text ?? '').split(/\r\n|\r|\n/)) {
     if (!raw.trim()) continue // 空行跳过：段落归属跨空行延续（标准 markdown

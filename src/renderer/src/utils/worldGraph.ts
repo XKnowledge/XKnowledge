@@ -3,27 +3,66 @@
  * 缝合边三态与渲染场景导出。全部无副作用——组件层（XkWorldGraph /
  * WorldView）只做装配。数据形状见 docs/superpowers/specs/2026-09-25-world-graph-design.md
  */
+import type { ChartData, GraphLink, GraphNode } from './graphData'
 
 /** 展开域锚定力强度（forceX/Y/Z strength），实现期可调 */
 export const ANCHOR_STRENGTH = 0.05
 
+/** 世界层图卡（世界索引 graphs 项：每个 .xk 的摘要） */
+export interface WorldGraphCard {
+  id: string
+  title: string
+  source?: string
+  nodeCount?: number
+}
+
+/** 缝合名：跨库同名节点（名字 + 出现该名字的图 id 集） */
+export interface Stitch {
+  name: string
+  graphIds: Iterable<string>
+}
+
+/** 超节点（每个 .xk 一个） */
+export interface SuperNode {
+  id: string
+  title: string
+  source?: string
+  nodeCount?: number
+  __kind: 'graph'
+}
+
+/** 缝合边（同名 ≥2 图的两两连线；weight = 共享名数） */
+export interface SuperLink {
+  source: string
+  target: string
+  weight: number
+  sharedNames: string[]
+  __kind: 'stitch'
+}
+
 /** 超节点体积：nodeCount 与单图 symbolSize 同语义（立方缩放）；
  *  空图（nodeCount=0/缺省）以 10 兜底防不可见 */
-export const superNodeVal = (nodeCount) => Math.pow(Math.max(nodeCount ?? 0, 10), 3) / 2500
+export const superNodeVal = (nodeCount?: number | null): number =>
+  Math.pow(Math.max(nodeCount ?? 0, 10), 3) / 2500
 
 /**
  * 超图：每个 .xk 一个超节点；缝合组（同名 ≥2 图）两两连边，
  * 同一对超节点间多个共享名聚合为一条（weight = 名字数）。
  */
-export const buildSuperGraph = (graphs, stitches) => {
-  const nodes = (graphs ?? []).map((g) => ({
-    id: g.id,
-    title: g.title,
-    source: g.source,
-    nodeCount: g.nodeCount,
-    __kind: 'graph'
-  }))
-  const pairs = new Map() // 'idA\0idB'(A<B) → { weight, sharedNames }
+export const buildSuperGraph = (
+  graphs: WorldGraphCard[] | null,
+  stitches: Stitch[] | null
+): { nodes: SuperNode[]; links: SuperLink[] } => {
+  const nodes = (graphs ?? []).map(
+    (g): SuperNode => ({
+      id: g.id,
+      title: g.title,
+      source: g.source,
+      nodeCount: g.nodeCount,
+      __kind: 'graph'
+    })
+  )
+  const pairs = new Map<string, { weight: number; sharedNames: string[] }>() // 'idA\0idB'(A<B) → { weight, sharedNames }
   for (const { name, graphIds } of stitches ?? []) {
     const ids = [...graphIds].sort()
     for (let i = 0; i < ids.length; i++) {
@@ -36,15 +75,36 @@ export const buildSuperGraph = (graphs, stitches) => {
       }
     }
   }
-  const links = [...pairs.entries()].map(([key, rec]) => {
+  const links = [...pairs.entries()].map(([key, rec]): SuperLink => {
     const [source, target] = key.split('\u0000')
     return { source, target, weight: rec.weight, sharedNames: rec.sharedNames, __kind: 'stitch' }
   })
   return { nodes, links }
 }
 
+/** 跨库索引节点（世界索引 nodes 项，searchWorldNodes 的输入） */
+interface WorldSearchNode {
+  graphId: string
+  name?: string
+  des?: string
+  category?: string
+}
+
+/** 跨库搜索命中项（附所属图标题） */
+export interface WorldSearchHit {
+  graphId: string
+  graphTitle: string
+  name?: string
+  des?: string
+  category?: string
+}
+
 /** 跨全库节点搜索：name/des 大小写不敏感子串（语义同 searchGraphNodes） */
-export const searchWorldNodes = (nodes, graphsById, keyword) => {
+export const searchWorldNodes = (
+  nodes: ReadonlyArray<WorldSearchNode> | null,
+  graphsById: Map<string, { title?: string }> | null | undefined,
+  keyword: string
+): WorldSearchHit[] => {
   const kw = String(keyword ?? '')
     .trim()
     .toLowerCase()
@@ -68,8 +128,42 @@ export const searchWorldNodes = (nodes, graphsById, keyword) => {
     }))
 }
 
+/** 三维坐标（展开域锚定：超节点当前 d3 位置） */
+interface Vec3 {
+  x: number
+  y: number
+  z: number
+}
+
+/** 展开域真实节点（域内 chartData 节点 + 世界层定位字段） */
+export interface WorldGraphNode extends GraphNode {
+  /** `${graphId}|${name}`（跨图同名不冲突） */
+  id: string
+  graphId: string
+  __kind: 'node'
+}
+
+/** 展开域真实边（端点已 `${graphId}|` 前缀化） */
+export interface WorldGraphLink extends GraphLink {
+  graphId: string
+  __kind: 'link'
+}
+
 /** 世界状态：超图 + 展开登记 + 展开域真实节点/边。expanded 用普通对象（Vue 响应性友好） */
-export const createWorldState = (graphs, stitches) => {
+export interface WorldState {
+  superNodes: SuperNode[]
+  superLinks: SuperLink[]
+  /** graphId → { anchor: {x,y,z} } */
+  expanded: Record<string, { anchor: Vec3 }>
+  graphNodes: WorldGraphNode[]
+  graphLinks: WorldGraphLink[]
+}
+
+/** 世界状态：超图 + 展开登记 + 展开域真实节点/边 */
+export const createWorldState = (
+  graphs: WorldGraphCard[] | null,
+  stitches: Stitch[] | null
+): WorldState => {
   const built = buildSuperGraph(graphs, stitches)
   return {
     superNodes: built.nodes,
@@ -81,30 +175,39 @@ export const createWorldState = (graphs, stitches) => {
 }
 
 /** 展开：锚定坐标来自超节点当前 d3 位置（组件传入）；幂等 */
-export const applyExpansion = (state, graphId, chart, anchor) => {
+export const applyExpansion = (
+  state: WorldState,
+  graphId: string,
+  chart: ChartData,
+  anchor?: Vec3 | null
+): WorldState => {
   if (state.expanded[graphId]) return state
   return {
     ...state,
     expanded: { ...state.expanded, [graphId]: { anchor: anchor ?? { x: 0, y: 0, z: 0 } } },
     graphNodes: [
       ...state.graphNodes,
-      ...chart.nodes.map((n) => ({ ...n, id: `${graphId}|${n.name}`, graphId, __kind: 'node' }))
+      ...chart.nodes.map(
+        (n): WorldGraphNode => ({ ...n, id: `${graphId}|${n.name}`, graphId, __kind: 'node' })
+      )
     ],
     graphLinks: [
       ...state.graphLinks,
-      ...chart.links.map((l) => ({
-        ...l,
-        source: `${graphId}|${l.source}`,
-        target: `${graphId}|${l.target}`,
-        graphId,
-        __kind: 'link'
-      }))
+      ...chart.links.map(
+        (l): WorldGraphLink => ({
+          ...l,
+          source: `${graphId}|${l.source}`,
+          target: `${graphId}|${l.target}`,
+          graphId,
+          __kind: 'link'
+        })
+      )
     ]
   }
 }
 
 /** 收拢：移除该域真实节点/边与展开登记；域内坐标随会话丢弃 */
-export const applyCollapse = (state, graphId) => {
+export const applyCollapse = (state: WorldState, graphId: string): WorldState => {
   if (!state.expanded[graphId]) return state
   const expanded = { ...state.expanded }
   delete expanded[graphId]
@@ -116,16 +219,28 @@ export const applyCollapse = (state, graphId) => {
   }
 }
 
+/** 世界场景节点：未展开超节点或展开域真实节点（喂 ForceGraph3D） */
+export type SceneNode = SuperNode | WorldGraphNode
+
+/** 世界场景边：展开域真实边，或缝合边三态（收拢聚合 weight / 单端脐带 per-name / 双端节点对 per-name） */
+export type SceneLink =
+  | WorldGraphLink
+  | { source: string; target: string; __kind: 'stitch'; weight: number }
+  | { source: string; target: string; __kind: 'stitch'; name: string }
+
 /**
  * 渲染场景（喂 ForceGraph3D）：
  * - 节点 = 未展开超节点 + 全部展开域真实节点
  * - 边 = 展开域真实边 + 缝合边三态（收拢聚合 / 单端脐带 per-name / 双端节点对 per-name）
  * - 端点悬空（索引快照与文件内容失配）跳过，绝不产出引用不存在节点的边
  */
-export const worldScene = (state) => {
-  const nodes = [...state.superNodes.filter((n) => !state.expanded[n.id]), ...state.graphNodes]
+export const worldScene = (state: WorldState): { nodes: SceneNode[]; links: SceneLink[] } => {
+  const nodes: SceneNode[] = [
+    ...state.superNodes.filter((n) => !state.expanded[n.id]),
+    ...state.graphNodes
+  ]
   const idSet = new Set(nodes.map((n) => n.id))
-  const links = [...state.graphLinks]
+  const links: SceneLink[] = [...state.graphLinks]
   for (const l of state.superLinks) {
     const aExp = !!state.expanded[l.source]
     const bExp = !!state.expanded[l.target]
@@ -145,7 +260,22 @@ export const worldScene = (state) => {
 }
 
 /** 边端点取 id：字符串原样；d3 灌库后可能已解析为节点对象（同 graphData.linkEnd 语义） */
-const linkEndId = (end) => (typeof end === 'object' && end !== null ? end.id : end)
+const linkEndId = (end: string | { id: string }): string =>
+  typeof end === 'object' && end !== null ? end.id : (end as string)
+
+/** 世界聚焦系函数的节点入参：读 id 与体量字段（超节点 nodeCount / 真实节点 symbolSize） */
+export interface WorldFocusNodeDatum {
+  id: string
+  __kind?: 'graph' | 'node'
+  nodeCount?: number
+  symbolSize?: number
+}
+
+/** 世界聚焦系函数的边入参（端点可能已被 d3 反解为节点对象，按 id 归一） */
+export interface WorldFocusLinkDatum {
+  source: string | { id: string }
+  target: string | { id: string }
+}
 
 /**
  * 世界聚焦邻域：从 focusId 出发沿场景全部边（域内真实边 + 缝合边/脐带边）
@@ -153,12 +283,16 @@ const linkEndId = (end) => (typeof end === 'object' && end !== null ? end.id : e
  * 但按 id——世界场景跨图同名（name 不唯一）。焦点不在场景中时返回空集
  * （调用方以空集表达「无聚焦，全图正常色」）。
  */
-export const worldFocusNeighborhood = (scene, focusId, hops) => {
+export const worldFocusNeighborhood = (
+  scene: { nodes?: ReadonlyArray<WorldFocusNodeDatum> | null; links?: ReadonlyArray<WorldFocusLinkDatum> | null } | null | undefined,
+  focusId: string,
+  hops: number
+): Set<string> => {
   if (!focusId || !scene?.nodes?.some((n) => n?.id === focusId)) return new Set()
-  const adj = new Map()
-  const addEdge = (s, t) => {
+  const adj = new Map<string, string[]>()
+  const addEdge = (s: string, t: string) => {
     if (!adj.has(s)) adj.set(s, [])
-    adj.get(s).push(t)
+    adj.get(s)!.push(t)
   }
   for (const l of scene?.links ?? []) {
     const s = linkEndId(l.source)
@@ -189,15 +323,19 @@ export const worldFocusNeighborhood = (scene, focusId, hops) => {
  * （超节点 nodeCount / 真实节点 symbolSize）→ 先出现。空场景返回 ''。
  * 语义对齐图表页 defaultFocusNode，按 id 而非 name。
  */
-export const defaultFocusNodeId = (nodes, links) => {
+export const defaultFocusNodeId = (
+  nodes: ReadonlyArray<WorldFocusNodeDatum> | null | undefined,
+  links: ReadonlyArray<WorldFocusLinkDatum> | null | undefined
+): string => {
   if (!nodes?.length) return ''
-  const degree = new Map()
-  const bump = (id) => degree.set(id, (degree.get(id) ?? 0) + 1)
+  const degree = new Map<string, number>()
+  const bump = (id: string) => degree.set(id, (degree.get(id) ?? 0) + 1)
   for (const l of links ?? []) {
     bump(linkEndId(l.source))
     bump(linkEndId(l.target))
   }
-  const sizeOf = (n) => (n.__kind === 'graph' ? n.nodeCount : n.symbolSize) ?? 0
+  const sizeOf = (n: WorldFocusNodeDatum): number =>
+    (n.__kind === 'graph' ? n.nodeCount : n.symbolSize) ?? 0
   let best = nodes[0]
   let bestDeg = degree.get(best.id) ?? 0
   for (let i = 1; i < nodes.length; i++) {

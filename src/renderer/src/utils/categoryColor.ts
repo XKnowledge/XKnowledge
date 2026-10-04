@@ -3,7 +3,7 @@
  * 颜色是展示层推导，不进 .xk 数据文件：同一类型集合永远得到同一分配
  * （保存重开、多窗口一致），与节点顺序无关。
  */
-export const PALETTE = [
+export const PALETTE: string[] = [
   '#E64A19', // 红
   '#C62828', // 深红
   '#FF9800', // 橙
@@ -26,7 +26,7 @@ export const PALETTE = [
   '#78909C' // 灰
 ]
 
-const hash = (str) => {
+const hash = (str: string): number => {
   let h = 0
   for (let i = 0; i < str.length; i++) {
     // 31 进制多项式哈希；|0 保证 32 位整数运算
@@ -38,16 +38,18 @@ const hash = (str) => {
 /**
  * 按类型集合分配颜色：哈希取位 + 被占顺延（first-fit）。
  * 类型数 ≤ PALETTE 长度时零撞色；超过后从哈希位循环复用。
- * 返回 Map<归一化类型名, hex>；查询端统一 .get(String(cat ?? ''))——
- * Map.get 严格相等，undefined 不会被隐式字符串化，归一化必须两端一致。
+ * 查询端统一 .get(String(cat ?? ''))——Map.get 严格相等，undefined
+ * 不会被隐式字符串化，归一化必须两端一致。
  * 集合变化（加新类型）可能使顺延链重排、其他类型换色，属预期行为。
- * @param {Iterable<string|null|undefined>} categories
- * @returns {Map<string, string>}
+ * @param categories 类型名集合（元素可为 null/undefined，统一归一化为空串）
+ * @returns Map<归一化类型名, hex>
  */
-export const assignCategoryColors = (categories) => {
+export const assignCategoryColors = (
+  categories: Iterable<string | null | undefined>
+): Map<string, string> => {
   const names = [...new Set([...(categories ?? [])].map((c) => String(c ?? '')))].sort()
-  const result = new Map()
-  const used = new Set()
+  const result = new Map<string, string>()
+  const used = new Set<number>()
   for (const name of names) {
     let i = hash(name) % PALETTE.length
     let tries = 0

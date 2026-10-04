@@ -10,16 +10,18 @@ import { computed, ref } from 'vue'
 export const STORAGE_KEY = 'xk-theme-mode'
 
 /** 三态：auto（跟随系统）/ light / dark */
-export const THEME_MODES = ['auto', 'light', 'dark']
+export type ThemeMode = 'auto' | 'light' | 'dark'
+
+export const THEME_MODES: ThemeMode[] = ['auto', 'light', 'dark']
 
 /** 非法存储值（手改/损坏）回落 auto */
-export const normalizeMode = (v) => (THEME_MODES.includes(v) ? v : 'auto')
+export const normalizeMode = (v: any): ThemeMode => (THEME_MODES.includes(v) ? v : 'auto')
 
 /** 生效主题推导（纯函数）：dark 显式即深；auto 跟随系统；其余浅色 */
-export const resolveEffective = (mode, systemDark) =>
+export const resolveEffective = (mode: ThemeMode, systemDark: boolean): 'dark' | 'light' =>
   mode === 'dark' || (mode === 'auto' && systemDark) ? 'dark' : 'light'
 
-const readStoredMode = () => {
+const readStoredMode = (): ThemeMode => {
   try {
     return normalizeMode(localStorage.getItem(STORAGE_KEY))
   } catch {
@@ -32,7 +34,7 @@ const systemDark = ref(false)
 export const effective = computed(() => resolveEffective(mode.value, systemDark.value))
 
 /** 应用当前生效主题：CSS 变量钩子 + 上报主进程（themeSource/标题栏/新窗口底色） */
-const apply = () => {
+const apply = (): void => {
   document.documentElement.dataset.theme = effective.value
   Promise.resolve(
     window.electronAPI?.themeApplied?.({ mode: mode.value, effective: effective.value })
@@ -41,7 +43,7 @@ const apply = () => {
   })
 }
 
-export const setMode = (next) => {
+export const setMode = (next: ThemeMode): void => {
   mode.value = normalizeMode(next)
   try {
     localStorage.setItem(STORAGE_KEY, mode.value) // 其他窗口经 storage 事件跟随
@@ -59,7 +61,7 @@ let inited = false
  * - 其他窗口改偏好（storage 事件只在其他窗口触发，本窗口由 setMode 覆盖）
  * 幂等：HMR/重复调用不叠加监听。
  */
-export const initTheme = () => {
+export const initTheme = (): void => {
   if (inited) return
   inited = true
   const mq = window.matchMedia('(prefers-color-scheme: dark)')
