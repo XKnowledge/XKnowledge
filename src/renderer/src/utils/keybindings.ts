@@ -57,8 +57,8 @@ export const isValidBinding = (x: any): x is KeyBinding =>
   typeof x.key === 'string' &&
   x.key.length > 0
 
-/** 录制事件的最小结构（KeyboardEvent 满足；测试可直接传普通对象，不耦合浏览器环境） */
-interface RecordableEvent {
+/** 录制/判定事件的最小结构（KeyboardEvent 满足；测试可直接传普通对象，不耦合浏览器环境） */
+export interface RecordableEvent {
   key: string
   ctrlKey?: boolean
   metaKey?: boolean
