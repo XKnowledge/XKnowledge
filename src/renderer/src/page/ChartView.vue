@@ -214,6 +214,7 @@ import { locale } from '../store/localeStore.js'
 import { t } from '../i18n.js'
 import { takePendingChart } from '../store/chartStore'
 import { useRecording } from '../composables/useRecording'
+import { useChartAttrs } from '../composables/useChartAttrs'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
@@ -244,8 +245,6 @@ const siderVisible = ref(false)
 const saveNodeVisible = ref(false)
 
 const attributeVisible = ref(true)
-const checkedValues = ref([])
-const repulsion = ref(100)
 
 /** 导出交互式单文件 HTML：白名单序列化（动态成形不带坐标）→ 主进程
  *  读 viewer 模板拼装落盘（VIDEO_SAVE 同模式，不进 guard/mtime）。
@@ -305,10 +304,21 @@ const {
   onToggleScreenRecord,
   onToggleRecordPause
 } = useRecording(graph3dRef)
+// 属性面板状态机（会话级渲染设置 + 简介元数据）：置脏经回调回编排层；
+// 刻意与聚焦模式分管道——聚焦「不置脏、跨图保持」是设计意图（见模板内注释）
+const {
+  checkedValues,
+  repulsion,
+  showLinkName,
+  showSmallLabels,
+  chartDescription,
+  onChangeAttr,
+  onDescriptionChange,
+  onChangeRepulsion,
+  initAttr
+} = useChartAttrs({ xkContext, graph3dRef, markDirty: () => (saveNodeVisible.value = true) })
 const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「设置」入口
 const outlineImportRef = ref(null) // XkOutlineImport 实例（expose open/close）
-const showLinkName = ref(false) // 会话级渲染设置：悬浮时是否显示边名
-const showSmallLabels = ref(true) // 会话级渲染设置：是否常显小节点名称（默认开，全显）
 // 聚焦模式（会话级，不写盘、不置脏、不进 initAttr——用户开着探照灯换图，
 // 灯不应被默默关掉，否则「打开新图自动聚焦」永远不触发）：
 // off 关闭 / focus 灰化（邻域外退灰）/ deep 隐藏（邻域外直接隐藏）
@@ -515,14 +525,6 @@ const loadChartData = (data) => {
   })
 }
 
-const initAttr = () => {
-  // v2 格式不存渲染配置，恢复会话默认值
-  showLinkName.value = false
-  showSmallLabels.value = true
-  repulsion.value = 100
-  checkedValues.value = ['showSmallLabels']
-}
-
 watch(
   () => xkContext.value.updateChart,
   () => {
@@ -557,32 +559,6 @@ watch(locale, () => {
     console.error('未保存状态上报失败', err)
   })
 })
-
-const onChangeAttr = () => {
-  showLinkName.value = checkedValues.value.includes('showEdgeName')
-  showSmallLabels.value = checkedValues.value.includes('showSmallLabels')
-  saveNodeVisible.value = true
-}
-
-// 图谱简介：双向包装 chartData.description——装载失败时 chartData 为 null，
-// 而属性面板仅被 v-show 隐藏仍会渲染，裸绑 description 会在渲染期抛
-// TypeError；get 兜底空串，set 顺带覆盖「新建文件无该字段」的首次创建
-const chartDescription = computed({
-  get: () => xkContext.value.chartData?.description ?? '',
-  set: (v) => {
-    if (!xkContext.value.chartData) return
-    xkContext.value.chartData.description = v
-  }
-})
-
-const onDescriptionChange = () => {
-  saveNodeVisible.value = true
-}
-
-const onChangeRepulsion = () => {
-  graph3dRef.value?.setRepulsion(repulsion.value)
-  saveNodeVisible.value = true
-}
 
 const shortcut = (event) => {
   // 统一转换为小写处理
