@@ -217,6 +217,7 @@ import { useRecording } from '../composables/useRecording'
 import { useChartAttrs } from '../composables/useChartAttrs'
 import { useFocusMode } from '../composables/useFocusMode'
 import { useSelection } from '../composables/useSelection'
+import { useChartFile } from '../composables/useChartFile'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
@@ -254,9 +255,9 @@ const attributeVisible = ref(true)
  *  时间戳单源）；空图直接提示不导出 */
 const onExportHtml = async () => {
   const chart = xkContext.value.chartData
-  const graphTitle = filePath
-    ? filePath.split(/[\\/]/).pop().replace(/\.xk$/i, '')
-    : chartName || t('common.untitled')
+  const graphTitle = filePath.value
+    ? filePath.value.split(/[\\/]/).pop().replace(/\.xk$/i, '')
+    : chartName.value || t('common.untitled')
   const data = serializeGraphForViewer(chart, graphTitle, locale.value, repulsion.value)
   if (!data) {
     message.info(t('chart.emptyGraphNoExport'))
@@ -351,15 +352,8 @@ const {
   clearSelection
 } = useSelection(xkContext)
 
-let filePath = ''
-// 图库名（示例副本无 path 时的显示名；见 loadChartData 的 name 登记）
-let chartName = ''
 const shortcutActive = ref('')
 const shortcutWatch = ref(false)
-
-let autoSaveTimer = null
-let offRequestClose = null
-let autoSaveSuspended = false // 文件冲突后暂停自动保存，避免每分钟重复报错
 
 onMounted(async () => {
   window.addEventListener('keydown', shortcut)
@@ -380,57 +374,16 @@ onMounted(async () => {
       message.error(t('chart.loadFailed'))
     }
   }
-  // 通知主进程解锁窗口并注册关闭确认
-  window.electronAPI.enterChartMode().catch((err) => {
-    console.error('进入图表模式失败', err)
-  })
-
-  autoSaveTimer = setInterval(() => {
-    // 1分钟保存一次：走 persistFile 纯保存，不重置侧边栏——后台保存
-    // 必须隐形，清表单/跳属性页会打断正在编辑的用户（也不借用
-    // shortcutActive 分发，避免占用菜单按钮的 v-model 状态）
-    if (!autoSaveSuspended && saveNodeVisible.value && filePath !== '') {
-      persistFile()
-    }
-  }, 60000)
-
-  // 用户点击窗口关闭按钮：主进程拦截 close 后推送本事件，
-  // 由本页面决定是否可以关闭。
-  offRequestClose = window.electronAPI.onRequestClose(async () => {
-    if (!saveNodeVisible.value) {
-      window.electronAPI.closeWindow()
-      return
-    }
-
-    let choice
-    try {
-      choice = await window.electronAPI.confirmUnsaved()
-    } catch (err) {
-      console.error('退出确认失败', err)
-      return // 确认框失败按“取消”处理，避免误丢用户数据
-    }
-    if (choice === 'cancel') return
-    if (choice === 'discard') {
-      window.electronAPI.closeWindow()
-      return
-    }
-    // choice === 'save'：保存成功才关闭；失败留在当前页面
-    const ok = await saveFile()
-    if (ok) window.electronAPI.closeWindow()
-  })
+  // 文件生命周期挂载：解锁窗口并注册关闭确认 + 60 秒自动保存
+  // （门控与关闭确认的实现见 useChartFile）
+  mountFileLifecycle()
 })
 
 onUnmounted(() => {
   // 同窗口再次挂载（路由进出图表页）时，旧实例的监听器与定时器若不
   // 释放，会导致快捷键跑两遍、自动保存累积、内存泄漏
   window.removeEventListener('keydown', shortcut)
-  if (autoSaveTimer) clearInterval(autoSaveTimer)
-  if (offRequestClose) offRequestClose()
-
-  // 解除主进程的窗口锁定与关闭拦截（与挂载时的 enterChartMode 对称）
-  window.electronAPI.exitChartMode().catch((err) => {
-    console.error('退出图表模式失败', err)
-  })
+  unmountFileLifecycle()
 })
 
 const loadChartData = (data) => {
@@ -461,14 +414,8 @@ const loadChartData = (data) => {
   }
   xkContext.value.chartData = chart
 
-  filePath = data.path
-  // 图库名（示例副本 path 为空时唯一可用的图名，导出 HTML 标题用）；
-  // 打开本地文件/另存后有 filePath，标题以文件名优先
-  chartName = typeof data.name === 'string' ? data.name : ''
-  // 向主进程登记"本窗口正在编辑该文件"：再次打开同一文件时聚焦本窗口
-  window.electronAPI.fileOpened({ path: filePath }).catch((err) => {
-    console.error('登记文件打开状态失败', err)
-  })
+  // 文件身份维护 + 主进程登记（再次打开同一文件时聚焦本窗口）
+  registerOpenedFile(data.path, data.name)
 
   initAttr()
   // 换图关闭图内搜索：关键词属于旧图，留着是误导
@@ -499,24 +446,6 @@ watch(
     )
   }
 )
-
-// 未保存状态上报主进程：窗口标题加/去圆点（标题条文件名后、任务栏标题前）。
-// 现有置位/清零点（编辑、属性开关、保存、另存、装载）全部照旧翻转
-// saveNodeVisible，这里统一上报；红条警示已删，标题圆点是唯一未保存提示
-watch(saveNodeVisible, (v) => {
-  window.electronAPI.fileDirty({ dirty: v }).catch((err) => {
-    console.error('未保存状态上报失败', err)
-  })
-})
-
-// 语言切换重报当前未保存状态：主进程 refreshTitles 只覆盖已登记文件窗口，
-// 未命名窗口（无登记项）靠这条重报走 file:dirty 的未命名标题分支，
-// 「未保存圆点 + 新语言标题」才能即时刷新（与 dirty 翻转共用同一条管道）
-watch(locale, () => {
-  window.electronAPI.fileDirty({ dirty: saveNodeVisible.value }).catch((err) => {
-    console.error('未保存状态上报失败', err)
-  })
-})
 
 const shortcut = (event) => {
   // 统一转换为小写处理
@@ -783,153 +712,22 @@ const toggleSider = () => {
   }
 }
 
-const createNewFile = () => {
-  /**
-   * 实现新建文件：新窗口装载空白图谱（未存盘，path 为空）
-   */
-  window.electronAPI
-    .newChartWindow({ content: JSON.stringify({ version: 2, nodes: [], links: [] }), path: '' })
-    .catch((err) => {
-      console.error('新建图表窗口失败', err)
-      message.error(t('chart.newWindowFailed'))
-    })
-}
-
-const openFile = async () => {
-  /**
-   * 实现打开文件：读取成功后在新窗口打开（保持新窗口的保存直接写回原文件）。
-   * 同一文件已在其他窗口打开时，主进程会聚焦那个窗口并返回 alreadyOpen。
-   */
-  try {
-    const res = await window.electronAPI.openFile()
-    if (res.canceled) return
-    if (res.alreadyOpen) {
-      message.info(t('chart.alreadyOpen'))
-      return
-    }
-    window.electronAPI.newChartWindow({ content: res.content, path: res.path }).catch((err) => {
-      console.error('打开失败', err)
-      message.error(t('chart.openFailed'))
-    })
-  } catch (err) {
-    console.error('打开失败', err)
-    // 不解析 err.message（跨 IPC 边界后文案不可靠），使用固定中文提示
-    message.error(t('common.openFailedDetail'))
-  }
-}
-
-const closeFile = async () => {
-  /**
-   * 实现关闭文件：未保存确认与窗口关闭按钮同款（保存/放弃/取消），
-   * 通过后清掉主进程的打开登记再跳回首页，其余清理由 onUnmounted 完成
-   */
-  if (saveNodeVisible.value) {
-    let choice
-    try {
-      choice = await window.electronAPI.confirmUnsaved()
-    } catch (err) {
-      console.error('关闭文件确认失败', err)
-      return // 确认框失败按“取消”处理，避免误丢用户数据
-    }
-    if (choice === 'cancel') return
-    if (choice === 'save') {
-      const ok = await saveFile()
-      if (!ok) return // 保存失败留在图表页（报错沿用 saveFile 现有分支）
-    }
-  }
-  // 清掉本窗口的打开登记（空路径只清不登）：不清的话，再次打开同一文件
-  // 会“聚焦”到这个实际已回到首页的窗口
-  window.electronAPI.fileOpened({ path: '' }).catch((err) => {
-    console.error('清除打开登记失败', err)
-  })
-  router.push('/')
-}
-
-const persistFile = async () => {
-  /**
-   * 保存核心层：写盘 + 路径/登记/脏标记维护与错误处理，无任何 UI 重置
-   * 副作用。60 秒自动保存与手动保存共用——后台保存必须隐形，清表单/
-   * 跳属性页会打断正在编辑的用户。
-   * 返回是否保存成功。
-   */
-  if (!xkContext.value.chartData) {
-    // 装载失败的窗口没有可保存内容，禁止把字面量 "null" 写成损坏文件
-    message.error(t('chart.nothingToSave'))
-    return false
-  }
-  try {
-    const res = await window.electronAPI.saveFile({
-      path: filePath,
-      content: JSON.stringify(jsonReactive(xkContext.value.chartData))
-    })
-    if (res.canceled) return false
-    filePath = res.path
-    autoSaveSuspended = false
-    // 首次保存（原 path 为空）后文件有了路径，更新登记
-    window.electronAPI.fileOpened({ path: filePath }).catch(() => {})
-    saveNodeVisible.value = false
-    return true
-  } catch (err) {
-    console.error('保存失败', err)
-    // invoke 错误边界只保留 message（code 属性跨 IPC 丢失），
-    // 按主进程错误里的稳定 token 区分冲突场景
-    if (String(err?.message).includes('[FILE_CONFLICT]')) {
-      autoSaveSuspended = true // 冲突未解决前不再自动保存，避免每分钟重复报错
-      message.error(t('chart.fileConflictHint'))
-    } else if (String(err?.message).includes('[EXAMPLE_PROTECTED]')) {
-      // 另存对话框里选到了示例目录内（示例是内置资产，不允许覆盖）
-      message.error(t('chart.exampleProtectedHint'))
-    } else {
-      message.error(t('chart.saveFailed'))
-    }
-    saveNodeVisible.value = true
-    return false
-  }
-}
-
-const saveFile = async () => {
-  /**
-   * 手动保存（Ctrl/⌘+S/菜单/关闭前保存）：在 persistFile 之上叠加 UI 重置
-   * ——保存成功后回到干净的属性面板，这是用户主动动作的预期反馈。
-   * 返回是否保存成功（供退出流程使用）。
-   */
-  const ok = await persistFile()
-  if (ok) {
-    resetSider()
-    resetRefData()
-  }
-  return ok
-}
-
-const saveAs = async () => {
-  /**
-   * 实现文件另存为。
-   */
-  if (!xkContext.value.chartData) {
-    message.error(t('chart.nothingToSave'))
-    return
-  }
-  try {
-    const res = await window.electronAPI.saveFileAs({
-      content: JSON.stringify(jsonReactive(xkContext.value.chartData))
-    })
-    if (res.canceled) return
-    filePath = res.path
-    autoSaveSuspended = false // 换了新文件，恢复自动保存
-    // 另存为换了路径：更新登记，旧文件不再聚焦到本窗口
-    window.electronAPI.fileOpened({ path: filePath }).catch(() => {})
-    saveNodeVisible.value = false
-    resetSider()
-    resetRefData()
-  } catch (err) {
-    console.error('另存为失败', err)
-    if (String(err?.message).includes('[EXAMPLE_PROTECTED]')) {
-      message.error(t('chart.exampleProtectedHint'))
-    } else {
-      message.error(t('chart.saveAsFailed'))
-    }
-  }
-}
+// 文件生命周期（落盘/另存/打开/关闭、自动保存门控、关闭确认、未保存上报）：
+// 状态与函数收在 useChartFile；装载广播（上方 loadChartData）只经
+// registerOpenedFile 维护文件身份。手动保存/另存成功后的面板重置
+// （resetSider/resetRefData）经参数注入
+const {
+  filePath,
+  chartName,
+  registerOpenedFile,
+  saveFile,
+  saveAs,
+  createNewFile,
+  openFile,
+  closeFile,
+  mountFileLifecycle,
+  unmountFileLifecycle
+} = useChartFile({ xkContext, saveNodeVisible, router, resetSider, resetRefData })
 
 const undo = () => {
   /**

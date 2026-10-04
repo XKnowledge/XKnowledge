@@ -40,8 +40,8 @@ export interface WorldIndex {
 
 export interface ElectronApi {
   /** 打开对话框并读取：取消 { canceled }；同文件已在别窗打开 { alreadyOpen }（已聚焦该窗）；
-   *  示例文件 path 置空走副本语义（保存必弹另存） */
-  openFile(): Promise<{ canceled: true } | { alreadyOpen: true } | { content: string; path: string }>
+   *  示例文件 path 置空走副本语义（保存必弹另存）。返回形状按分支互斥，调用方渐进判属性 */
+  openFile(): Promise<{ canceled?: boolean; alreadyOpen?: boolean; content?: string; path?: string }>
   /** 装载/换文件上报（path 为空表示未命名）：主进程登记簿 + 标题联动 */
   fileOpened(payload: { path: string }): Promise<{ ok: true }>
   /** 未保存状态上报（窗口标题圆点） */
