@@ -27,7 +27,7 @@
 2. 用工具栏或快捷键增删改节点与连接；
 3. `Ctrl/⌘+S` 保存，属性面板里可调整排斥力、标签显示并导出图片。
 
-完整说明（界面布局、文件操作细节、快捷键、`.xk` 格式、常见问题）见
+完整说明（界面一览、各功能用法、快捷键、`.xk` 格式、常见问题）见
 **[docs/user-guide.md](docs/user-guide.md)**。
 
 ## 从源码运行
@@ -42,12 +42,15 @@ yarn dev       # 开发模式启动
 > 请全程使用 yarn，不要与 npm 混用（可能静默丢依赖）。国内网络下 Electron 二进制
 > 下载失败时，手动执行 install.js 需显式携带 `ELECTRON_MIRROR` 环境变量。
 
+测试体系（单元 + 冒烟）、构建打包、CI 与发版、提交规范等开发流程详见
+**[docs/development.md](docs/development.md)**。
+
 常用脚本：
 
 | 命令 | 说明 |
 | --- | --- |
 | `yarn dev` | 开发模式（electron-vite watch + DevTools） |
-| `yarn test` | 运行单元测试（vitest，37 个用例） |
+| `yarn test` | 运行单元测试（vitest） |
 | `yarn typecheck` | 类型检查（vue-tsc） |
 | `yarn build` | 构建（electron-vite build → `out/`） |
 
@@ -101,7 +104,8 @@ UTF-8 编码的 JSON：
 }
 ```
 
-节点以 `name` 为唯一标识，连接按节点名引用；格式细节与约束见使用说明。
+节点以 `name` 为唯一标识，连接按节点名引用；格式细节与约束见
+[用户手册](docs/user-guide.md)。
 
 ## 许可证
 
