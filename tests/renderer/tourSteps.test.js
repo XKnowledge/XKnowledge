@@ -25,24 +25,29 @@ describe('tourSteps：教程步骤数据完整性', () => {
     expect(resolve(enUS, 'menu.tour')).toBeDefined()
   })
 
-  it('target 二值合法：非空字符串锚点或 null（居中步）；首尾两步居中', () => {
+  it('target 二值合法：非空字符串锚点或 null（居中步）；首/画布三步/尾居中', () => {
     for (const s of TOUR_STEPS) {
       expect(
         s.target === null || (typeof s.target === 'string' && s.target.length > 0),
         `非法 target: ${s.target}`
       ).toBe(true)
     }
-    expect(TOUR_STEPS.filter((s) => s.target === null).length).toBe(2)
+    // 居中步：欢迎(1)、画布三连(4-6)、收尾(9)。画布不做锚点——画布贴
+    // 视口左缘(left=0)，vc-tour 遮罩 gap(默认6) 外扩会算出负 pos.left/top，
+    // Mask 挡板 rect 拿负值触发 SVG 校验 Error（rendering 级控制台报错）
+    expect(TOUR_STEPS.filter((s) => s.target === null).length).toBe(5)
     expect(TOUR_STEPS[0].target).toBeNull()
+    expect(TOUR_STEPS[3].target).toBeNull()
+    expect(TOUR_STEPS[4].target).toBeNull()
+    expect(TOUR_STEPS[5].target).toBeNull()
     expect(TOUR_STEPS[TOUR_STEPS.length - 1].target).toBeNull()
   })
 
-  it('锚点集合与 ChartView/XkGraph3D 现有稳定选择器一致', () => {
+  it('锚点集合与 ChartView/XkGraph3D 现有稳定选择器一致（且离视口边缘 >6px，避开遮罩 gap 负值）', () => {
     const anchors = new Set(TOUR_STEPS.map((s) => s.target).filter(Boolean))
     expect([...anchors]).toEqual([
-      '.sider-menu-style',
-      '.move-header',
-      '.echarts-style',
+      '.sider-menu-style .no-move',
+      '.move-header [data-toolbar-action]',
       '.graph3d-legend',
       '.attr-panel'
     ])
