@@ -43,7 +43,7 @@ yarn dev         # 开发模式启动（electron-vite dev --watch，DevTools 自
 
 几条贯穿全仓的约定（背景与理由见 [软件结构文档](./architecture.md)）：
 
-- **纯逻辑抽纯函数模块**：不依赖 electron 的逻辑放 `.mjs` / 纯函数文件，主进程、vitest、构建脚本三方直接 import 同一份实现（`chartValidation.mjs`、`exampleManifest.mjs` 均为此模式）。
+- **纯逻辑抽纯函数模块**：不依赖 electron 的逻辑放 `.mjs` / 纯函数文件，主进程、渲染端、vitest、构建脚本直接 import 同一份实现（`shared/chartValidation.mjs`——主进程读盘与渲染端装载兜底共用，`exampleManifest.mjs` 均为此模式）。
 - **IPC 通道名单单源**：`src/shared/ipc-channels.js` 是唯一出处，禁止裸写字符串。
 - **双语字典单源**：`src/shared/locales/`（纯数据模块，禁止 import vue/electron），渲染层与主进程共用；改文案两个语言都要改，`tests/shared/locales.test.js` 会锁 key 树与占位符一致性。
 - **改 `examples/` 内 `.xk` 后必须 `yarn generate:examples`**——同步守护测试对清单与目录现扫结果逐字节对比，忘了跑测试必红。

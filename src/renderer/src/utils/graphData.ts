@@ -70,11 +70,24 @@ export interface GraphLink {
   des?: string
 }
 
-/** chartData：图谱文档数据（xkContext.chartData 的 nodes/links） */
+/** chartData：图谱文档数据（文档域的 nodes/links + 图表级元数据） */
 export interface ChartData {
   nodes: GraphNode[]
   links: GraphLink[]
+  /** 图表简介（元数据）：不进撤销栈，保存时随文档落盘 */
+  description?: string
 }
+
+/** 侧栏节点表单的空模板（表单初始值与编辑面板复位共用同一形状） */
+export const emptyNode = (): GraphNode => ({ name: '', des: '', symbolSize: 50, category: '' })
+
+/** 侧栏边表单的空模板 */
+export const emptyEdge = (): GraphLink => ({ source: '', target: '', name: '', des: '' })
+
+/** 深拷贝（JSON 往返）。图谱数据是纯 JSON 数据（与 .xk 落盘同构），JSON
+ *  克隆语义与落盘一致（undefined 字段一并丢弃）；入图 / 入历史前脱钩
+ *  引用统一用这个。 */
+export const deepClone = <T>(x: T): T => JSON.parse(JSON.stringify(x))
 
 /** 图实例节点：chartData 节点 + 内部索引与 d3 布局坐标（mergeGraphNodes 产物） */
 export interface PlacedNode extends GraphNode {
@@ -372,7 +385,7 @@ export const planHighlightRepaint = ({
 }
 
 /**
- * 结构性变更（updateChart 翻转）后校准节点选中高亮名：
+ * 结构性变更后校准节点选中高亮名：
  * - 高亮名仍在图中 → 原样返回（普通建删不动既有高亮）
  * - 高亮名已消失 → 索引有效且指向新名时跟随（改名提交场景），否则清空
  * @param nodes chartData 当前节点（纯数据）

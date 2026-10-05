@@ -1,7 +1,7 @@
 /**
  * 图选区收集与合并的纯工具：复制的三路分发收集（collectCopySelection）与
  * 大纲导入/粘贴共用的合并批量（mergeGraphBatch）。输入是 chartData 快照
- * 与选中态，输出纯数据，不碰 xkContext/reactive——vitest 直测（项目惯例：
+ * 与选中态，输出纯数据，不碰文档域状态/reactive——vitest 直测（项目惯例：
  * .vue 交互逻辑抽 utils 单测，组件层由冒烟覆盖）。
  */
 import type { GraphNode, GraphLink } from './graphData'
@@ -56,7 +56,7 @@ export const collectCopySelection = (
  * 合并批量（大纲导入与粘贴共用——语义同一份代码，修一处两处受益）：
  * 同名节点跳过并合并（引用它的边仍可接上），边须两端都在「现有 ∪ 新增」
  * 并集内且与现有边无向端点对不重复。返回 { nodes, links, skippedCount }
- * ——元素是 incoming 的对象引用，调用方负责 jsonReactive 后再 push
+ * ——元素是 incoming 的对象引用，调用方负责 deepClone 后再 push
  * （history.data 须持有 push 进 chartData 的同一批对象）。
  */
 export const mergeGraphBatch = (

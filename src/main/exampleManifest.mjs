@@ -19,7 +19,7 @@
  */
 import fs from 'fs'
 import path from 'path'
-import { validateChartStructure } from './chartValidation.mjs'
+import { validateChartStructure } from '../shared/chartValidation.mjs'
 
 /** 清单文件名；放在 examples/ 内随 electron-builder files 通配自动进包 */
 export const MANIFEST_NAME = 'examples.manifest.json'

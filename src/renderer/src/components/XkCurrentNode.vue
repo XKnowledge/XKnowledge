@@ -43,15 +43,12 @@
 <script setup>
 import { defineComponent, ref } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
-import { t } from '../i18n.js'
-import { addHistory, jsonReactive } from '../utils/XkUtils'
 
 const currentNode = defineModel('currentNode', { type: Object })
 const categoryItems = defineModel('categoryItems', { type: Array })
 const categoryName = defineModel('categoryName', { type: String })
-const currentNodeDataIndex = defineModel('currentNodeDataIndex', { type: Number })
 
-const xkContext = defineModel('xkContext', { type: Object })
+const emit = defineEmits(['changeNode'])
 
 const inputRef = ref()
 
@@ -83,41 +80,11 @@ const VNodes = defineComponent({
 
 const currentNodeSubmit = () => {
   /**
-   * 实现节点的动态修改
+   * 提交节点修改：emit 意图，由编排层经 useDocument.changeNode 执行
+   * （重名校验、邻边端点改写、历史与刷新收口在文档域）；失败回显走
+   * 父层侧栏红条，成功清红条
    */
-  const { nodes: data, links } = xkContext.value.chartData
-  const oldNode = jsonReactive(data[currentNodeDataIndex.value])
-  const newNode = jsonReactive(currentNode.value)
-  const oldName = oldNode.name
-  const newName = newNode.name
-
-  if (oldName !== newName) {
-    // 修改节点的时候修改了节点名称
-    // 思考：为什么不需要去掉旧的节点名称？因为本身就不重名，所以不用去掉
-    // 思考：两个if是否可以合并？不可以合并，因为第二个if还有else分支
-    const hasDuplicate = data.some((node) => node.name === newName)
-    if (hasDuplicate) {
-      xkContext.value.errorMessage = t('validation.duplicateNode')
-      return
-    }
-
-    // 修改新节点所在的边
-    links.forEach((link) => {
-      if (link.source === oldName) link.source = newName
-      if (link.target === oldName) link.target = newName
-    })
-  }
-
-  data[currentNodeDataIndex.value] = newNode
-
-  addHistory(xkContext, {
-    act: 'changeNode',
-    old: oldNode,
-    new: newNode
-  })
-
-  xkContext.value.updateChart = !xkContext.value.updateChart
-  xkContext.value.errorMessage = ''
+  emit('changeNode', currentNode.value)
 }
 </script>
 

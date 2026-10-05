@@ -331,7 +331,7 @@ const onEditorCreateEdge = ({ name }) => {
   emit('canvas-create-edge', { ...ends, name })
 }
 
-/** ChartView 建点成功后回填落点（expose；updateChart 的 watch 异步于本轮，
+/** ChartView 建点成功后回填落点（expose；props 的 deep watch 异步于本轮，
  *  此调用先于重灌执行，时序安全） */
 const notifyNodeDropPos = (name, pos) => {
   if (name && pos) pendingDropPos.set(name, pos)

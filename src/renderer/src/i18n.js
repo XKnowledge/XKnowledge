@@ -27,5 +27,5 @@ export const i18n = createI18n({
   messages: { 'zh-CN': zhCN, 'en-US': enUS }
 })
 
-/** 非组件模块（utils/keybindings、XkUtils 等）用的快捷引用 */
+/** 非组件模块（utils/keybindings、composables/useDocument 等）用的快捷引用 */
 export const t = i18n.global.t

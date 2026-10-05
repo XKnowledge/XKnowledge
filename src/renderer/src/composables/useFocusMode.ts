@@ -2,14 +2,9 @@ import { computed, ref, watch, type Ref } from 'vue'
 import { defaultFocusNode, focusNeighborhood } from '../utils/graphData'
 import type { ChartData, GraphNode } from '../utils/graphData'
 
-/** xkContext 里聚焦模式关心的部分（ChartView 中枢状态的形状切片） */
-export interface FocusContextSlice {
-  chartData: ChartData | null
-}
-
 export interface UseFocusModeOptions {
-  /** 中枢状态（读 chartData 的 nodes/links） */
-  xkContext: Ref<FocusContextSlice>
+  /** 图谱文档数据（读 nodes/links） */
+  chartData: Ref<ChartData | null>
   /** 侧栏选中索引（开聚焦时优先当前选中节点） */
   currentNodeDataIndex: Ref<number>
   /** 侧栏节点表单（选中索引无效时的回退） */
@@ -25,7 +20,7 @@ export interface UseFocusModeOptions {
  * 刻意与属性面板的置脏管道分流（见 ChartView 模板内注释）。
  */
 export function useFocusMode({
-  xkContext,
+  chartData,
   currentNodeDataIndex,
   currentNode,
   syncCurrentNodeByName
@@ -36,7 +31,7 @@ export function useFocusMode({
   // 邻域集合：依赖 chartData/focusNodeId/focusHops，图被增删编辑后自动重算
   const focusNodeNames = computed(() => {
     if (focusMode.value === 'off' || !focusNodeId.value) return []
-    const chart = xkContext.value.chartData
+    const chart = chartData.value
     return [
       ...focusNeighborhood(
         chart?.nodes ?? [],
@@ -56,23 +51,23 @@ export function useFocusMode({
       return
     }
     // 开启：优先当前选中节点，否则默认焦点（度数最高 → symbolSize → 先出现）
-    const nodes = xkContext.value.chartData?.nodes ?? []
+    const nodes = chartData.value?.nodes ?? []
     const selected =
       currentNodeDataIndex.value > -1 && nodes[currentNodeDataIndex.value]
         ? nodes[currentNodeDataIndex.value].name
         : currentNode.value?.name || ''
-    focusNodeId.value = selected || defaultFocusNode(nodes, xkContext.value.chartData?.links ?? [])
+    focusNodeId.value = selected || defaultFocusNode(nodes, chartData.value?.links ?? [])
     // 焦点同步选中（仅数据，不强制弹侧栏/切面板——不打扰当前面板状态）
     if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
   }
 
   // 焦点节点被删：回退默认焦点；全图删空 → '' → 邻域空 = 全图恢复正常色
   watch(
-    () => xkContext.value.chartData?.nodes,
+    () => chartData.value?.nodes,
     (nodes) => {
       if (focusMode.value === 'off' || !focusNodeId.value) return
       if (!nodes?.some((n) => n.name === focusNodeId.value)) {
-        const next = defaultFocusNode(nodes ?? [], xkContext.value.chartData?.links ?? [])
+        const next = defaultFocusNode(nodes ?? [], chartData.value?.links ?? [])
         focusNodeId.value = next
         if (next) syncCurrentNodeByName(next)
       }

@@ -10,7 +10,7 @@
  *   FAIL —— 打不开、渲染错乱或违反全库约定的问题，退出码 1；
  *   WARN —— 不影响打开但偏离质量基准，提醒斟酌。
  *
- * 面向「创作完成的图谱」，比应用打开时的最低校验（src/main/chartValidation.mjs）
+ * 面向「创作完成的图谱」，比应用打开时的最低校验（src/shared/chartValidation.mjs）
  * 更严：空图谱、缺 title/description 在此算 FAIL。零依赖，Node ≥ 16。
  */
 import fs from 'node:fs'

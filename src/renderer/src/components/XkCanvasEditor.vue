@@ -144,7 +144,7 @@ const newCategory = ref('')
 // 大小一致。纯参数不参与提交流——类目选定即整单提交的节奏不变，零打扰
 const sizeTier = ref(50)
 
-// 就地新增的类目先记本地（节点落库后 updateChart watch 会从节点重算 categoryItems）
+// 就地新增的类目先记本地（节点落库后文档变更通知会从节点重算 categoryItems）
 const addedCategories = ref([])
 const localCategories = computed(() => [
   ...new Set([...props.categories, ...addedCategories.value])

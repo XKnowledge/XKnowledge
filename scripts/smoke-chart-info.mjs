@@ -20,15 +20,25 @@ if (!fs.existsSync(electronBin)) {
   process.exit(1)
 }
 
-// 与渲染端 listExamples 同源的首个示例：readdir 顺序一致，首页第一张卡即它
+// 与渲染端同源的首个示例：首页卡片按标题拼音 localeCompare('zh-CN') 排序
+// （sortExamples），首页第一张卡 = 排序后的第一项——readdir 顺序与卡片顺序
+// 不一致（数字前缀标题的卡片排在汉字标题前），不能拿目录序当卡片序
 const firstExample = () => {
-  const dir = path.join(APP_DIR, 'examples')
-  const entry = fs
-    .readdirSync(dir, { withFileTypes: true })
-    .find((e) => e.isFile() && e.name.endsWith('.xk'))
-  if (!entry) throw new Error('examples 目录下没有 .xk 示例')
-  const parsed = JSON.parse(fs.readFileSync(path.join(dir, entry.name), 'utf-8'))
-  return { fileName: entry.name, description: parsed.description || '' }
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(APP_DIR, 'examples', 'examples.manifest.json'), 'utf-8')
+  )
+  const first = [...manifest.items]
+    .sort(
+      (a, b) =>
+        String(a.title ?? '').localeCompare(String(b.title ?? ''), 'zh-CN') ||
+        String(a.fileName ?? '').localeCompare(String(b.fileName ?? ''), 'zh-CN')
+    )
+    .at(0)
+  if (!first) throw new Error('示例清单为空')
+  const parsed = JSON.parse(
+    fs.readFileSync(path.join(APP_DIR, 'examples', first.fileName), 'utf-8')
+  )
+  return { fileName: first.fileName, description: parsed.description || '' }
 }
 
 const errors = []

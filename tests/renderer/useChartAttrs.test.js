@@ -1,16 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { useChartAttrs } from '../../src/renderer/src/composables/useChartAttrs'
+import { useDocument } from '../../src/renderer/src/composables/useDocument'
 
 /** 特征测试（characterization）：锁定 ChartView 属性面板既有行为，动刀前后不得漂移。
  *  覆盖清点结论：该角色此前无任何单测、唯一冒烟 smoke-chart-info 基线为红——
- *  本文件是 useChartAttrs 抽取的入场券（见 docs/chartview-split-checklist.md 第三节）。 */
-const makeCtx = (chartData = null) => ref({ chartData })
+ *  本文件是 useChartAttrs 抽取的入场券（见 docs/chartview-split-checklist.md 第三节）。
+ *  文档域用真实 useDocument（简介写入经 setDescription 意图）。 */
+const makeDoc = (chartData = null) => {
+  const doc = useDocument({ onChange: () => {} })
+  if (chartData) doc.load(chartData)
+  return doc
+}
 
 describe('useChartAttrs（属性面板状态机）', () => {
   it('initAttr 恢复会话默认值：双开关、斥力 100、仅勾「显示小节点名称」', () => {
     const { checkedValues, repulsion, showLinkName, showSmallLabels, initAttr } = useChartAttrs({
-      xkContext: makeCtx(),
+      document: makeDoc({ nodes: [], links: [] }),
       graph3dRef: ref(null),
       markDirty: () => {}
     })
@@ -27,7 +33,7 @@ describe('useChartAttrs（属性面板状态机）', () => {
   it('onChangeAttr：checkedValues → 双开关联动，并置脏', () => {
     const markDirty = vi.fn()
     const { checkedValues, showLinkName, showSmallLabels, onChangeAttr } = useChartAttrs({
-      xkContext: makeCtx(),
+      document: makeDoc({ nodes: [], links: [] }),
       graph3dRef: ref(null),
       markDirty
     })
@@ -46,7 +52,7 @@ describe('useChartAttrs（属性面板状态机）', () => {
 
   it('chartDescription：chartData 为 null 时 get 兜底空串、set 无操作不抛错（装载失败窗口）', () => {
     const { chartDescription } = useChartAttrs({
-      xkContext: makeCtx(null),
+      document: makeDoc(null),
       graph3dRef: ref(null),
       markDirty: () => {}
     })
@@ -56,15 +62,15 @@ describe('useChartAttrs（属性面板状态机）', () => {
   })
 
   it('chartDescription：读写 chartData.description（含「无该字段首次创建」路径）', () => {
-    const ctx = makeCtx({ nodes: [], links: [] })
+    const doc = makeDoc({ nodes: [], links: [] })
     const { chartDescription } = useChartAttrs({
-      xkContext: ctx,
+      document: doc,
       graph3dRef: ref(null),
       markDirty: () => {}
     })
     expect(chartDescription.value).toBe('')
     chartDescription.value = '图谱简介'
-    expect(ctx.value.chartData.description).toBe('图谱简介')
+    expect(doc.chartData.value.description).toBe('图谱简介')
     expect(chartDescription.value).toBe('图谱简介')
   })
 
@@ -72,7 +78,7 @@ describe('useChartAttrs（属性面板状态机）', () => {
     const setRepulsion = vi.fn()
     const markDirty = vi.fn()
     const { repulsion, onChangeRepulsion } = useChartAttrs({
-      xkContext: makeCtx(),
+      document: makeDoc({ nodes: [], links: [] }),
       graph3dRef: ref({ setRepulsion }),
       markDirty
     })
@@ -85,7 +91,7 @@ describe('useChartAttrs（属性面板状态机）', () => {
   it('onDescriptionChange：仅置脏（简介文本本身经 chartDescription computed 直写）', () => {
     const markDirty = vi.fn()
     const { onDescriptionChange } = useChartAttrs({
-      xkContext: makeCtx(),
+      document: makeDoc({ nodes: [], links: [] }),
       graph3dRef: ref(null),
       markDirty
     })

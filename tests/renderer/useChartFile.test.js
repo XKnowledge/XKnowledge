@@ -12,13 +12,13 @@ vi.mock('ant-design-vue', () => ({
  *  本文件是 useChartFile 抽取的入场券（见 docs/chartview-split-checklist.md）。
  *  node 环境：window/electronAPI 以 globalThis.window 注入桩；antd message 模块级 mock。 */
 const makeSetup = (chartData = { nodes: [], links: [] }) => {
-  const xkContext = ref({ chartData })
+  const chart = ref(chartData)
   const saveNodeVisible = ref(false)
   const router = { push: vi.fn() }
   const resetSider = vi.fn()
   const resetRefData = vi.fn()
-  const api = useChartFile({ xkContext, saveNodeVisible, router, resetSider, resetRefData })
-  return { xkContext, saveNodeVisible, router, resetSider, resetRefData, ...api }
+  const api = useChartFile({ chartData: chart, saveNodeVisible, router, resetSider, resetRefData })
+  return { chartData: chart, saveNodeVisible, router, resetSider, resetRefData, ...api }
 }
 
 const mockElectronAPI = (overrides = {}) => {
@@ -90,7 +90,10 @@ describe('useChartFile（文件生命周期）—— persistFile 分支', () => 
 
   it('示例目录保护（[EXAMPLE_PROTECTED]）与兜底分支：报错且保持脏标记', async () => {
     mockElectronAPI({
-      saveFile: vi.fn().mockRejectedValueOnce(new Error('[EXAMPLE_PROTECTED] x')).mockRejectedValueOnce(new Error('boom'))
+      saveFile: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('[EXAMPLE_PROTECTED] x'))
+        .mockRejectedValueOnce(new Error('boom'))
     })
     const { persistFile, saveNodeVisible } = makeSetup()
     saveNodeVisible.value = true
@@ -114,7 +117,8 @@ describe('useChartFile —— saveAs / 登记与门控', () => {
 
   it('saveAs 取消：状态不动；成功：换路径、清脏、按新路径登记', async () => {
     const api = mockElectronAPI({
-      saveFileAs: vi.fn()
+      saveFileAs: vi
+        .fn()
         .mockResolvedValueOnce({ canceled: true })
         .mockResolvedValueOnce({ path: 'D:/b.xk' })
     })

@@ -40,8 +40,8 @@
           <XkGraph3D
             ref="graph3dRef"
             class="echarts-style"
-            :nodes="xkContext.chartData?.nodes ?? []"
-            :links="xkContext.chartData?.links ?? []"
+            :nodes="chartData?.nodes ?? []"
+            :links="chartData?.links ?? []"
             :highlight-link="highlightEdgeObj"
             :highlight-node="highlightNodeName"
             :show-link-name="showLinkName"
@@ -67,8 +67,8 @@
           />
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
-          <a-space v-show="xkContext.errorMessage !== ''" direction="vertical" style="width: 80%">
-            <a-alert :message="xkContext.errorMessage" type="error" />
+          <a-space v-show="errorMessage" direction="vertical" style="width: 80%">
+            <a-alert :message="errorMessage" type="error" />
           </a-space>
 
           <!-- 属性面板用普通块级容器：a-checkbox-group 是 inline-flex，
@@ -172,15 +172,13 @@
             v-model:current-node="currentNode"
             v-model:category-items="categoryItems"
             v-model:category-name="categoryName"
-            v-model:current-node-data-index="currentNodeDataIndex"
-            v-model:xk-context="xkContext"
+            @change-node="onChangeNodeSubmit"
           ></XkCurrentNode>
 
           <XkCurrentEdge
             v-show="currentEdgeVisible"
             v-model:current-edge="currentEdge"
-            v-model:current-edge-data-index="currentEdgeDataIndex"
-            v-model:xk-context="xkContext"
+            @change-edge="onChangeEdgeSubmit"
           ></XkCurrentEdge>
         </a-layout-sider>
       </a-layout>
@@ -191,16 +189,23 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { jsonReactive, resetEdgeRef, resetNodeRef } from '../utils/XkUtils'
-import { defaultFocusNode, reconcileNodeHighlight } from '../utils/graphData.js'
+import {
+  defaultFocusNode,
+  deepClone,
+  emptyEdge,
+  emptyNode,
+  reconcileNodeHighlight
+} from '../utils/graphData.js'
 import { serializeGraphForViewer } from '../../../shared/graphViewerData.js'
+import { validateChartStructure } from '../../../shared/chartValidation.mjs'
 import { locale } from '../store/localeStore.js'
 import { t } from '../i18n.js'
 import { takePendingChart } from '../store/chartStore'
 import { useRecording } from '../composables/useRecording'
+import { useDocument } from '../composables/useDocument'
 import { useChartAttrs } from '../composables/useChartAttrs'
 import { useFocusMode } from '../composables/useFocusMode'
 import { useSelection } from '../composables/useSelection'
@@ -225,13 +230,9 @@ import EditIcon from '../assets/edit.png'
 const isMacOS = window.electronAPI.platform === 'darwin'
 const router = useRouter()
 
-const xkContext = ref({
-  errorMessage: '',
-  chartData: null,
-  updateChart: false,
-  historyList: [], // 记录历史
-  historySequenceNumber: -1 // HSN：历史操作对应的目前的位置
-})
+// 侧栏顶部红条：表单意图失败时由编排层写入（resetSider 清空）。错误呈现的
+// 决策点收口在编排层——侧栏表单来源走红条、画布直操来源走全局 toast
+const errorMessage = ref('')
 
 const siderVisible = ref(false)
 const saveNodeVisible = ref(false)
@@ -243,7 +244,7 @@ const attributeVisible = ref(true)
  *  默认文件名 = 图谱名（发送场景文件名应有意义；PNG/视频是自留档走
  *  时间戳单源）；空图直接提示不导出 */
 const onExportHtml = async () => {
-  const chart = xkContext.value.chartData
+  const chart = chartData.value
   const graphTitle = filePath.value
     ? filePath.value.split(/[\\/]/).pop().replace(/\.xk$/i, '')
     : chartName.value || t('common.untitled')
@@ -264,21 +265,11 @@ const onExportHtml = async () => {
 }
 
 const currentNodeVisible = ref(false)
-const currentNode = ref({
-  name: '',
-  des: '',
-  symbolSize: 50,
-  category: ''
-})
+const currentNode = ref(emptyNode())
 const currentNodeDataIndex = ref(-1)
 
 const currentEdgeVisible = ref(false)
-const currentEdge = ref({
-  source: '',
-  target: '',
-  name: '',
-  des: ''
-})
+const currentEdge = ref(emptyEdge())
 const currentEdgeDataIndex = ref(-1)
 
 // 新增时的类目
@@ -296,6 +287,27 @@ const {
   onToggleScreenRecord,
   onToggleRecordPause
 } = useRecording(graph3dRef)
+
+// 图谱文档（chartData + 历史栈）的唯一持有者：编辑全部经意图方法进入，
+// onChange 是结构性变更的唯一出口——类目重算、置脏、高亮校准三个副作用
+// 在此收口（旧的翻转刷新信号与装载误置脏的 nextTick 对冲补丁一并消失）。
+// highlightNodeName 由下方 useSelection 提供，首次通知发生在装载期，
+// 彼时各角色均已就位
+const onDocumentChanged = ({ dirty }) => {
+  const nodes = chartData.value.nodes
+  categoryItems.value = [...new Set(nodes.map((x) => x.category))]
+  if (dirty) saveNodeVisible.value = true
+  // 改名校准：改名提交经文档意图到达，父层在此跟随侧栏索引的新名，其余
+  // 结构变更不动既有高亮（删除/撤销已由 resetRefData→downplayAllHightlight 清理）
+  highlightNodeName.value = reconcileNodeHighlight(
+    nodes,
+    highlightNodeName.value,
+    currentNodeDataIndex.value
+  )
+}
+const doc = useDocument({ onChange: onDocumentChanged })
+const { chartData } = doc
+
 // 属性面板状态机（会话级渲染设置 + 简介元数据）：置脏经回调回编排层；
 // 刻意与聚焦模式分管道——聚焦「不置脏、跨图保持」是设计意图（见模板内注释）
 const {
@@ -308,23 +320,23 @@ const {
   onDescriptionChange,
   onChangeRepulsion,
   initAttr
-} = useChartAttrs({ xkContext, graph3dRef, markDirty: () => (saveNodeVisible.value = true) })
+} = useChartAttrs({ document: doc, graph3dRef, markDirty: () => (saveNodeVisible.value = true) })
 const settingsRef = ref(null) // XkSettings 实例（expose open），菜单「设置」入口
 const outlineImportRef = ref(null) // XkOutlineImport 实例（expose open/close）
 
 /** 按名同步选中态（默认焦点/焦点删除回退时用）：index 与 currentNode 对齐 */
 const syncCurrentNodeByName = (name) => {
-  const nodes = xkContext.value.chartData?.nodes ?? []
+  const nodes = chartData.value?.nodes ?? []
   const i = nodes.findIndex((n) => n.name === name)
   if (i === -1) return
   currentNodeDataIndex.value = i
-  currentNode.value = jsonReactive({ ...nodes[i] })
+  currentNode.value = deepClone({ ...nodes[i] })
 }
 
 // 聚焦模式状态机（会话级）：状态与模式切换收在 useFocusMode，
 // 换图时的默认焦点重置由 loadChartData 编排（见下）
 const { focusMode, focusHops, focusNodeId, focusNodeNames, onFocusModeChange } = useFocusMode({
-  xkContext,
+  chartData,
   currentNodeDataIndex,
   currentNode,
   syncCurrentNodeByName
@@ -339,7 +351,7 @@ const {
   selectionLinkIndexes,
   downplayAllHightlight,
   clearSelection
-} = useSelection(xkContext)
+} = useSelection(chartData)
 
 onMounted(async () => {
   window.addEventListener('keydown', shortcut)
@@ -383,22 +395,16 @@ const loadChartData = (data) => {
     }
   })()
   if (!chart) return
-  if (
-    chart.version !== 2 ||
-    !Array.isArray(chart.nodes) ||
-    !Array.isArray(chart.links) ||
-    chart.nodes.some((n) => !n || typeof n !== 'object')
-  ) {
+  // .xk 结构校验单源（shared/chartValidation，主进程读盘同一份）：v2、
+  // nodes/links 数组齐全、无悬空边——损坏内容统一提示后中止
+  if (validateChartStructure(chart)) {
     message.error(t('error.contentInvalid'))
     return
   }
-  // 与主进程 fileService 对齐：悬空边（source/target 不在任何节点上）同样视为损坏
-  const names = new Set(chart.nodes.map((n) => n.name))
-  if (chart.links.some((l) => !l || !names.has(l?.source) || !names.has(l?.target))) {
-    message.error(t('error.contentInvalid'))
-    return
-  }
-  xkContext.value.chartData = chart
+
+  // 文档落位：load 内部即 onChange({ dirty: false })——类目重算与高亮校准
+  // 照走，换图不置脏（取代旧「翻转信号 + nextTick 事后抵消」的补丁路径）
+  doc.load(chart)
 
   // 文件身份维护 + 主进程登记（再次打开同一文件时聚焦本窗口）
   registerOpenedFile(data.path, data.name)
@@ -410,28 +416,7 @@ const loadChartData = (data) => {
   // 没开则置空，防旧图 name 泄漏进新图邻域计算
   focusNodeId.value = focusMode.value !== 'off' ? defaultFocusNode(chart.nodes, chart.links) : ''
   if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
-  xkContext.value.updateChart = !xkContext.value.updateChart
-  nextTick(() => {
-    saveNodeVisible.value = false
-  })
 }
-
-watch(
-  () => xkContext.value.updateChart,
-  () => {
-    const categories = [...new Set(xkContext.value.chartData.nodes.map((x) => x.category))]
-    categoryItems.value = categories
-    saveNodeVisible.value = true
-    // 改名校准：改名提交在子组件内翻转 updateChart，父层只能在此校准——
-    // 高亮名消失时跟随侧栏索引的新名，其余结构变更不动既有高亮（删除/撤销
-    // 已由 resetRefData→downplayAllHightlight 清理）
-    highlightNodeName.value = reconcileNodeHighlight(
-      xkContext.value.chartData.nodes,
-      highlightNodeName.value,
-      currentNodeDataIndex.value
-    )
-  }
-)
 
 const resetRefData = () => {
   /**
@@ -439,9 +424,9 @@ const resetRefData = () => {
    */
   downplayAllHightlight()
   currentNodeDataIndex.value = -1
-  resetNodeRef(currentNode)
+  currentNode.value = emptyNode()
   currentEdgeDataIndex.value = -1
-  resetEdgeRef(currentEdge)
+  currentEdge.value = emptyEdge()
   // 框选集同步清空：删除/撤销/重做/保存/切换侧栏后选中集已失效
   // （节点可能已不在图内、边 index 已漂移）
   clearSelection()
@@ -451,7 +436,7 @@ const resetSider = () => {
   /**
    * 将侧边栏中显示的信息全部隐藏
    */
-  xkContext.value.errorMessage = ''
+  errorMessage.value = ''
   attributeVisible.value = true
   currentNodeVisible.value = false
   currentEdgeVisible.value = false
@@ -461,7 +446,7 @@ const onGraphNodeClick = (nodeData, index) => {
   resetSider()
   attributeVisible.value = false
   currentNodeVisible.value = true
-  currentNode.value = jsonReactive(nodeData)
+  currentNode.value = deepClone(nodeData)
   currentNodeDataIndex.value = index
   // 选中高亮 toggle：再点同一个取消；换点直接换亮。边高亮同步清——
   // 图面高亮与侧栏显示对象必须一一对应（点节点不清边高亮的错位在此修正）
@@ -483,7 +468,7 @@ const onGraphLinkClick = (linkData, index) => {
   resetSider()
   attributeVisible.value = false
   currentEdgeVisible.value = true
-  currentEdge.value = jsonReactive(linkData)
+  currentEdge.value = deepClone(linkData)
   currentEdgeDataIndex.value = index
   // 对称清节点选中态：点边后按 Delete 删的是这条边，而非之前点的节点
   // （否则「点节点 A → 点边 → Delete」会把 A 及其相连边全部误删）
@@ -494,6 +479,19 @@ const onGraphLinkClick = (linkData, index) => {
   selectionLinkIndexes.value = []
 
   if (!siderVisible.value) switchSider()
+}
+
+/** 侧栏表单意图的编排层收口：执行经文档域（校验/邻边改写/历史/刷新同源），
+ *  错误呈现按来源分流——表单来源回显侧栏红条（成功清红条），画布直操
+ *  来源在 useEditActions 走全局 toast */
+const onChangeNodeSubmit = (node) => {
+  const result = doc.changeNode(currentNodeDataIndex.value, node)
+  errorMessage.value = result.ok ? '' : result.error
+}
+
+const onChangeEdgeSubmit = (edge) => {
+  doc.changeEdge(currentEdgeDataIndex.value, edge)
+  errorMessage.value = ''
 }
 
 /** Shift+拖框选提交（XkGraph3D 松手拾取后 emit）：集体高亮、Delete 批量删。
@@ -554,11 +552,11 @@ const {
   closeFile,
   mountFileLifecycle,
   unmountFileLifecycle
-} = useChartFile({ xkContext, saveNodeVisible, router, resetSider, resetRefData })
+} = useChartFile({ chartData, saveNodeVisible, router, resetSider, resetRefData })
 
 // 图谱编辑操作（撤销/重做/三路删除/复制粘贴/大纲导入/画布直操建点建边）：
-// 序号与分发收在 useEditActions，数据补偿语义在 utils（多重边安全）；
-// 数据变更后的面板复位（resetSider+resetRefData）打包为 afterEdit 注入
+// 数据与历史收在 useDocument（补偿语义在 utils，多重边安全），这里只做
+// UI 编排；数据变更后的面板复位（resetSider+resetRefData）打包为 afterEdit 注入
 const {
   undo,
   redo,
@@ -571,7 +569,7 @@ const {
   onCanvasCreateNode,
   onCanvasCreateEdge
 } = useEditActions({
-  xkContext,
+  document: doc,
   currentNodeDataIndex,
   currentEdgeDataIndex,
   selectionNodeNames,

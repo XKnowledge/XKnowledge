@@ -4,19 +4,14 @@ import { locale } from '../store/localeStore.js'
 import { t } from '../i18n.js'
 import type { ChartData } from '../utils/graphData'
 
-/** xkContext 里文件生命周期关心的部分（ChartView 中枢状态的形状切片） */
-export interface FileContextSlice {
-  chartData: ChartData | null
-}
-
 /** 路由的最小形状（closeFile 跳回首页用；useRouter() 代理结构满足） */
 interface RouterLike {
   push: (to: string) => void
 }
 
 export interface UseChartFileOptions {
-  /** 中枢状态（读 chartData 序列化落盘） */
-  xkContext: Ref<FileContextSlice>
+  /** 图谱文档数据（读 chartData 序列化落盘） */
+  chartData: Ref<ChartData | null>
   /** 未保存标记（编排层单一持有，本模块只读 + 保存成功后清零） */
   saveNodeVisible: Ref<boolean>
   /** 路由（关闭文件跳回首页） */
@@ -34,7 +29,7 @@ export interface UseChartFileOptions {
  * 在其上叠加用户主动动作预期的面板重置。
  */
 export function useChartFile({
-  xkContext,
+  chartData,
   saveNodeVisible,
   router,
   resetSider,
@@ -82,7 +77,7 @@ export function useChartFile({
    *  副作用。60 秒自动保存与手动保存共用——后台保存必须隐形，清表单/
    *  跳属性页会打断正在编辑的用户。返回是否保存成功。 */
   const persistFile = async (): Promise<boolean> => {
-    if (!xkContext.value.chartData) {
+    if (!chartData.value) {
       // 装载失败的窗口没有可保存内容，禁止把字面量 "null" 写成损坏文件
       message.error(t('chart.nothingToSave'))
       return false
@@ -90,7 +85,7 @@ export function useChartFile({
     try {
       const res = await window.electronAPI.saveFile({
         path: filePath.value,
-        content: JSON.stringify(xkContext.value.chartData)
+        content: JSON.stringify(chartData.value)
       })
       if (res.canceled) return false
       filePath.value = res.path ?? ''
@@ -131,13 +126,13 @@ export function useChartFile({
 
   /** 另存为。 */
   const saveAs = async (): Promise<void> => {
-    if (!xkContext.value.chartData) {
+    if (!chartData.value) {
       message.error(t('chart.nothingToSave'))
       return
     }
     try {
       const res = await window.electronAPI.saveFileAs({
-        content: JSON.stringify(xkContext.value.chartData)
+        content: JSON.stringify(chartData.value)
       })
       if (res.canceled) return
       filePath.value = res.path ?? ''

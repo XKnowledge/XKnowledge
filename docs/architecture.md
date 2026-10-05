@@ -17,7 +17,7 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 | UI 组件库 | Ant Design Vue 4 | 布局、表单、菜单、提示 |
 | 国际化 | vue-i18n 11（渲染层）+ 主进程查表 `t()` | 双端共用一份字典（`src/shared/locales/`） |
 | 图可视化 | 3d-force-graph（Three.js）+ three-spritetext | 3D 力导向图与节点文字标签 |
-| 测试 | Vitest 5 | 135 个单元测试（`yarn test`） |
+| 测试 | Vitest 5 | 513 个单元测试（`yarn test`） |
 | 质量 | ESLint 10（flat config）、Prettier 3、TypeScript 5.9 + vue-tsc | `yarn typecheck` |
 
 代码语言为 JS 为主、TS 为辅：主进程与 preload 全部为 JS，渲染层入口与工具函数为 TS。
@@ -63,7 +63,6 @@ XKnowledge/
 │  │  ├─ windowManager.js       # createWindow / createChartWindow / enter|exitChartMode
 │  │  ├─ ipc.js                 # registerIpc：全部 ipcMain.handle 与 openedFiles 登记
 │  │  ├─ fileService.js         # .xk 读 / 写 / 校验 / 对话框 / 原子写入
-│  │  ├─ chartValidation.mjs    # validateChartStructure 纯函数（无 electron 依赖，.mjs 供纯 node 脚本直 import）
 │  │  ├─ exampleService.js      # 示例图库对外门面：定位 examples/ 目录并转发
 │  │  ├─ exampleManifest.mjs    # 示例元数据清单：快慢两层（§5.6），零 electron 依赖
 │  │  ├─ exportHtml.js          # 交互式 HTML 导出：读 viewer 模板拼装 + 保存框落盘（§6.10）
@@ -72,6 +71,7 @@ XKnowledge/
 │  │  └─ index.js               # contextBridge 暴露 window.electronAPI
 │  ├─ shared/
 │  │  ├─ ipc-channels.js        # IPC 通道名单（唯一出处，禁止裸字符串）
+│  │  ├─ chartValidation.mjs    # validateChartStructure：.xk 结构校验唯一出处（主进程读盘/渲染端装载/示例清单三方共用）
 │  │  └─ graphViewerData.js     # 导出 HTML 的数据白名单序列化（纯函数，§6.10）
 │  ├─ viewer/                   # 交互式 HTML 导出的查看器源码（§6.10，纯 JS 无框架，
 │  │                            #   构建为单 IIFE 内嵌进 resources/viewer/index.html）
@@ -85,16 +85,17 @@ XKnowledge/
 │        ├─ layouts/BasicLayout.vue   # 首页框架：侧边栏 +「打开本地文件」
 │        ├─ page/
 │        │  ├─ AddView.vue      # 首页：示例图库 + 新建空白文件
-│        │  └─ ChartView.vue    # 图表编辑页（核心，~1000 行）
+│        │  └─ ChartView.vue    # 图表编辑页（核心编排层；文档域/选中/聚焦/文件生命周期等状态机在 composables/）
 │        ├─ components/
 │        │  ├─ XkGraph3D.vue        # 3D 力导向图封装（详见 §8）
 │        │  ├─ XkMenu.vue           # 图表页左上角下拉菜单
 │        │  ├─ XkCurrentNode.vue    # 侧边栏：修改节点表单
 │        │  └─ XkCurrentEdge.vue    # 侧边栏：修改连接表单
 │        ├─ store/chartStore.js     # 同窗口「首页 → 图表页」的一次性数据传递
+│        ├─ composables/            # ChartView 各角色状态机（useDocument 为文档域唯一持有者）
 │        ├─ utils/
-│        │  ├─ XkUtils.ts          # jsonReactive / addHistory / resetNodeRef / resetEdgeRef
-│        │  └─ categoryColor.js    # 类目彩虹 20 色调色板，集合顺延分配
+│        │  ├─ historyOps.ts        # 历史操作对象工厂（undo/redo 正反变换同厂成对）
+│        │  └─ categoryColor.js     # 类目彩虹 20 色调色板，集合顺延分配
 ├─ tests/
 │  ├─ main/                     # fileGuard / fileService / ipc 单元测试
 │  └─ renderer/categoryColor.test.js
@@ -210,7 +211,7 @@ XKnowledge/
 
 清单消除了数据等待（~85ms → ~15ms），剩余可感停顿来自渲染侧：207 张卡片一次性挂载的 paint 是 200~350ms 的主线程长帧（掉帧、页面无响应，dev 模式更甚）。渲染端两层配合消除：AddView 分帧挂载（数据到手首批 40 张与虚线框同帧可见——40 覆盖任意首屏视口，剩余 requestAnimationFrame 每帧 +40 铺完；搜索结果即时全量、不受分帧延迟）；卡片固定 200×150，配 `content-visibility: auto` + `contain-intrinsic-size` 让浏览器跳过视口外整卡渲染。冒烟 `scripts/smoke-gallery-frame.mjs` 守护三项：首批可见 ≤150ms、装载期无 >120ms 长帧、搜索即时全量（注意：content-visibility 下测试读卡片文本须用 textContent——视口外卡片的 innerText 为空串）。
 
-两个 `.mjs` 模块（chartValidation / exampleManifest）保持零 electron 依赖，主进程、vitest、生成脚本三方直接 import 同一份逻辑；`exampleService.js` 只负责经 `examplesDir()` 定位目录并转发（文件名防穿越校验仍在 `openExample`）。
+两个 `.mjs` 模块（`shared/chartValidation` / `exampleManifest`）保持零 electron 依赖，主进程、vitest、生成脚本三方直接 import 同一份逻辑（chartValidation 另有渲染端装载兜底这第四方，见 §7.1）；`exampleService.js` 只负责经 `examplesDir()` 定位目录并转发（文件名防穿越校验仍在 `openExample`）。
 
 ## 6. 渲染层
 
@@ -225,19 +226,9 @@ XKnowledge/
 
 ### 6.2 ChartView 状态模型
 
-图表页状态集中在单个 `xkContext` ref：
+图谱文档（`chartData` + 历史栈）由 `composables/useDocument` **唯一持有**：所有结构变更经意图方法进入（`createNode` / `changeNode` / `deleteNodeAt` / `deleteSelection` / `paste` / `importOutline` / `undo` / `redo`……），校验、数据变换、历史记录与变更通知在同一处完成。意图返回统一的 `{ ok, error }`，错误呈现由编排层按来源分流——侧栏表单走红条（`errorMessage` ref）、画布直操走全局 toast。
 
-```js
-{
-  errorMessage: '',        // 侧边栏顶部错误提示
-  chartData: null,         // 图谱数据（.xk v2 反序列化结果，直接可变）
-  updateChart: false,      // 翻转触发 watch 重算类目、标记未保存
-  historyList: [],         // 操作历史栈（撤销/重做的数据源）
-  historySequenceNumber: -1 // 当前位置（-1 表示栈底之前）
-}
-```
-
-节点/边的增删改**直接修改 `chartData`**（数组 splice/push/整项替换），随后翻转 `updateChart` 触发派生计算（类目列表、未保存标记）与 `XkGraph3D` 的增量刷新（`watch [props.nodes, props.links]`，deep）。
+结构性变更的唯一出口是 `onChange({ dirty })` 回调（编辑 `dirty: true`；装载换图 `dirty: false`），ChartView 在此收口三个派生副作用：类目列表重算、未保存标记置位、节点高亮校准。`XkGraph3D` 的增量刷新不依赖该通知——它对 `props.nodes/links` 自带 deep watch。
 
 侧边栏以 `xxxVisible` 布尔族互斥切换显示：属性面板 / 修改节点 / 修改连接三选一；图表点击节点/边时自动切换到对应表单（点击边同时记录高亮索引）。创建节点不进侧栏：画布双击的就地编辑器（`XkCanvasEditor`）是唯一建点入口。
 
@@ -249,13 +240,13 @@ XKnowledge/
 
 ### 6.4 侧边栏表单组件
 
-两个表单（XkCurrentNode / XkCurrentEdge）均通过 `defineModel` 双向绑定 ChartView 的 ref，只负责校验与提交，不做 I/O：
+两个表单（XkCurrentNode / XkCurrentEdge）通过 `defineModel` 双向绑定表单状态 ref，提交时 **emit 意图**（`change-node` / `change-edge`），由编排层经 `useDocument` 意图方法执行——表单组件不触碰文档数据：
 
 - 节点表单支持在类目下拉中**即时新增类目**（`dropdownRender` 自定义下拉脚）；
 - 创建节点（画布双击直操，见 §8）校验：必须有类目、不允许与现有节点同名（节点 name 即主键）；
 - 创建连接（画布拖拽直操，见 §8）校验：两点间不允许重复连接（无向判定）；
-- 修改节点改名时，同步改写所有引用旧名的边的 source/target；
-- 提交成功统一走 `addHistory` 记录历史。
+- 修改节点改名时，同步改写所有引用旧名的边的 source/target（`useDocument.changeNode` 内）；
+- 提交失败回显侧栏红条（编排层 `errorMessage`），成功清红条。
 
 ### 6.5 主题（深色模式）
 
@@ -282,7 +273,7 @@ XKnowledge/
 
 - **localeStore**（`store/localeStore.js`，themeStore 同构）：三态 `auto`/`zh-CN`/`en-US`，localStorage `xk-locale`、`storage` 事件跨窗口同步、`initLocaleSync()` mount 前上报主进程；切换时同步 `i18n.global.locale`。跟随系统映射：`zh*` 前缀 → zh-CN，否则 en-US（渲染层 `navigator.language`、主进程 `app.getLocale()`）。
 - **主进程上报链**（`app:locale-applied`，`app:theme-applied` 同模式）：主进程 `setCurrentLocale` 后 `refreshTitles()` 重算已登记窗口标题；未命名窗口不在登记簿，由 ChartView `watch(locale)` 重报当前 dirty 走 `file:dirty` 的未命名标题分支刷新。
-- **错误 token 契约不动**：`[FILE_CONFLICT]` 等英文字面前缀保留在消息头，翻译只作用于消息体；`chartValidation.mjs` 保持无 electron 依赖的纯模块（示例清单生成脚本直接 import），返回稳定错误码（即字典 `error.validation.<code>` 键），翻译集中在 fileService。
+- **错误 token 契约不动**：`[FILE_CONFLICT]` 等英文字面前缀保留在消息头，翻译只作用于消息体；`shared/chartValidation.mjs` 保持无 electron 依赖的纯模块（示例清单生成脚本直接 import），返回稳定错误码（即字典 `error.validation.<code>` 键），翻译集中在 fileService。
 - **antd locale**：`App.vue` 的 `a-config-provider` 补 `:locale`，随语言切 `zhCN`/`enUS`。
 - **语言相关文案的动态点**：`ACTION_NAMES` 常量改 `actionName(id)` 函数（设置行名/冲突提示）、ChartView `buttonList` 与 XkSettings `keybindingRows`/`gestureRows` 均 computed 化；3D 底部导航条（navInfo，querySelector 覆盖 three-render-objects 内置英文）在 XkGraph3D/XkWorldGraph `watch(locale)` 重设；nodeLabel 冒号分隔符走字典（accessor 每次悬停执行，天然跟随）。
 - **不随语言变化的**：大纲导入默认类目「未分类」与示例内容属数据层；示例排序保持 `localeCompare('zh-CN')`（示例标题为中文）。
@@ -350,7 +341,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
     → 新窗口 ChartView.onMounted → invoke app:take-pending-chart 取走（取后即清）
 ```
 
-两条路径都做防御：渲染端装载时再校验一次 v2 结构与悬空边（与主进程 `validateChartStructure` 对齐），损坏内容在主进程已被拦截，这里是兜底。
+两条路径都做防御：渲染端装载时再校验一次 v2 结构与悬空边——直接 import 主进程读盘用的同一份 `shared/chartValidation.mjs`（校验单源，格式演进只改一处），损坏内容在主进程已被拦截，这里是兜底。
 
 ### 7.2 未保存标记
 
@@ -376,7 +367,9 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 
 ### 7.5 撤销 / 重做
 
-历史栈元素为 `{ act, ... }`，`act ∈ { createNode, deleteNode, changeNode, createEdge, deleteEdge, changeEdge, deleteSelection }`；创建/删除携带 `data`（删除节点额外携带被连带删除的 `links`，框选批量删除的 `deleteSelection` 携带整批 `{ nodes, links }`——含直选边与删点连带边），修改携带 `old/new`。`addHistory`（XkUtils）追加前先**截断当前位置之后的废弃 redo 分支**，否则 undo 后做新操作会残留过期记录，再次 undo/redo 时会重放与当前状态不符的操作。撤销/重做的逆操作以策略对象（`actionHandlers` 映射）实现，按节点 name 定位目标。历史为内存态，不落盘。
+历史栈（`useDocument` 持有）存**操作对象**（`utils/historyOps.ts` 的工厂产物）：每个操作自带 `undo(chart)` / `redo(chart)` 把 chartData 变换到相邻历史状态——同一操作的正反两份知识在同一个工厂里相邻成对，不再有 act 字符串分发与两侧 switch 的人肉对称。入栈前先**截断当前位置之后的废弃 redo 分支**，否则 undo 后做新操作会残留过期记录，再次 undo/redo 时会重放与当前状态不符的操作。
+
+多重边安全是补偿语义的硬约束（`examples/中医基础理论.xk`、`地理.xk` 自带同端点多边）：边的定位用「端点对 + 边名」三元组；整批操作（粘贴/大纲导入/框选删除）节点按名、边按对象引用（`toRaw` 归一后比对，防响应式代理身份失配），引用比对天然只命中本批、不误删同端点的手建边。历史为内存态，不落盘。
 
 ## 8. 3D 渲染层（XkGraph3D.vue）
 
@@ -437,7 +430,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 
 ## 11. 测试
 
-`yarn test`（vitest run）共 **135 个用例、10 个文件**，全部不依赖真实 Electron 窗口（mock `electron` 模块）：
+`yarn test`（vitest run）共 **513 个用例、36 个文件**，全部不依赖真实 Electron 窗口（mock `electron` 模块）：
 
 | 文件 | 覆盖 |
 | --- | --- |
@@ -450,11 +443,21 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 | `tests/main/exampleManifest.test.js` | 清单序列化/解析/匹配、快路径信任清单、慢路径重建、只读目录静默 |
 | `tests/main/example-manifest-sync.test.js` | 同步守护：仓库清单与 examples/ 现扫结果逐字节一致 |
 | `tests/main/examplePaths.test.js` | `isExamplePath` 示例目录判定 |
+| `tests/main/exportHtml.test.js` / `worldIndex.test.js` / `i18nMain.test.js` | HTML 导出拼装与转义、世界树索引、主进程 i18n 查表 |
+| `tests/preload/index.test.js` | contextBridge 桥接面（通道名单 ↔ electronAPI 方法） |
+| `tests/shared/*` | locales 字典 key 树与占位符一致性、graphClipboard 序列化白名单、graphViewerData 白名单 |
+| `tests/viewer/i18n.test.js` | viewer 内嵌双语 |
+| `tests/renderer/useDocument.test.js` | 文档域特征测试：建点建边校验、表单提交（改名同步邻边/撞名拒绝）、删除三路、合并批次、撤销栈不变量（截断 redo 分支）、onChange dirty 语义 |
+| `tests/renderer/historyOps.test.js` | 操作对象补偿语义：多重边安全（三元组定位、整批按名/按引用）、常规序列回归 |
+| `tests/renderer/useChartFile.test.js` | persistFile/saveAs 全分支（取消/冲突/示例保护/兜底）、保存触发面板重置、自动保存门控（fake timers）、关闭确认 |
+| `tests/renderer/useChartAttrs.test.js` | 属性面板：initAttr 默认值、开关联动置脏、简介双向绑定（null 兜底） |
+| `tests/renderer/graphData.test.js` | 节点合并、连接归一化、标签阈值、增量重着色计划、deepClone 脱钩、表单空模板 |
+| `tests/renderer/graphMerge.test.js` / `canvasEdit.test.js` / `outlineParser.test.js` | 复制三路分发与合并语义、框选几何、大纲解析 |
+| `tests/renderer/*Store.test.js` / `keybindings.test.js` / `platformModifier.test.js` | 各 store 状态机（chart/locale/theme/keybinding）、键位判定、平台修饰键 |
 | `tests/renderer/categoryColor.test.js` | 调色板稳定性（同名同色、循环取模） |
-| `tests/renderer/graphData.test.js` | 节点合并、连接归一化、标签阈值、增量重着色计划 |
-| `tests/renderer/historyActions.test.js` | 撤销/重做：多重边安全与常规序列回归 |
+| `tests/renderer/filterExamples.test.js` / `sortExamples.test.js` / `worldGraph.test.js` / `videoExport.test.js` | 图库过滤/排序、世界树聚合、录制管线纯函数 |
 
-主进程的文件与 IPC 层是回归重点；渲染层 UI 依赖人工冒烟。
+主进程的文件与 IPC 层是回归重点；渲染层 UI 依赖人工冒烟（`scripts/smoke-*.mjs`，见 §4.2 开发指南）。
 
 ## 12. 构建与工程
 

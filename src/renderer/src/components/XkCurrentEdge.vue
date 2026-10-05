@@ -13,26 +13,16 @@
 </template>
 
 <script setup>
-import { addHistory, jsonReactive } from '../utils/XkUtils'
-
 const currentEdge = defineModel('currentEdge', { type: Object })
-const currentEdgeDataIndex = defineModel('currentEdgeDataIndex', { type: Number })
 
-const xkContext = defineModel('xkContext', { type: Object })
+const emit = defineEmits(['changeEdge'])
 
 const currentEdgeSubmit = () => {
   /**
-   * 实现连接的动态修改
+   * 提交连接修改：emit 意图，由编排层经 useDocument.changeEdge 执行
+   * （按索引替换、历史与刷新收口在文档域）；成功清红条
    */
-  const currentEdgeJson = jsonReactive(currentEdge.value)
-  addHistory(xkContext, {
-    act: 'changeEdge',
-    old: jsonReactive(xkContext.value.chartData.links[currentEdgeDataIndex.value]),
-    new: currentEdgeJson
-  })
-  xkContext.value.chartData.links[currentEdgeDataIndex.value] = currentEdgeJson
-  xkContext.value.updateChart = !xkContext.value.updateChart
-  xkContext.value.errorMessage = ''
+  emit('changeEdge', currentEdge.value)
 }
 </script>
 

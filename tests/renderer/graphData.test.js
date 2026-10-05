@@ -9,6 +9,9 @@ import {
   defaultFocusNode,
   focusNeighborhood,
   searchGraphNodes,
+  deepClone,
+  emptyNode,
+  emptyEdge,
   SCENE_COLORS,
   HL_COLOR,
   LINK_BASE_COLOR,
@@ -861,5 +864,26 @@ describe('planHighlightRepaint：sceneColors 传参', () => {
       nextLink: null
     })
     expect(nodeRepaints).toEqual([[nodes[0], HL_COLOR]])
+  })
+})
+
+describe('deepClone：入图/入历史前的深拷贝', () => {
+  it('嵌套对象与数组整体脱钩（改副本不回渗原图）', () => {
+    const src = { nodes: [{ name: 'A' }], links: [] }
+    const copy = deepClone(src)
+    copy.nodes[0].name = 'changed'
+    copy.links.push('x')
+    expect(src.nodes[0].name).toBe('A')
+    expect(src.links).toHaveLength(0)
+  })
+})
+
+describe('emptyNode / emptyEdge：侧栏表单空模板', () => {
+  it('emptyNode 回到空节点模板（symbolSize 基线 50）', () => {
+    expect(emptyNode()).toEqual({ name: '', des: '', symbolSize: 50, category: '' })
+  })
+
+  it('emptyEdge 回到空边模板', () => {
+    expect(emptyEdge()).toEqual({ source: '', target: '', name: '', des: '' })
   })
 })

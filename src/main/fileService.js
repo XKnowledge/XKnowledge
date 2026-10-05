@@ -10,7 +10,7 @@ const guard = createPathGuard()
 
 // 校验逻辑独立为无 electron 依赖的纯模块（见 chartValidation.mjs 头注释），
 // 转发导出保持既有 import 路径不变；本模块内部也直接使用
-import { validateChartStructure } from './chartValidation.mjs'
+import { validateChartStructure } from '../shared/chartValidation.mjs'
 import { t } from './i18nMain'
 export { validateChartStructure }
 
