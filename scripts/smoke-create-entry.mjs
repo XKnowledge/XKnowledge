@@ -183,6 +183,20 @@ expectTrue(
     .catch(() => false)
 )
 
+// 5. 第三扇门：菜单「创建节点」——与删除节点同组（菜单里删有建无的不对称
+//    修复），经 shortcutActive/shortcutWatch 分发到同一 createNodeAtCenter
+await page.locator('.sider-menu-style a').hover() // Windows trigger=hover
+await page.locator('.ant-dropdown-menu-item', { hasText: '创建节点' }).click()
+expectTrue('菜单「创建节点」打开建点编辑器', await waitEditorCount('node', 1))
+await shot('05-editor-from-menu')
+await page.keyboard.press('Escape')
+expectTrue('菜单路径 Esc 关闭编辑器', await waitEditorCount('node', 0))
+expectEq(
+  '菜单路径取消不建点（节点计数）',
+  await page.locator('.graph3d-wrap').getAttribute('data-node-count'),
+  '1'
+)
+
 console.log(errors.length ? `渲染错误 ${errors.length} 条:` : '渲染无错误', errors)
 // 收尾用 destroy：必然留下未保存修改，app.close 会撞原生未保存确认对话框
 await app.evaluate(({ BrowserWindow }) => {

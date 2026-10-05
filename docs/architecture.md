@@ -234,7 +234,7 @@ XKnowledge/
 
 ### 6.3 操作触发的统一分发
 
-工具栏按钮、`XkMenu` 菜单项、全局快捷键、60 秒自动保存定时器**四种来源**统一走同一条分发链：来源方设置 `shortcutActive`（动作名）并翻转 `shortcutWatch` → ChartView 的 `watch(shortcutWatch)` 按 `actionMap` 分发到 `saveFile / deleteNode / undo / ...`。导出子菜单四项（图片/HTML/环绕/录屏）同走此通道（`export_png` 等，无键盘键位、不进 keybindingStore，仅菜单入口）；菜单项的禁用/文案/danger 态由 ChartView 的录制状态经 props 单向下发（XkMenu 只读展示）。
+菜单项与全局快捷键**两条触发路径**汇入 `useShortcuts` 的 `dispatch(actionName)` 唯一入口：`actionMap` 顶层注册表查表直调（编排层注入动作 + 设置/大纲导入/导出 PNG/搜索四项 ref 直连），键盘判定后同样经 dispatch——一个动作一个名字（`create_node / delete_node / save_file / undo / ...`）。工具栏按钮不经此通道，直调编排层函数（如「创建节点」→ `createNodeAtCenter`）。创建节点与删除同组三扇门：菜单/工具栏/画布双击走同一条就地编辑器管道（创建连接无菜单项——二元操作只能武装成两击流，是模态，手势+触点提示已覆盖）。导出子菜单四项（图片/HTML/环绕/录屏）走 dispatch（`export_png` 等，无键盘键位、不进 keybindingStore，仅菜单入口）；菜单项的禁用/文案/danger 态由 ChartView 的录制状态经 props 单向下发（XkMenu 只读展示）。
 
 快捷键（`window.keydown`）：Ctrl+S 保存、Ctrl+Z 撤销、Ctrl+Y 重做、Delete **框选集优先**——有框选（Shift+拖，见 §8 手势层）时批量删（`delete_selection`，一条 `deleteSelection` 历史承载被选节点 + 直选边 + 删点连带边），否则删**最后点击**的对象（点击节点/边时对称清对方的选中 index，据此分发 `delete_node`/`delete_edge`，无选中时 `<0` 守卫兜底无动作）、Ctrl+R 阻止刷新。修饰键判定在 `utils/platformModifier.js`：键盘快捷键全平台 Ctrl/⌘ 双收（`shortcutModifierActive`），建边拖拽手势按平台分流（`linkDragModifierActive`，macOS ⌘/其余 Ctrl——macOS 的 Ctrl+点按是系统右键语义，不承担建边），框选拖拽全平台统一 Shift（`marqueeModifierActive`，Shift 拖拽无平台保留语义）；提示条与 XkMenu 快捷键文案经 `modifierKeyLabel` 按平台显示 ⌘/Ctrl；Delete/Ctrl+Z/Ctrl+Y 在焦点位于 INPUT/TEXTAREA/可编辑元素时屏蔽，避免打字时误触。组件卸载时移除监听，防止同窗口反复挂载导致快捷键跑两遍。
 

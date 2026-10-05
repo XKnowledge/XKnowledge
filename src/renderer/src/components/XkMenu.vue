@@ -8,7 +8,9 @@
         <a-menu-item key="1" @click="dispatch('create_new_file')">
           {{ $t('menu.newFile') }}
         </a-menu-item>
-        <a-menu-item key="2" @click="dispatch('open_file')"> {{ $t('menu.openFile') }} </a-menu-item>
+        <a-menu-item key="2" @click="dispatch('open_file')">
+          {{ $t('menu.openFile') }}
+        </a-menu-item>
         <a-menu-item key="12" @click="dispatch('close_file')">
           {{ $t('menu.closeFile') }}
         </a-menu-item>
@@ -26,6 +28,12 @@
           </a-row>
         </a-menu-item>
         <a-menu-divider />
+        <!-- 创建节点：与工具栏按钮/画布双击同一条管道——菜单里删有建无的
+             不对称修复（创建连接不加菜单项：二元操作只能武装成两击流，
+             是模态，手势+触点提示已覆盖） -->
+        <a-menu-item key="17" @click="dispatch('create_node')">
+          {{ $t('chart.createNode') }}
+        </a-menu-item>
         <a-menu-item key="7" @click="dispatch('delete_node')">
           <a-row>
             <a-col flex="120px">{{ $t('chart.deleteNode') }}</a-col>

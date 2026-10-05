@@ -606,6 +606,10 @@ const {
   siderVisible.value = true
 })
 
+/** 工具栏按钮与菜单项共用的可见入口：与画布双击同一条就地编辑器管道
+ *  （机制不重复，门要多开）——视图中心为落点 */
+const createNodeAtCenter = () => graph3dRef.value?.openNodeEditorAtCenter()
+
 // 快捷键与菜单动作的统一分发（keydown 判定与菜单点击汇入同一 dispatch）：
 // 动作集由编排层从各 composable 汇入；keydown 监听的挂/卸在生命周期钩子里
 const { shortcut, dispatch } = useShortcuts({
@@ -621,6 +625,7 @@ const { shortcut, dispatch } = useShortcuts({
     closeFile,
     createNewFile,
     openFile,
+    createNode: createNodeAtCenter,
     deleteNode,
     deleteEdge,
     deleteSelection,
@@ -636,9 +641,7 @@ const { shortcut, dispatch } = useShortcuts({
 })
 
 // 按钮名语言相关：computed 让语言切换后即时跟随（ref 常量不会刷新）。
-// action 是冒烟锚点（data-toolbar-action）；创建节点是可见入口——与画布
-// 双击同一条就地编辑器管道，机制不重复，门要多开
-const createNodeAtCenter = () => graph3dRef.value?.openNodeEditorAtCenter()
+// action 是冒烟锚点（data-toolbar-action）
 const buttonList = computed(() => [
   {
     src: CreateNodeIcon,

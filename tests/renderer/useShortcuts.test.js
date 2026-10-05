@@ -14,7 +14,7 @@ const keyEvent = (over = {}) => ({
   ...over
 })
 
-// 编排层注入面：16 个动作全 vi.fn；三个 ref 直连入口各带 open/export 方法
+// 编排层注入面：17 个动作全 vi.fn；三个 ref 直连入口各带 open/export 方法
 const setup = (over = {}) => {
   const actions = {
     saveFile: vi.fn(),
@@ -22,6 +22,7 @@ const setup = (over = {}) => {
     closeFile: vi.fn(),
     createNewFile: vi.fn(),
     openFile: vi.fn(),
+    createNode: vi.fn(),
     deleteNode: vi.fn(),
     deleteEdge: vi.fn(),
     deleteSelection: vi.fn(),
@@ -79,6 +80,7 @@ describe('dispatch：键盘与菜单汇入的唯一分发入口', () => {
     ['close_file', 'closeFile'],
     ['create_new_file', 'createNewFile'],
     ['open_file', 'openFile'],
+    ['create_node', 'createNode'],
     ['delete_node', 'deleteNode'],
     ['delete_edge', 'deleteEdge'],
     ['delete_selection', 'deleteSelection'],
@@ -221,9 +223,7 @@ describe('isTypingContext 守卫：跟动作走、不跟键走', () => {
 
   it('isContentEditable 元素同样被守卫', () => {
     const { shortcut, actions } = setup()
-    shortcut(
-      keyEvent({ key: 'Delete', target: { tagName: 'DIV', isContentEditable: true } })
-    )
+    shortcut(keyEvent({ key: 'Delete', target: { tagName: 'DIV', isContentEditable: true } }))
     expect(actions.deleteNode).not.toHaveBeenCalled()
   })
 })

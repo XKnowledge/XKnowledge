@@ -24,6 +24,7 @@ export interface UseShortcutsOptions {
     closeFile: () => Promise<void>
     createNewFile: () => void
     openFile: () => Promise<void>
+    createNode: () => void
     deleteNode: () => void
     deleteEdge: () => void
     deleteSelection: () => void
@@ -63,6 +64,7 @@ export function useShortcuts({
     close_file: actions.closeFile,
     create_new_file: actions.createNewFile,
     open_file: actions.openFile,
+    create_node: actions.createNode,
     delete_node: actions.deleteNode,
     delete_edge: actions.deleteEdge,
     delete_selection: actions.deleteSelection,
