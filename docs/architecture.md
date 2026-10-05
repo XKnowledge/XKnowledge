@@ -230,7 +230,7 @@ XKnowledge/
 
 结构性变更的唯一出口是 `onChange({ dirty })` 回调（编辑 `dirty: true`；装载换图 `dirty: false`），ChartView 在此收口三个派生副作用：类目列表重算、未保存标记置位、节点高亮校准。`XkGraph3D` 的增量刷新不依赖该通知——它对 `props.nodes/links` 自带 deep watch。
 
-侧边栏以 `xxxVisible` 布尔族互斥切换显示：属性面板 / 修改节点 / 修改连接三选一；图表点击节点/边时自动切换到对应表单（点击边同时记录高亮索引）。创建节点不进侧栏：画布双击的就地编辑器（`XkCanvasEditor`）是唯一建点入口。
+侧边栏以 `xxxVisible` 布尔族互斥切换显示：属性面板 / 修改节点 / 修改连接三选一；图表点击节点/边时自动切换到对应表单（点击边同时记录高亮索引）。创建节点不进侧栏：就地编辑器（`XkCanvasEditor`）是唯一建点机制——画布双击与工具栏「创建节点」按钮（expose 的 `openNodeEditorAtCenter`，视图中心落点）两扇门走同一条 `canvas-create-node` 管道；空图时画布中央显示建图引导（`data-empty-hint`，编辑器开着让位、建成首节点即退场）。
 
 ### 6.3 操作触发的统一分发
 
@@ -376,7 +376,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 对 `3d-force-graph` 的完整封装，props 进 / events 出，不回写父组件数据：
 
 - **数据拷贝**：图实例吃的是 `chartData` 的拷贝（附加内部 `__idx` 与 d3 坐标字段），增量刷新时按 name 匹配旧节点**保留坐标与拖拽锚点**，编辑后已布局的图不跳；发给父组件的点击数据经 `pureNode/pureLink` 剥离内部字段。
-- **画布手势层**：dblclick/pointer 事件直接挂 canvas DOM。双击空白建点、⌘/Ctrl+拖连线之外，**Shift+拖为框选**（`marquee`）：矩形以 SVG 覆盖层随拖拽绘制，松手按屏幕投影拾取——框内节点 + 投影线段与框相交的边（隐形/无坐标对象不参与），emit `marquee-select` 给 ChartView 落选中集（`selectionNodes/selectionLinks` props 回流高亮，Delete 批量删）。框选与连线共用 capture 阶段 pointerdown 截断传播独占手势（DragControls/OrbitControls 收不到 pointerdown 不抢拖）；矩形归一/点入框/线段相交的纯几何在 `utils/canvasEdit.js` 可单测。
+- **画布手势层**：dblclick/pointer 事件直接挂 canvas DOM。双击空白建点、⌘/Ctrl+拖连线之外，**Shift+拖为框选**（`marquee`）：矩形以 SVG 覆盖层随拖拽绘制，松手按屏幕投影拾取——框内节点 + 投影线段与框相交的边（隐形/无坐标对象不参与），emit `marquee-select` 给 ChartView 落选中集（`selectionNodes/selectionLinks` props 回流高亮，Delete 批量删）。框选与连线共用 capture 阶段 pointerdown 截断传播独占手势（DragControls/OrbitControls 收不到 pointerdown 不抢拖）；矩形归一/点入框/线段相交的纯几何在 `utils/canvasEdit.js` 可单测。底部导航条（`.scene-nav-info`，querySelector 覆盖库内硬编码英文）在装载/语言切换/选中变更时经 `utils/navInfo.js` 的 `navInfoKey` 重设——无选中＝默认导航文案，点选/框选了节点＝连线手势触点提示（`{modifier}` 随平台渲染），切语言不清掉触点提示（单测锁 key 选择语义）。
 - **节点大小语义**：three-forcegraph 半径 = ∛val × nodeRelSize，直接传 symbolSize 时 40/50/70 几乎不可辨；`nodeVal = symbolSize³ / 2500` 让半径与 symbolSize 线性成正比，对齐旧 2D 图语义。
 - **标签**：大节点（symbolSize 前 30 名）常显名称（three-spritetext），小节点由「显示小节点名称」开关决定；悬浮提示为 `名称：描述`，边悬浮名由开关控制。
 - **类目图例**：覆盖层（DOM，位于库挂载点之外——库初始化会清空挂载容器）点击切换类目显隐，边随两端节点显隐；配色来自 `categoryColor`。

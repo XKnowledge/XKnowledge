@@ -21,7 +21,12 @@
                 direction="vertical"
                 size="small"
               >
-                <a-button type="link" class="no-move-button" @click="item.click">
+                <a-button
+                  type="link"
+                  class="no-move-button"
+                  :data-toolbar-action="item.action"
+                  @click="item.click"
+                >
                   <img :src="item.src" alt="" :style="{ width: '20px', height: '20px' }" />
                 </a-button>
                 <div style="text-align: center; margin-top: -8px; font: 12px sans-serif">
@@ -225,6 +230,7 @@ import XkWindowControls from '../components/XkWindowControls.vue'
 import XkRecordingCard from '../components/XkRecordingCard.vue'
 import XkTour from '../components/XkTour.vue'
 
+import CreateNodeIcon from '../assets/create_node.png'
 import DeleteNodeIcon from '../assets/delete_node.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
 import EditIcon from '../assets/edit.png'
@@ -629,11 +635,20 @@ const { shortcut, dispatch } = useShortcuts({
   }
 })
 
-// 按钮名语言相关：computed 让语言切换后即时跟随（ref 常量不会刷新）
+// 按钮名语言相关：computed 让语言切换后即时跟随（ref 常量不会刷新）。
+// action 是冒烟锚点（data-toolbar-action）；创建节点是可见入口——与画布
+// 双击同一条就地编辑器管道，机制不重复，门要多开
+const createNodeAtCenter = () => graph3dRef.value?.openNodeEditorAtCenter()
 const buttonList = computed(() => [
-  { src: DeleteNodeIcon, name: t('chart.deleteNode'), click: deleteNode },
-  { src: DeleteEdgeIcon, name: t('chart.deleteEdge'), click: deleteEdge },
-  { src: EditIcon, name: t('chart.editSider'), click: toggleSider }
+  {
+    src: CreateNodeIcon,
+    name: t('chart.createNode'),
+    action: 'create_node',
+    click: createNodeAtCenter
+  },
+  { src: DeleteNodeIcon, name: t('chart.deleteNode'), action: 'delete_node', click: deleteNode },
+  { src: DeleteEdgeIcon, name: t('chart.deleteEdge'), action: 'delete_edge', click: deleteEdge },
+  { src: EditIcon, name: t('chart.editSider'), action: 'toggle_sider', click: toggleSider }
 ])
 
 // 图表区宽度不在此设定：由 antd flex 布局撑开；3D 图组件经

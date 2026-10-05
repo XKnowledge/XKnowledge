@@ -127,7 +127,7 @@ export const zhCN = {
       '新建 / 打开 / 关闭文件、撤销重做、保存与另存、导出（图片 / HTML / 录制）、从大纲导入、设置，都汇集在这个左上角菜单。',
     toolbarTitle: '工具栏',
     toolbarDesc:
-      '删除节点、删除连接，以及编辑栏——点它展开或收起右侧边栏；边栏收起时点击画布里的节点 / 连接会自动唤起。',
+      '创建节点（也可直接双击画布）、删除节点、删除连接，以及编辑栏——点它展开或收起右侧边栏；边栏收起时点击画布里的节点 / 连接会自动唤起。',
     createNodeTitle: '建节点：双击画布',
     createNodeDesc:
       '在画布空白处双击，就地输入节点名称，回车前可选类目（可即时新增）、大小档位和描述——像打字一样连续建图。',
@@ -135,8 +135,7 @@ export const zhCN = {
     linkDesc:
       '按住 Ctrl（macOS 为 ⌘）把一个节点拖到另一个节点上松开，就地输入连接名称（留空则建无名边）；拖到空白处松开即放弃。',
     navigateTitle: '画布导航',
-    navigateDesc:
-      '左键拖动旋转、滚轮缩放、右键拖动平移；「复位视图」按钮在右侧属性面板底部。',
+    navigateDesc: '左键拖动旋转、滚轮缩放、右键拖动平移；「复位视图」按钮在右侧属性面板底部。',
     legendTitle: '图例',
     legendDesc: '每个类目一个色点，点击色点切换该类目节点的显示 / 隐藏；建图后色点随类目自动出现。',
     panelTitle: '属性面板',
@@ -181,6 +180,7 @@ export const zhCN = {
     exampleProtectedHint: '示例文件不允许修改，请选择其他位置保存',
     saveFailed: '保存失败',
     saveAsFailed: '另存为失败',
+    createNode: '创建节点',
     deleteNode: '删除节点',
     deleteEdge: '删除连接',
     editSider: '编辑栏',
@@ -194,6 +194,8 @@ export const zhCN = {
     init3dFailed: '3D 视图初始化失败（显卡驱动异常？），侧边栏编辑功能仍可使用',
     navInfo3d:
       '左键：旋转　右键：平移　滚轮：缩放　双击：建节点　拖节点：移动　{modifier}+拖到节点：连线　Shift+拖：框选',
+    navInfoConnect: '已选中节点：按住 {modifier} 拖到另一节点即可连线',
+    emptyHint: '双击画布，或点上方「创建节点」按钮，创建第一个节点',
     nodeLabelSep: '：'
   },
   world: {

@@ -127,7 +127,7 @@ export const enUS = {
       'New / open / close file, undo & redo, save & save as, export (image / HTML / recording), outline import and settings all live in this top-left menu.',
     toolbarTitle: 'Toolbar',
     toolbarDesc:
-      'Delete node, delete link, and the panel toggle — click it to show or hide the right sidebar; clicking a node / link in the canvas brings it back automatically.',
+      'Create node (double-clicking the canvas works too), delete node, delete link, and the panel toggle — click it to show or hide the right sidebar; clicking a node / link in the canvas brings it back automatically.',
     createNodeTitle: 'Create a node: double-click',
     createNodeDesc:
       'Double-click an empty spot on the canvas, type the node name inline, then pick a category (add new ones on the fly), a size tier and a description before pressing Enter.',
@@ -184,6 +184,7 @@ export const enUS = {
     exampleProtectedHint: 'Example files cannot be modified; choose another location to save',
     saveFailed: 'Failed to save',
     saveAsFailed: 'Save As failed',
+    createNode: 'Create Node',
     deleteNode: 'Delete Node',
     deleteEdge: 'Delete Link',
     editSider: 'Edit Panel',
@@ -201,6 +202,9 @@ export const enUS = {
     init3dFailed: '3D view failed to initialize (GPU driver issue?); sidebar editing still works',
     navInfo3d:
       'Left: rotate  Right: pan  Wheel: zoom  Double-click: add node  Drag node: move  {modifier}+drag to node: link  Shift+drag: marquee',
+    navInfoConnect: 'Node selected: hold {modifier} and drag it onto another node to link',
+    emptyHint:
+      'Double-click the canvas, or use the Create Node button above, to add your first node',
     nodeLabelSep: ': '
   },
   world: {

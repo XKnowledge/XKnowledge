@@ -79,7 +79,7 @@ await page.waitForTimeout(1_500) // 等 enterChartMode 生效
 let s = await iconState()
 expectOk('深色主题生效', s.theme === 'dark', `data-theme=${s.theme}`)
 expectOk('标题栏深色底', s.headerBgDim, s.headerBg)
-expectOk('图标齐全（5 工具栏 + 1 菜单）', s.imgCount === 6, `实际 ${s.imgCount}`)
+expectOk('图标齐全（4 工具栏 + 1 菜单）', s.imgCount === 5, `实际 ${s.imgCount}`)
 expectOk(
   '深色下全部图标反色',
   s.filters.length === 1 && s.filters[0].includes('invert'),

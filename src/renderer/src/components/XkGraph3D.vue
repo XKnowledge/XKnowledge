@@ -53,6 +53,11 @@
       @create-edge="onEditorCreateEdge"
       @close="closeEditor"
     />
+    <!-- 空图引导：空白画布的第一步自白——建成首节点即退场；就地编辑器也
+         开在中心，编辑期间让位不叠字。pointer-events 穿透不挡双击手势 -->
+    <div v-if="emptyHintVisible" class="graph3d-empty-hint" data-empty-hint>
+      {{ $t('chart.emptyHint') }}
+    </div>
     <!-- 连线拖拽预览：SVG 覆盖层跟随鼠标，pointer-events 穿透 -->
     <svg v-if="linkDrag" class="graph3d-link-preview" data-link-preview>
       <line :x1="linkDrag.sx" :y1="linkDrag.sy" :x2="linkDrag.cx" :y2="linkDrag.cy" />
@@ -87,6 +92,7 @@ import {
   pointInRect,
   segmentIntersectsRect
 } from '../utils/canvasEdit.js'
+import { navInfoKey } from '../utils/navInfo.js'
 import {
   linkDragModifierActive,
   marqueeModifierActive,
@@ -300,6 +306,12 @@ const closeEditor = () => {
   pendingLinkEnds = null
 }
 
+/** 空图中央引导：空白画布的第一步教学，有节点/初始化失败/编辑器开着
+ *  （编辑器同样落位中心，叠字）时退场 */
+const emptyHintVisible = computed(
+  () => props.nodes.length === 0 && !editor.value.mode && !initFailed.value
+)
+
 /** editor 打开期间挂 window Esc（bubble）：焦点不在编辑器内也能取消。
  *  编辑器内（含类目下拉展开态）的 Esc 由 XkCanvasEditor 根 div 的
  *  esc.capture 承接（vc-select 对 Esc stopPropagation 拦 bubble，capture
@@ -342,6 +354,17 @@ const onCanvasDblClick = (e) => {
   const { x: cx, y: cy } = toLocal(e)
   // 双击空白才建点；双击节点暂无语义（单击选中语义照旧）
   if (pickNearestNode(projectAllNodes(), cx, cy)) return
+  pendingWorldPos = screenToWorldOnFocusPlane(cx, cy)
+  openEditor('node', cx, cy)
+}
+
+/** 工具栏「创建节点」可见入口：与双击同管道——以画布中心为落点打开就地
+ *  编辑器。机制单源（手势/按钮是同一房间的两扇门），不做第二套表单 */
+const openNodeEditorAtCenter = () => {
+  if (!graph || initFailed.value || editor.value.mode) return
+  const el = containerRef.value
+  const cx = el.clientWidth / 2
+  const cy = el.clientHeight / 2
   pendingWorldPos = screenToWorldOnFocusPlane(cx, cy)
   openEditor('node', cx, cy)
 }
@@ -655,12 +678,22 @@ const applySimulationScale = () => {
   }
 }
 
-// 语言切换重设底部导航提示（querySelector 覆盖式文案，与 onMounted 内
-// 首次覆盖同一目标；watch 回调执行时容器必已挂载——语言切换只发生在交互期）
-watch(locale, () => {
+// 底部导航提示（querySelector 覆盖式文案——three-render-objects 硬编码英文
+// 无配置项，类名随库版本锁定 ^1.80）：装载首设/语言切换/选中变更三方共用同
+// 一选择器，切语言不清掉连线触点提示。无选中＝默认导航；点选/框选了节点＝
+// 连线手势触点提示（用户此刻正握着一根边的原材料，教 {modifier}+拖的最佳
+// 时机）。watch 回调执行时容器必已挂载——语言切换与点选只发生在交互期
+const applyNavInfo = () => {
   const navInfo = containerRef.value?.querySelector?.('.scene-nav-info')
-  if (navInfo) navInfo.textContent = t('chart.navInfo3d', { modifier: modifierKeyLabel(isDarwin) })
-})
+  if (!navInfo) return
+  const key = navInfoKey(!!props.highlightNode || props.selectionNodes.length > 0)
+  navInfo.textContent = t(key, { modifier: modifierKeyLabel(isDarwin) })
+}
+watch(locale, applyNavInfo)
+watch(
+  () => [props.highlightNode, props.selectionNodes.length],
+  () => applyNavInfo()
+)
 
 onMounted(() => {
   try {
@@ -723,10 +756,8 @@ onMounted(() => {
   // 父组件不再需要 nextTick(resize) 联动；
   // 先于各 apply* 建立，避免任一 accessor 异常吞掉画布自适应
   //
-  // 底部导航提示文案在 three-render-objects 内硬编码为英文且无配置项，
-  // 这里替换为中文；类名随库版本锁定（^1.80）
-  const navInfo = containerRef.value.querySelector('.scene-nav-info')
-  if (navInfo) navInfo.textContent = t('chart.navInfo3d', { modifier: modifierKeyLabel(isDarwin) })
+  // 底部导航提示：首设走 applyNavInfo（语言切换/选中变更见其 watch）
+  applyNavInfo()
 
   resizeObserver = new ResizeObserver(() => {
     const el = containerRef.value
@@ -1098,6 +1129,7 @@ defineExpose({
   focusCamera,
   openSearch,
   closeSearch,
+  openNodeEditorAtCenter,
   notifyNodeDropPos
 })
 </script>
@@ -1149,6 +1181,20 @@ defineExpose({
   height: 10px;
   border-radius: 50%;
   display: inline-block;
+}
+
+/* 空图中央引导：幽灵提示，pointer-events 穿透不挡双击建点手势 */
+.graph3d-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--xk-text-secondary);
+  font: 14px sans-serif;
+  text-align: center;
+  padding: 0 40px;
 }
 
 .graph3d-fallback {
