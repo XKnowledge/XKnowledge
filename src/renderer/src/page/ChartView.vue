@@ -185,11 +185,12 @@
     </a-layout>
     <XkSettings ref="settingsRef" />
     <XkOutlineImport ref="outlineImportRef" @import="onOutlineImport" />
+    <XkTour :open="tourOpen" @close="stopTour" />
   </a-space>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -212,6 +213,7 @@ import { useSelection } from '../composables/useSelection'
 import { useChartFile } from '../composables/useChartFile'
 import { useEditActions } from '../composables/useEditActions'
 import { useShortcuts } from '../composables/useShortcuts'
+import { useTour } from '../composables/useTour'
 
 import XkCurrentNode from '../components/XkCurrentNode.vue'
 import XkCurrentEdge from '../components/XkCurrentEdge.vue'
@@ -222,6 +224,7 @@ import XkSettings from '../components/XkSettings.vue'
 import XkOutlineImport from '../components/XkOutlineImport.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 import XkRecordingCard from '../components/XkRecordingCard.vue'
+import XkTour from '../components/XkTour.vue'
 
 import DeleteNodeIcon from '../assets/delete_node.png'
 import DeleteEdgeIcon from '../assets/delete_edge.png'
@@ -375,6 +378,9 @@ onMounted(async () => {
   // 文件生命周期挂载：解锁窗口并注册关闭确认 + 60 秒自动保存
   // （门控与关闭确认的实现见 useChartFile）
   mountFileLifecycle()
+  // 首次进图表页自动开新手教程（看过/跳过一次即标记，菜单可重开）；
+  // nextTick 等装载与首帧布局完成、锚点就位再开
+  nextTick(() => maybeAutoStartTour())
 })
 
 onUnmounted(() => {
@@ -582,6 +588,19 @@ const {
   closeOutlineImport: () => outlineImportRef.value?.close()
 })
 
+// 新手教程状态机：open 的持有者与「看过一次」标记在 useTour；开启前的
+// UI 前置（侧栏回标准态——收起时属性面板步骤锚点不可见）经回调注入，
+// 自动触发与菜单重开同一条路径
+const {
+  open: tourOpen,
+  maybeAutoStart: maybeAutoStartTour,
+  start: startTour,
+  stop: stopTour
+} = useTour(() => {
+  resetSider()
+  siderVisible.value = true
+})
+
 // 快捷键与菜单动作的统一分发（keydown 判定 + shortcutWatch 动作映射）：
 // 动作集由编排层从各 composable 汇入；keydown 监听的挂/卸在生命周期钩子里
 const { shortcutActive, shortcutWatch, shortcut } = useShortcuts({
@@ -606,7 +625,8 @@ const { shortcutActive, shortcutWatch, shortcut } = useShortcuts({
     redo,
     onExportHtml,
     onExportVideo,
-    onToggleScreenRecord
+    onToggleScreenRecord,
+    startTour
   }
 })
 

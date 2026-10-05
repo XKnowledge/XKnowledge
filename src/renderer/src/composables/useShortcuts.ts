@@ -34,6 +34,7 @@ export interface UseShortcutsOptions {
     onExportHtml: () => Promise<void>
     onExportVideo: () => Promise<void>
     onToggleScreenRecord: () => Promise<void>
+    startTour: () => void
   }
 }
 
@@ -161,7 +162,8 @@ export function useShortcuts({
       export_png: () => graph3dRef.value?.exportPng(),
       export_html: actions.onExportHtml,
       export_video: actions.onExportVideo,
-      screen_record: actions.onToggleScreenRecord
+      screen_record: actions.onToggleScreenRecord,
+      start_tour: actions.startTour
     }
 
     const actionName = shortcutActive.value

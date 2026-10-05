@@ -66,6 +66,15 @@
         </a-sub-menu>
         <a-menu-divider />
         <a-menu-item key="14" @click="importOutline"> {{ $t('menu.importOutline') }} </a-menu-item>
+        <!-- 新手教程：录制中禁用——教程遮罩盖画布会毁录制画面 -->
+        <a-menu-item
+          key="16"
+          data-start-tour
+          :disabled="exportingVideo || screenRecording"
+          @click="startTour"
+        >
+          {{ $t('menu.tour') }}
+        </a-menu-item>
         <a-menu-item key="13" @click="openSettings"> {{ $t('common.settings') }} </a-menu-item>
       </a-menu>
     </template>
@@ -167,6 +176,11 @@ const exportVideo = () => {
 
 const screenRecord = () => {
   shortcutActive.value = 'screen_record'
+  shortcutWatch.value = !shortcutWatch.value
+}
+
+const startTour = () => {
+  shortcutActive.value = 'start_tour'
   shortcutWatch.value = !shortcutWatch.value
 }
 </script>

@@ -44,7 +44,8 @@ export const enUS = {
     refresh: 'Refresh View',
     backHome: 'Back to Home',
     worldTree: 'World Tree',
-    openLocalFile: 'Open Local File'
+    openLocalFile: 'Open Local File',
+    tour: 'Tutorial'
   },
   settings: {
     title: 'Settings',
@@ -116,6 +117,35 @@ export const enUS = {
     doubleClickBlank: 'Double-click blank area',
     shiftDrag: 'Shift+drag',
     linkLabel: '{modifier}+drag node'
+  },
+  tour: {
+    welcomeTitle: 'Welcome to XKnowledge',
+    welcomeDesc:
+      'This is a 3D knowledge graph: nodes are concepts, links are relations, and categories are color-coded. A quick 1-minute tour of the essentials.',
+    menuTitle: 'Menu',
+    menuDesc:
+      'New / open / close file, undo & redo, save & save as, export (image / HTML / recording), outline import and settings all live in this top-left menu.',
+    toolbarTitle: 'Toolbar',
+    toolbarDesc:
+      'Delete node, delete link, and the panel toggle — click it to show or hide the right sidebar; clicking a node / link in the canvas brings it back automatically.',
+    createNodeTitle: 'Create a node: double-click',
+    createNodeDesc:
+      'Double-click an empty spot on the canvas, type the node name inline, then pick a category (add new ones on the fly), a size tier and a description before pressing Enter.',
+    linkTitle: 'Link nodes: Ctrl + drag',
+    linkDesc:
+      'Hold Ctrl (⌘ on macOS) and drag one node onto another, release, then type the link name inline (leave empty for an unnamed link); release on empty space to cancel.',
+    navigateTitle: 'Canvas navigation',
+    navigateDesc:
+      'Drag with the left button to rotate, scroll to zoom, drag with the right button to pan; the Reset View button sits at the bottom of the right panel.',
+    legendTitle: 'Legend',
+    legendDesc:
+      "One color dot per category — click a dot to toggle that category's visibility; dots appear as your categories grow.",
+    panelTitle: 'Properties panel',
+    panelDesc:
+      'The "show link names on hover / small node labels" switches, focus mode, repulsion slider, graph description and reset view live here.',
+    doneTitle: 'Start building',
+    doneDesc:
+      'Ctrl+F searches within the graph, Ctrl+S saves (with a 60-second autosave backup). Happy graphing!'
   },
   chart: {
     showEdgeName: 'Show link names on hover',

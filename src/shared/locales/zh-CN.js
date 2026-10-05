@@ -45,7 +45,8 @@ export const zhCN = {
     refresh: '刷新视图',
     backHome: '返回首页',
     worldTree: '世界树',
-    openLocalFile: '打开本地文件'
+    openLocalFile: '打开本地文件',
+    tour: '新手教程'
   },
   settings: {
     title: '设置',
@@ -116,6 +117,33 @@ export const zhCN = {
     doubleClickBlank: '双击空白处',
     shiftDrag: 'Shift+拖拽',
     linkLabel: '{modifier}+拖拽节点'
+  },
+  tour: {
+    welcomeTitle: '欢迎使用 XKnowledge',
+    welcomeDesc:
+      '这是一张 3D 知识图谱：节点代表概念、连接代表关系、类目用颜色区分。约 1 分钟带你逛完主要功能。',
+    menuTitle: '菜单',
+    menuDesc:
+      '新建 / 打开 / 关闭文件、撤销重做、保存与另存、导出（图片 / HTML / 录制）、从大纲导入、设置，都汇集在这个左上角菜单。',
+    toolbarTitle: '工具栏',
+    toolbarDesc:
+      '删除节点、删除连接，以及编辑栏——点它展开或收起右侧边栏；边栏收起时点击画布里的节点 / 连接会自动唤起。',
+    createNodeTitle: '建节点：双击画布',
+    createNodeDesc:
+      '在画布空白处双击，就地输入节点名称，回车前可选类目（可即时新增）、大小档位和描述——像打字一样连续建图。',
+    linkTitle: '连线：Ctrl 拖拽',
+    linkDesc:
+      '按住 Ctrl（macOS 为 ⌘）把一个节点拖到另一个节点上松开，就地输入连接名称（留空则建无名边）；拖到空白处松开即放弃。',
+    navigateTitle: '画布导航',
+    navigateDesc:
+      '左键拖动旋转、滚轮缩放、右键拖动平移；「复位视图」按钮在右侧属性面板底部。',
+    legendTitle: '图例',
+    legendDesc: '每个类目一个色点，点击色点切换该类目节点的显示 / 隐藏；建图后色点随类目自动出现。',
+    panelTitle: '属性面板',
+    panelDesc:
+      '「悬浮显示连接名称 / 小节点名称」开关、聚焦模式、排斥力滑杆、图谱简介与复位视图都在这里。',
+    doneTitle: '开始建图吧',
+    doneDesc: 'Ctrl+F 图内搜索定位节点，Ctrl+S 保存（60 秒自动保存兜底）。祝建图愉快！'
   },
   chart: {
     showEdgeName: '悬浮显示连接名称',
