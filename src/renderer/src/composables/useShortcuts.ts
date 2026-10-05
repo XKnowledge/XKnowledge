@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { type Ref } from 'vue'
 import { matchEvent } from '../utils/keybindings.js'
 import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { bindings as keybindings } from '../store/keybindingStore.js'
@@ -39,12 +39,11 @@ export interface UseShortcutsOptions {
 }
 
 /**
- * 键盘快捷键与菜单动作的统一分发通道：
+ * 键盘与菜单动作的统一分发：一个动作一个名字（actionName），
+ * 两条触发路径汇进同一个 dispatch(actionName) 入口——
  * - keydown → shortcut() 判定（7 个可自定义键位读 keybindingStore，
  *   matchEvent 精确匹配，primary=Ctrl/⌘ 双收；isTypingContext 守卫跟动作走）
- * - 菜单按钮 → v-model 翻转 shortcutWatch 经 triggerShortcut 标记动作名
- * - watch(shortcutWatch) 把动作名映射到编排层注入的动作集
- * shortcutActive/shortcutWatch 同时是 XkMenu 的 v-model（按钮高亮/分发复用）。
+ * - 菜单按钮 → XkMenu 拿 dispatch prop 直接调用（同一张 actionMap）
  * keydown 监听的挂/卸（onMounted/onUnmounted）属编排层。
  */
 export function useShortcuts({
@@ -56,8 +55,41 @@ export function useShortcuts({
   currentEdgeDataIndex,
   actions
 }: UseShortcutsOptions) {
-  const shortcutActive = ref('')
-  const shortcutWatch = ref(false)
+  // 动作注册表：编排层注入的函数 + ref 直连项（设置/大纲导入/导出 PNG/搜索
+  // 无需经编排层转发）。dispatch 查表直调——不经任何中间状态。
+  const actionMap: Record<string, () => void> = {
+    save_file: actions.saveFile,
+    save_as: actions.saveAs,
+    close_file: actions.closeFile,
+    create_new_file: actions.createNewFile,
+    open_file: actions.openFile,
+    delete_node: actions.deleteNode,
+    delete_edge: actions.deleteEdge,
+    delete_selection: actions.deleteSelection,
+    copy: actions.copySelection,
+    paste: actions.pasteSelection,
+    undo: actions.undo,
+    redo: actions.redo,
+    open_settings: () => settingsRef.value?.open(),
+    import_outline: () => outlineImportRef.value?.open(),
+    // 导出子菜单四项（无键盘键位，仅菜单入口）：与原侧栏按钮同一批函数
+    export_png: () => graph3dRef.value?.exportPng(),
+    export_html: actions.onExportHtml,
+    export_video: actions.onExportVideo,
+    screen_record: actions.onToggleScreenRecord,
+    start_tour: actions.startTour,
+    open_search: () => graph3dRef.value?.openSearch()
+  }
+
+  /** 键盘与菜单的唯一分发入口：按动作名查表直调，缺项提示开发期错字 */
+  const dispatch = (actionName: string): void => {
+    const action = actionMap[actionName]
+    if (action) {
+      action()
+    } else {
+      console.warn(`未定义的操作: ${actionName}`)
+    }
+  }
 
   const shortcut = (event: KeyboardEvent) => {
     // 统一转换为小写处理
@@ -75,7 +107,7 @@ export function useShortcuts({
       // 全局快捷键
       {
         match: () => matchEvent(event, keybindings.value.save),
-        action: () => triggerShortcut('save_file')
+        action: () => dispatch('save_file')
       },
       {
         // 拦截项非用户动作、不进自定义列表，保持原样
@@ -88,41 +120,41 @@ export function useShortcuts({
         match: () => matchEvent(event, keybindings.value.search),
         action: () => {
           event.preventDefault() // 防御性拦截（Electron 默认无查找，防未来版本行为变化）
-          graph3dRef.value?.openSearch()
+          dispatch('open_search')
         }
       },
 
       // 图表区域快捷键（输入文本时不触发）
       {
-        // 删「框选集优先，否则最后点击的对象」：框选批量删（deleteSelection）；
+        // 删「框选集优先，否则最后点击的对象」：框选批量删（delete_selection）；
         // 无框选时最后点过边（且未再点节点）删边，否则删节点；两边 index 在对方
         // 被点击时对称清空，无选中时各自函数的 <0 守卫兜底，按键无动作
         match: () => !isTypingContext && matchEvent(event, keybindings.value.delete),
         action: () => {
           if (selectionNodeNames.value.length || selectionLinkIndexes.value.length) {
-            triggerShortcut('delete_selection')
+            dispatch('delete_selection')
             return
           }
-          triggerShortcut(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
+          dispatch(currentEdgeDataIndex.value > -1 ? 'delete_edge' : 'delete_node')
         }
       },
       {
         match: () => !isTypingContext && matchEvent(event, keybindings.value.undo),
-        action: () => triggerShortcut('undo')
+        action: () => dispatch('undo')
       },
       {
         match: () => !isTypingContext && matchEvent(event, keybindings.value.redo),
-        action: () => triggerShortcut('redo')
+        action: () => dispatch('redo')
       },
       {
         // 三路分发在 copySelection 内部（三条路径汇到同一序列化出口，不拆
         // actionMap 多条目）；输入框内放行走浏览器原生文本复制
         match: () => !isTypingContext && matchEvent(event, keybindings.value.copy),
-        action: () => triggerShortcut('copy')
+        action: () => dispatch('copy')
       },
       {
         match: () => !isTypingContext && matchEvent(event, keybindings.value.paste),
-        action: () => triggerShortcut('paste')
+        action: () => dispatch('paste')
       }
     ]
 
@@ -135,44 +167,5 @@ export function useShortcuts({
     }
   }
 
-  // 新增的快捷操作触发方法
-  const triggerShortcut = (actionName: string) => {
-    shortcutActive.value = actionName
-    shortcutWatch.value = !shortcutWatch.value
-  }
-
-  watch(shortcutWatch, () => {
-    // 使用对象映射替代 switch-case 结构
-    const actionMap: Record<string, () => void> = {
-      save_file: actions.saveFile,
-      save_as: actions.saveAs,
-      close_file: actions.closeFile,
-      create_new_file: actions.createNewFile,
-      open_file: actions.openFile,
-      delete_node: actions.deleteNode,
-      delete_edge: actions.deleteEdge,
-      delete_selection: actions.deleteSelection,
-      copy: actions.copySelection,
-      paste: actions.pasteSelection,
-      undo: actions.undo,
-      redo: actions.redo,
-      open_settings: () => settingsRef.value?.open(),
-      import_outline: () => outlineImportRef.value?.open(),
-      // 导出子菜单四项（无键盘键位，仅菜单入口）：与原侧栏按钮同一批函数
-      export_png: () => graph3dRef.value?.exportPng(),
-      export_html: actions.onExportHtml,
-      export_video: actions.onExportVideo,
-      screen_record: actions.onToggleScreenRecord,
-      start_tour: actions.startTour
-    }
-
-    const actionName = shortcutActive.value
-    if (actionName && actionMap[actionName]) {
-      actionMap[actionName]()
-    } else if (actionName) {
-      console.warn(`未定义的快捷操作: ${actionName}`)
-    }
-  })
-
-  return { shortcutActive, shortcutWatch, shortcut }
+  return { shortcut, dispatch }
 }

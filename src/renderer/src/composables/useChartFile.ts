@@ -209,9 +209,8 @@ export function useChartFile({
   }
 
   /** 挂载文件生命周期（编排层 onMounted 调用）：解锁窗口注册关闭确认 +
-   *  60 秒自动保存（走 persistFile 纯保存，不重置侧边栏——后台保存必须
-   *  隐形，清表单/跳属性页会打断正在编辑的用户，也不借用 shortcutActive
-   *  分发，避免占用菜单按钮的 v-model 状态） */
+   *  60 秒自动保存（走 persistFile 纯保存、直接调用，不走 dispatch——
+   *  后台保存必须隐形，清表单/跳属性页会打断正在编辑的用户） */
   const mountFileLifecycle = (): void => {
     window.electronAPI.enterChartMode().catch((err) => {
       console.error('进入图表模式失败', err)

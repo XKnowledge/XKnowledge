@@ -5,8 +5,7 @@
         <a-layout>
           <a-layout-sider class="sider-menu-style">
             <XkMenu
-              v-model:shortcut-active="shortcutActive"
-              v-model:shortcut-watch="shortcutWatch"
+              :dispatch="dispatch"
               :exporting-video="exportingVideo"
               :screen-recording="screenRecording"
             />
@@ -601,9 +600,9 @@ const {
   siderVisible.value = true
 })
 
-// 快捷键与菜单动作的统一分发（keydown 判定 + shortcutWatch 动作映射）：
+// 快捷键与菜单动作的统一分发（keydown 判定与菜单点击汇入同一 dispatch）：
 // 动作集由编排层从各 composable 汇入；keydown 监听的挂/卸在生命周期钩子里
-const { shortcutActive, shortcutWatch, shortcut } = useShortcuts({
+const { shortcut, dispatch } = useShortcuts({
   graph3dRef,
   settingsRef,
   outlineImportRef,
