@@ -1,7 +1,10 @@
 // 冒烟驱动：60 秒自动保存不抢编辑状态——自动保存必须隐形（落盘 + 清脏），
-// 不得清正在填写的表单、不得把侧边栏跳回属性面板。复现审计中-1：自动保存
-// 复用手动保存的 saveFile，成功后无条件 resetSider+resetRefData，正在打字的
-// 「新建节点」表单被静默清空且面板被切走。
+// 不得清正在填写的表单、不得把侧边栏跳回属性面板。历史：fb8116f 修复
+// 「自动保存复用手动保存的 saveFile，成功后无条件 resetSider+resetRefData，
+// 正在打字的表单被静默清空且面板被切走」。编辑中载体随产品形态更替：
+// 原为 Insert 键的侧栏「新建节点」表单，8bcad63 建点收敛为画布双击后移除——
+// 现用探针点击画布命中节点打开「当前节点」表单（XkCurrentNode），名称框
+// 填半截新名不点确认，等效承载「正在打字、未提交」的编辑态。
 // 窗口构造：示例卡 filePath='' 不触发自动保存、新建文件首存走原生对话框，
 // 且 newChartWindow 直传的 path 不经 fileGuard 授权（PATH_NOT_AUTHORIZED，
 // 自动保存必失败、失败分支不重置 UI，测不到目标路径）。故按真实用户流走
@@ -20,22 +23,17 @@ const SHOT_DIR = path.join(APP_DIR, '.artifacts', 'smoke-shots-autosave')
 fs.rmSync(SHOT_DIR, { recursive: true, force: true })
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 // 自动保存的落盘目标（放截图专属目录内：清场天然覆盖，且已被 gitignore）。
-// 须预创建：FILE_OPEN 的 readChartFile 要真实读它并完成 fileGuard 授权
+// 须预创建：FILE_OPEN 的 readChartFile 要真实读它并完成 fileGuard 授权。
+// 单节点图：zoomToFit 后唯一节点必居画布正中，中心探针确定性命中
+// （多节点力导向布局下节点屏上仅 ~20px，撒网采样踩不中）
 const TARGET = path.join(SHOT_DIR, 'autosave-target.xk')
 fs.writeFileSync(
   TARGET,
   JSON.stringify({
     version: 2,
     description: '自动保存冒烟原始简介',
-    nodes: [
-      { name: '甲', des: '', symbolSize: 40, category: '冒烟' },
-      { name: '乙', des: '', symbolSize: 40, category: '冒烟' },
-      { name: '丙', des: '', symbolSize: 40, category: '冒烟' }
-    ],
-    links: [
-      { source: '甲', target: '乙', name: '相连', des: '' },
-      { source: '乙', target: '丙', name: '相连', des: '' }
-    ]
+    nodes: [{ name: '甲', des: '', symbolSize: 40, category: '冒烟' }],
+    links: []
   }),
   'utf-8'
 )
@@ -112,9 +110,24 @@ page2.on('console', (msg) => {
 await page2.waitForSelector('.graph3d-container', { timeout: 15_000 })
 await page2.waitForTimeout(1_500)
 
+// 2.1 新手教程防御：全新 userData 首次进图表页会自动开教程（dbdedea），
+//     其 onBeforeStart 置 siderVisible=true 会吃掉「编辑栏」按钮的翻转
+//     语义，遮罩还会拦画布探针点击——出现即点关闭（同真实用户跳过，
+//     stopTour 顺手写「看过」标记）；非首次环境无教程，超时静默通过
+try {
+  await page2.locator('.ant-tour-close').waitFor({ state: 'visible', timeout: 3_000 })
+  await page2.locator('.ant-tour-close').click()
+  await page2.waitForTimeout(300)
+} catch {
+  /* 教程未自动弹出，继续 */
+}
+
 // 3. 开侧边栏（编辑栏是最后一个工具栏按钮，同 smoke-chart-info），
-//    改简介置脏 → 断言脏链路（标题圆点）
-await page2.locator('.no-move-button').last().click()
+//    改简介置脏 → 断言脏链路（标题圆点）。侧栏已被教程前置打开时不再
+//    点（再点一下是收起）
+if (!(await page2.locator('.sider-style').isVisible())) {
+  await page2.locator('.no-move-button').last().click()
+}
 const textarea = page2.locator('.attr-panel textarea')
 await textarea.waitFor({ state: 'visible', timeout: 5_000 })
 await textarea.fill('自动保存冒烟：简介已修改')
@@ -126,11 +139,40 @@ expectOk(
   JSON.stringify(dirtyTitles)
 )
 
-// 4. 点「复位视图」把焦点移出 textarea（文本输入上下文会屏蔽 Insert 键），
-//    再按 Insert 打开「新建节点」表单，填一个未提交的节点名
-await page2.locator('.attr-panel button', { hasText: '复位视图' }).click()
-await page2.keyboard.press('Insert')
-// XkCreateNode 的名称框是该表单第一个 textarea（:visible 过滤掉 v-show 隐藏的其他表单）
+// 4. 探针点击画布命中节点（同 smoke-3d 的采样模式：中心+四向偏移，命中边
+//    继续探）→ onGraphNodeClick 把侧栏切到「当前节点」表单；在名称框填
+//    半截新名、不点确认——「正在打字、未提交」的编辑态，焦点留在框内
+//    （比原 Insert 流程的复位视图移焦点更贴近真实用户被打断的场景）
+const canvasBox = await page2.locator('.graph3d-container').boundingBox()
+if (!canvasBox) throw new Error('画布 boundingBox 不可得')
+const cx = canvasBox.x + canvasBox.width / 2
+const cy = canvasBox.y + canvasBox.height / 2
+await shot('00-canvas-before-probe')
+// 环形扫描采样：中心 + 半径按画布短边比例的三个环 × 8 向。3 节点小图
+// zoomToFit 撑满后节点散在外围，smoke-3d 的中心±70 网格（密图设计）全空
+const step = Math.round(Math.min(canvasBox.width, canvasBox.height) / 6)
+const probes = [[cx, cy]]
+for (const r of [step, step * 2, step * 3]) {
+  for (let a = 0; a < 8; a++) {
+    probes.push([cx + r * Math.cos((a * Math.PI) / 4), cy + r * Math.sin((a * Math.PI) / 4)])
+  }
+}
+let hitName = ''
+for (const [x, y] of probes) {
+  await page2.mouse.click(x, y)
+  await page2.waitForTimeout(400)
+  const probeState = await page2.evaluate(() => ({
+    node: document.querySelector('.graph3d-wrap')?.dataset.highlightNode ?? '',
+    edge: document.querySelector('.graph3d-wrap')?.dataset.highlightEdge ?? ''
+  }))
+  console.log(
+    `probe(${Math.round(x - cx)},${Math.round(y - cy)}): node="${probeState.node}" edge="${probeState.edge}"`
+  )
+  hitName = probeState.node
+  if (hitName) break
+}
+expectOk('探针命中节点（侧栏已切当前节点表单）', !!hitName, '五个探针均未命中节点/仅命中边')
+// XkCurrentNode 的名称框是该表单第一个 textarea（:visible 过滤掉 v-show 隐藏的其他表单）
 const nameArea = page2.locator('.sider-style form textarea:visible').first()
 await nameArea.waitFor({ state: 'visible', timeout: 5_000 })
 await nameArea.fill('冒烟半成品节点')
@@ -153,12 +195,12 @@ for (let i = 0; i < 20; i++) {
 expectOk('自动保存后标题圆点消失（脏已清）', saved)
 
 // 6. 核心断言：正在填写的表单不被清空、侧边栏不跳回属性面板。
-//    可见性断言用 :visible 定位器；值读取用 DOM 顺序定位器——XkCreateNode
+//    可见性断言用 :visible 定位器；值读取用 DOM 顺序定位器——XkCurrentNode
 //    是模板里第一个表单组件，其名称框即第一个 form textarea（v-show 隐藏
 //    不改变 DOM 存在性，被切走后仍可读值）
 await shot('02-after-autosave')
 expectOk(
-  '新建节点表单仍可见（未被切走）',
+  '当前节点表单仍可见（未被切走）',
   await page2.locator('.sider-style form textarea:visible').first().isVisible()
 )
 const keptName = await page2.locator('.sider-style form textarea').first().inputValue()
@@ -180,8 +222,10 @@ if (savedChart) {
     savedChart.description
   )
   expectOk(
-    '未提交的表单节点未入库（仍 3 节点）',
-    Array.isArray(savedChart.nodes) && savedChart.nodes.length === 3,
+    '未提交的名称修改未入库（仍 1 节点且无半成品名）',
+    Array.isArray(savedChart.nodes) &&
+      savedChart.nodes.length === 1 &&
+      savedChart.nodes.every((n) => n.name !== '冒烟半成品节点'),
     `nodes=${savedChart.nodes?.length}`
   )
 }
