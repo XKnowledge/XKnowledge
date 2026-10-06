@@ -227,3 +227,65 @@ describe('isTypingContext 守卫：跟动作走、不跟键走', () => {
     expect(actions.deleteNode).not.toHaveBeenCalled()
   })
 })
+
+describe('录制期间只读黑名单（isRecording 注入）', () => {
+  // 黑名单 = 改图/换图/换呈现；放行 = 保存/另存/复制/导出/搜索/录制项
+  const BLOCKED = [
+    ['create_node', 'createNode'],
+    ['delete_node', 'deleteNode'],
+    ['delete_edge', 'deleteEdge'],
+    ['delete_selection', 'deleteSelection'],
+    ['paste', 'pasteSelection'],
+    ['undo', 'undo'],
+    ['redo', 'redo'],
+    ['create_new_file', 'createNewFile'],
+    ['open_file', 'openFile'],
+    ['close_file', 'closeFile'],
+    ['start_tour', 'startTour']
+  ]
+
+  it.each(BLOCKED)('录制中 dispatch(%s) 被吞，编排层动作不执行', (actionName, fnName) => {
+    const { dispatch, actions } = setup({ isRecording: () => true })
+    dispatch(actionName)
+    expect(actions[fnName]).not.toHaveBeenCalled()
+  })
+
+  it.each(BLOCKED)('非录制期 dispatch(%s) 照常分发', (actionName, fnName) => {
+    const { dispatch, actions } = setup()
+    dispatch(actionName)
+    expect(actions[fnName]).toHaveBeenCalledTimes(1)
+  })
+
+  it('录制中 dispatch(open_settings)/dispatch(import_outline) 连 ref 直连项也吞', () => {
+    const ctx = setup({ isRecording: () => true })
+    ctx.dispatch('open_settings')
+    ctx.dispatch('import_outline')
+    expect(ctx.settingsRef.value.open).not.toHaveBeenCalled()
+    expect(ctx.outlineImportRef.value.open).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['save_file', 'saveFile'],
+    ['save_as', 'saveAs'],
+    ['copy', 'copySelection'],
+    ['export_html', 'onExportHtml'],
+    ['export_video', 'onExportVideo'],
+    ['screen_record', 'onToggleScreenRecord']
+  ])('录制中放行 %s（非修改非尺寸）', (actionName, fnName) => {
+    const { dispatch, actions } = setup({ isRecording: () => true })
+    dispatch(actionName)
+    expect(actions[fnName]).toHaveBeenCalledTimes(1)
+  })
+
+  it('录制中键盘路径同样被拦：Ctrl+Z 不撤销', () => {
+    const ctx = setup({ isRecording: () => true })
+    ctx.shortcut(keyEvent({ ctrlKey: true, key: 'z' }))
+    expect(ctx.actions.undo).not.toHaveBeenCalled()
+  })
+
+  it('录制中键盘放行：Ctrl+S 照常保存', () => {
+    const ctx = setup({ isRecording: () => true })
+    ctx.shortcut(keyEvent({ ctrlKey: true, key: 's' }))
+    expect(ctx.actions.saveFile).toHaveBeenCalledTimes(1)
+  })
+})

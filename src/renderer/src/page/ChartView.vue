@@ -25,6 +25,7 @@
                   type="link"
                   class="no-move-button"
                   :data-toolbar-action="item.action"
+                  :disabled="item.disabled"
                   @click="item.click"
                 >
                   <img :src="item.src" alt="" :style="{ width: '20px', height: '20px' }" />
@@ -35,8 +36,9 @@
               </a-space>
             </a-space>
           </a-layout-content>
-          <!-- 图表页经 enterChartMode 解锁窗口尺寸：最小化/最大化/关闭齐备 -->
-          <XkWindowControls sizable />
+          <!-- 图表页经 enterChartMode 解锁窗口尺寸：最小化/最大化/关闭齐备；
+               录制期间尺寸冻结（sizingLocked 禁最小化/最大化按钮） -->
+          <XkWindowControls sizable :sizing-locked="isRecording" />
         </a-layout>
       </a-layout-header>
       <a-layout>
@@ -67,7 +69,7 @@
             v-if="screenRecording"
             :paused="screenPaused"
             @toggle-pause="onToggleRecordPause"
-            @stop="onToggleScreenRecord"
+            @stop="doToggleScreenRecord"
           />
         </a-layout-content>
         <a-layout-sider v-show="siderVisible" class="sider-style">
@@ -295,6 +297,11 @@ const {
   onToggleScreenRecord,
   onToggleRecordPause
 } = useRecording(graph3dRef)
+
+// 录制期间只读谓词（环绕/录屏任一）：侧栏开合锁、工具栏编辑按钮禁、
+// dispatch 黑名单（useShortcuts）与 emit 双保险（useEditActions）的
+// 判定单源；XkGraph3D 内部手势守卫读组件自身 videoMode（同步翻转）
+const isRecording = computed(() => exportingVideo.value || screenRecording.value)
 
 // 图谱文档（chartData + 历史栈）的唯一持有者：编辑全部经意图方法进入，
 // onChange 是结构性变更的唯一出口——类目重算、置脏、高亮校准三个副作用
@@ -524,6 +531,8 @@ const onGraphBackgroundClick = () => {
 
 const switchSider = () => {
   // 当侧边栏收起的时候，直接点击图表，就回唤起侧边栏，这种情况下不能清空侧壁栏
+  // 录制期间锁开合：侧栏宽度是画布宽度的一部分，录制分辨率已在开录瞬间焊死
+  if (isRecording.value) return
   siderVisible.value = !siderVisible.value // 切换侧边栏的显示状态
 }
 
@@ -531,6 +540,8 @@ const toggleSider = () => {
   /**
    * 显示或者关闭侧边栏
    */
+  // 连带拦掉 resetRefData/resetSider 的面板重置（录制中被点不该清高亮）
+  if (isRecording.value) return
   const wasAttributeVisible = attributeVisible.value
   switchSider()
   // 如果是从打开到收起，一定会清空图表
@@ -590,7 +601,8 @@ const {
     resetSider()
     resetRefData()
   },
-  closeOutlineImport: () => outlineImportRef.value?.close()
+  closeOutlineImport: () => outlineImportRef.value?.close(),
+  isRecording: () => isRecording.value
 })
 
 // 新手教程状态机：open 的持有者与「看过一次」标记在 useTour；开启前的
@@ -602,6 +614,7 @@ const {
   start: startTour,
   stop: stopTour
 } = useTour(() => {
+  if (isRecording.value) return // 防御：教程入口录制中已禁，此处兜底不开侧栏
   resetSider()
   siderVisible.value = true
 })
@@ -609,6 +622,27 @@ const {
 /** 工具栏按钮与菜单项共用的可见入口：与画布双击同一条就地编辑器管道
  *  （机制不重复，门要多开）——视图中心为落点 */
 const createNodeAtCenter = () => graph3dRef.value?.openNodeEditorAtCenter()
+
+/** 开录前收拾（与环绕已有 closeEditor/closeSearch 并列）：先缩侧边栏，
+ *  再开始录制——侧栏宽度是画布宽度的一部分；收起同步完成后才进
+ *  onExportVideo 翻录制态（开合守卫不会拦到收起动作）。不走 toggleSider：
+ *  那是「编辑栏」按钮的智能切换，侧栏停在「当前节点/边」表单时它会把
+ *  侧栏切到属性页而非收起 */
+const collapseSiderForRecording = () => {
+  if (!siderVisible.value) return
+  siderVisible.value = false
+  resetRefData() // 含 downplayAllHightlight 与选中态清空
+  resetSider() // 面板回属性页默认态
+}
+const doExportVideo = async () => {
+  collapseSiderForRecording()
+  await onExportVideo()
+}
+const doToggleScreenRecord = async () => {
+  // 仅开录路径收侧栏；停止路径不需要
+  if (!screenRecording.value) collapseSiderForRecording()
+  await onToggleScreenRecord()
+}
 
 // 快捷键与菜单动作的统一分发（keydown 判定与菜单点击汇入同一 dispatch）：
 // 动作集由编排层从各 composable 汇入；keydown 监听的挂/卸在生命周期钩子里
@@ -634,24 +668,45 @@ const { shortcut, dispatch } = useShortcuts({
     undo,
     redo,
     onExportHtml,
-    onExportVideo,
-    onToggleScreenRecord,
+    onExportVideo: doExportVideo,
+    onToggleScreenRecord: doToggleScreenRecord,
     startTour
-  }
+  },
+  isRecording: () => isRecording.value
 })
 
 // 按钮名语言相关：computed 让语言切换后即时跟随（ref 常量不会刷新）。
-// action 是冒烟锚点（data-toolbar-action）
+// action 是冒烟锚点（data-toolbar-action）；录制期间四按钮全禁（建/删/删边
+// 是改图，编辑栏是侧栏开合——画布尺寸稳定性的另一半），与菜单黑名单同口径
 const buttonList = computed(() => [
   {
     src: CreateNodeIcon,
     name: t('chart.createNode'),
     action: 'create_node',
-    click: createNodeAtCenter
+    click: createNodeAtCenter,
+    disabled: isRecording.value
   },
-  { src: DeleteNodeIcon, name: t('chart.deleteNode'), action: 'delete_node', click: deleteNode },
-  { src: DeleteEdgeIcon, name: t('chart.deleteEdge'), action: 'delete_edge', click: deleteEdge },
-  { src: EditIcon, name: t('chart.editSider'), action: 'toggle_sider', click: toggleSider }
+  {
+    src: DeleteNodeIcon,
+    name: t('chart.deleteNode'),
+    action: 'delete_node',
+    click: deleteNode,
+    disabled: isRecording.value
+  },
+  {
+    src: DeleteEdgeIcon,
+    name: t('chart.deleteEdge'),
+    action: 'delete_edge',
+    click: deleteEdge,
+    disabled: isRecording.value
+  },
+  {
+    src: EditIcon,
+    name: t('chart.editSider'),
+    action: 'toggle_sider',
+    click: toggleSider,
+    disabled: isRecording.value
+  }
 ])
 
 // 图表区宽度不在此设定：由 antd flex 布局撑开；3D 图组件经

@@ -62,6 +62,14 @@ export const createWindow = (onWindowClosed, route = '') => {
   const webContentsId = current_window.webContents.id
   current_window.on('closed', () => {
     if (onWindowClosed) onWindowClosed(webContentsId)
+    recordingLocked.delete(webContentsId)
+  })
+
+  // 录制锁兜底：HMR/导航重载渲染层会让录制状态机丢失（unlock 永不到来），
+  // 导航开始即恢复解锁态。生产环境刷新已被 before-input-event 拦截，此
+  // 兜底纯防 dev 热重载
+  current_window.webContents.on('did-start-navigation', () => {
+    if (recordingLocked.has(webContentsId)) setRecordingLock(current_window, false)
   })
 
   current_window.on('ready-to-show', () => {
@@ -193,6 +201,31 @@ const lockSizing = (current_window) => {
   current_window.unmaximize()
   current_window.setMinimumSize(0, 0)
   current_window.setSize(900, 670)
+}
+
+// 录制锁：webContentsId -> true（环绕录制/录屏期间冻结窗口尺寸）。
+// 解锁恢复图表模式的解锁态；closed/did-start-navigation 清理防泄漏
+// （见 createWindow）
+const recordingLocked = new Map()
+
+/**
+ * 录制期间冻结窗口尺寸：只锁 resizable/maximizable/minimizable（最小化
+ * 会暂停 rAF，视频出现冻结段），不动当前尺寸与最小尺寸——与图表模式的
+ * unlockSizing/lockSizing 生命周期正交。录制只发生在图表页（解锁态），
+ * 解锁恢复三态 true 即回到该态。
+ */
+export const setRecordingLock = (win, lock) => {
+  if (!win || win.isDestroyed()) return
+  const id = win.webContents.id
+  if (lock) {
+    if (recordingLocked.has(id)) return // 重复锁幂等
+    recordingLocked.set(id, true)
+  } else if (!recordingLocked.delete(id)) {
+    return // 未锁时解锁为空操作
+  }
+  win.setMaximizable(!lock)
+  win.setMinimizable(!lock)
+  win.setResizable(!lock)
 }
 
 /**

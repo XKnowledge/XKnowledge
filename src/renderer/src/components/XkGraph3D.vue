@@ -295,6 +295,9 @@ const toLocal = (e) => {
 }
 
 const openEditor = (mode, cx, cy) => {
+  // 录制期间只读：双击/工具栏/连线落点全路径不开就地编辑器（组件层
+  // videoMode 即录制态单一来源，与 ChartView.isRecording 同步翻转）
+  if (videoMode.value) return
   const el = containerRef.value
   const pos = clampEditorPos(el.clientWidth, el.clientHeight, cx, cy)
   editor.value = { mode, x: pos.x, y: pos.y }
@@ -424,6 +427,9 @@ const onCanvasPointerDown = (e) => {
     return
   }
   // 普通拖让位 DragControls（移动节点）；主修饰键+拖才是连线（⌘/Ctrl 按平台）
+  // 录制期间连线手势不武装：拖了也无预览线，不给「能连」的错觉（框选在
+  // 前面的分支已放行——浏览操作）
+  if (videoMode.value) return
   if (!linkDragModifierActive(e, isDarwin)) return
   const { x: cx, y: cy } = toLocal(e)
   const hit = pickNearestNode(projectAllNodes(), cx, cy)
@@ -1022,6 +1028,7 @@ const exportVideo = async (durationMs = 10000) => {
   const target = graph.controls().target
   const look = { x: target.x, y: target.y, z: target.z }
   const restoreScale = applyRecordingScale()
+  window.electronAPI.recordingLock({ lock: true }).catch(() => {})
   const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
   const rec = createRecorder({ canvas: recCanvas, mimeType })
   const startTs = performance.now()
@@ -1054,8 +1061,10 @@ const exportVideo = async (durationMs = 10000) => {
   orbitCancel = null
   cancelAnimationFrame(raf)
   const blob = await rec.stop()
-  // 恢复交互与渲染分辨率（无论取消与否）
+  // 恢复交互与渲染分辨率（无论取消与否）；窗口尺寸锁同点解除——Esc 取消/
+  // 保存框取消/正常完成三路径共用这段收尾
   restoreScale()
+  window.electronAPI.recordingLock({ lock: false }).catch(() => {})
   for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.removeEventListener(ev, blockCanvasInput, true)
   window.removeEventListener('keydown', onOrbitEsc)
   videoMode.value = ''
@@ -1081,6 +1090,7 @@ const startScreenRecording = () => {
   closeEditor()
   videoMode.value = 'screen'
   const restoreScale = applyRecordingScale()
+  window.electronAPI.recordingLock({ lock: true }).catch(() => {})
   const { canvas: recCanvas, draw } = createRecordingCanvas(
     graph.renderer().domElement,
     sceneColors.value.watermark
@@ -1104,6 +1114,7 @@ const stopScreenRecording = async () => {
   // paused 态下 stop 合法（规范允许 paused→inactive，已录分片正常封包）
   const blob = await session.rec.stop()
   session.restoreScale()
+  window.electronAPI.recordingLock({ lock: false }).catch(() => {})
   const res = await saveVideoBlob(blob, session.ext)
   if (!res?.canceled) message.info(t('chart.recordingSaved'))
 }

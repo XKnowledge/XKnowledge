@@ -37,7 +37,30 @@ export interface UseShortcutsOptions {
     onToggleScreenRecord: () => Promise<void>
     startTour: () => void
   }
+  /** 录制期间只读判定（环绕/录屏任一进行中，ChartView 谓词单源注入）：
+   *  黑名单动作（改图/换图/换呈现）在 dispatch 入口直接吞掉 */
+  isRecording?: () => boolean
 }
+
+/** 录制期间禁的动作名单（判定口径「非修改非尺寸都允许」）：改图数据
+ *  （建/删/连/贴/撤/重做/大纲导入）、换录制对象（新建/打开/关闭文件）、
+ *  换呈现（设置弹窗改主题/语言）。放行：保存/另存/复制/导出图片/导出
+ *  HTML/搜索/录制互斥项（互斥禁用态另由 XkMenu 表达） */
+const RECORDING_BLOCKED_ACTIONS = new Set([
+  'create_node',
+  'delete_node',
+  'delete_edge',
+  'delete_selection',
+  'paste',
+  'undo',
+  'redo',
+  'import_outline',
+  'create_new_file',
+  'open_file',
+  'close_file',
+  'open_settings',
+  'start_tour'
+])
 
 /**
  * 键盘与菜单动作的统一分发：一个动作一个名字（actionName），
@@ -54,7 +77,8 @@ export function useShortcuts({
   selectionNodeNames,
   selectionLinkIndexes,
   currentEdgeDataIndex,
-  actions
+  actions,
+  isRecording = () => false
 }: UseShortcutsOptions) {
   // 动作注册表：编排层注入的函数 + ref 直连项（设置/大纲导入/导出 PNG/搜索
   // 无需经编排层转发）。dispatch 查表直调——不经任何中间状态。
@@ -83,8 +107,10 @@ export function useShortcuts({
     open_search: () => graph3dRef.value?.openSearch()
   }
 
-  /** 键盘与菜单的唯一分发入口：按动作名查表直调，缺项提示开发期错字 */
+  /** 键盘与菜单的唯一分发入口：按动作名查表直调，缺项提示开发期错字；
+   *  录制期间黑名单动作（改图/换图/换呈现）在查表前吞掉 */
   const dispatch = (actionName: string): void => {
+    if (isRecording() && RECORDING_BLOCKED_ACTIONS.has(actionName)) return
     const action = actionMap[actionName]
     if (action) {
       action()

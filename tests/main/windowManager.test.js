@@ -17,7 +17,8 @@ import {
   exitWorldMode,
   setWindowTitle,
   createChartWindow,
-  takePendingChart
+  takePendingChart,
+  setRecordingLock
 } from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
 
@@ -288,5 +289,58 @@ describe('createChartWindow / takePendingChart：新窗口图表暂存', () => {
     closedHandlers[0]()
     expect(takePendingChart(201)).toBeNull()
     expect(takePendingChart(202)).toEqual({ content: 'b', path: 'b.xk' })
+  })
+})
+
+describe('setRecordingLock：录制期间冻结窗口尺寸', () => {
+  // recordingLocked 是模块级 Map 且 vi.clearAllMocks() 清不掉（同
+  // chartModeWindows 惯例）——各用例独立 webContents.id 隔离
+  const recWindow = (id, overrides = {}) =>
+    fakeWindow({
+      webContents: { id, send: vi.fn(), isDestroyed: vi.fn(() => false) },
+      ...overrides
+    })
+
+  it('加锁冻结三态（resizable/maximizable/minimizable），不动尺寸', () => {
+    const win = recWindow(301)
+    setRecordingLock(win, true)
+    expect(win.setResizable).toHaveBeenCalledWith(false)
+    expect(win.setMaximizable).toHaveBeenCalledWith(false)
+    expect(win.setMinimizable).toHaveBeenCalledWith(false)
+    expect(win.setSize).not.toHaveBeenCalled()
+    expect(win.setMinimumSize).not.toHaveBeenCalled()
+    setRecordingLock(win, false) // 收尾解锁，防残留进后续用例
+  })
+
+  it('解锁恢复三态为 true（录制只在图表页发生，解锁即回图表模式态）', () => {
+    const win = recWindow(302)
+    setRecordingLock(win, true)
+    vi.clearAllMocks()
+    setRecordingLock(win, false)
+    expect(win.setResizable).toHaveBeenCalledWith(true)
+    expect(win.setMaximizable).toHaveBeenCalledWith(true)
+    expect(win.setMinimizable).toHaveBeenCalledWith(true)
+  })
+
+  it('重复加锁幂等（不重复 set）', () => {
+    const win = recWindow(303)
+    setRecordingLock(win, true)
+    vi.clearAllMocks()
+    setRecordingLock(win, true)
+    expect(win.setResizable).not.toHaveBeenCalled()
+    setRecordingLock(win, false)
+  })
+
+  it('未锁时解锁为空操作（不碰窗口）', () => {
+    const win = recWindow(304)
+    setRecordingLock(win, false)
+    expect(win.setResizable).not.toHaveBeenCalled()
+  })
+
+  it('窗口销毁/无效时直接返回不抛错', () => {
+    const win = recWindow(305, { isDestroyed: vi.fn(() => true) })
+    expect(() => setRecordingLock(win, true)).not.toThrow()
+    expect(win.setResizable).not.toHaveBeenCalled()
+    expect(() => setRecordingLock(null, true)).not.toThrow()
   })
 })

@@ -78,6 +78,9 @@ describe('preload：electronAPI 桥接面 → IPC 通道映射', () => {
     exposed.toggleMaximizeWindow()
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.APP_WINDOW_MAXIMIZE_TOGGLE)
 
+    exposed.recordingLock({ lock: true })
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.APP_RECORDING_LOCK, { lock: true })
+
     exposed.closeWindowRequest()
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.APP_CLOSE_WINDOW_REQUEST)
 

@@ -23,7 +23,8 @@ vi.mock('../../src/main/windowManager', () => ({
   enterWorldMode: vi.fn(() => ({ ok: true })),
   exitWorldMode: vi.fn(() => ({ ok: true })),
   takePendingChart: vi.fn(),
-  setWindowTitle: vi.fn()
+  setWindowTitle: vi.fn(),
+  setRecordingLock: vi.fn()
 }))
 
 vi.mock('../../src/main/exampleService', () => ({
@@ -53,6 +54,7 @@ import { saveHtmlFile } from '../../src/main/exportHtml'
 import { listExamples, openExample } from '../../src/main/exampleService'
 import * as worldIndex from '../../src/main/worldIndex'
 import { createChartWindow, takePendingChart, setWindowTitle } from '../../src/main/windowManager'
+import { setRecordingLock } from '../../src/main/windowManager'
 import * as windowManager from '../../src/main/windowManager'
 import { registerIpc } from '../../src/main/ipc'
 import { IPC } from '../../src/shared/ipc-channels'
@@ -70,6 +72,10 @@ const fakeWindow = (overrides = {}) => ({
   restore: vi.fn(),
   isMinimized: vi.fn(() => false),
   isDestroyed: vi.fn(() => false),
+  isResizable: vi.fn(() => true),
+  isMaximized: vi.fn(() => false),
+  maximize: vi.fn(),
+  unmaximize: vi.fn(),
   once: vi.fn(),
   setTitle: vi.fn(),
   ...overrides
@@ -611,5 +617,39 @@ describe('EXPORT_HTML_SAVE：交互式 HTML 导出', () => {
     // 断言聚焦在载荷透传
     expect(saveHtmlFile).toHaveBeenCalledTimes(1)
     expect(saveHtmlFile.mock.calls[0][1]).toEqual(payload)
+  })
+})
+
+describe('APP_RECORDING_LOCK：录制期间冻结窗口尺寸', () => {
+  it('lock:true 透传 setRecordingLock(win, true)', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    const res = await handlerOf(IPC.APP_RECORDING_LOCK)(senderOf(1), { lock: true })
+    expect(setRecordingLock).toHaveBeenCalledWith(win, true)
+    expect(res).toEqual({ ok: true })
+  })
+
+  it('lock 值布尔归一（truthy/falsy 均归一传递）', async () => {
+    BrowserWindow.fromWebContents.mockReturnValue(fakeWindow())
+    await handlerOf(IPC.APP_RECORDING_LOCK)(senderOf(1), { lock: 0 })
+    expect(setRecordingLock).toHaveBeenCalledWith(expect.anything(), false)
+  })
+})
+
+describe('APP_WINDOW_MAXIMIZE_TOGGLE：尺寸冻结期间防御拒绝', () => {
+  it('isResizable()=false（录制锁/首页锁）时不切换最大化', async () => {
+    const win = fakeWindow({ isResizable: vi.fn(() => false) })
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    const res = await handlerOf(IPC.APP_WINDOW_MAXIMIZE_TOGGLE)(senderOf(1))
+    expect(win.maximize).not.toHaveBeenCalled()
+    expect(win.unmaximize).not.toHaveBeenCalled()
+    expect(res).toEqual({ ok: true })
+  })
+
+  it('isResizable()=true 时照常切换', async () => {
+    const win = fakeWindow({ isMaximized: vi.fn(() => false) })
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    await handlerOf(IPC.APP_WINDOW_MAXIMIZE_TOGGLE)(senderOf(1))
+    expect(win.maximize).toHaveBeenCalledTimes(1)
   })
 })

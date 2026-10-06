@@ -110,7 +110,9 @@ await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
 await page.waitForTimeout(3_000) // 3D 引擎挂载 + 布局收敛 + 装载粗取景
 const N = Number(await nodeCount())
 expectTrue('示例图装载（节点 >= 2）', N >= 2, `节点 ${N}`)
-await page.locator('.no-move-button').nth(2).click() // 编辑栏开侧栏
+// 编辑栏开侧栏：显式锚点（d175e0b 后工具栏 4 按钮，原 nth(2) 已指向
+// 「删除连接」开侧栏失效）
+await page.locator('[data-toolbar-action="toggle_sider"]').click()
 await page.waitForTimeout(800)
 await page.locator('button', { hasText: '复位视图' }).click()
 await page.waitForTimeout(1_200) // zoomToFit 600ms 补间完成

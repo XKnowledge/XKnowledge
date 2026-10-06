@@ -3,12 +3,19 @@
        无法上下居中也无法与右缘留隙）。绝对定位于 53px 头部内：上下居中、
        右缘留隙。macOS 不渲染——那里保留原生红绿灯按钮，自绘会重复 -->
   <div v-if="!isDarwin" class="xk-window-controls">
-    <button v-if="sizable" class="xk-wc-btn" :title="$t('common.minimize')" @click="onMinimize">
+    <button
+      v-if="sizable"
+      class="xk-wc-btn"
+      :disabled="sizingLocked"
+      :title="$t('common.minimize')"
+      @click="onMinimize"
+    >
       <MinusOutlined />
     </button>
     <button
       v-if="sizable"
       class="xk-wc-btn"
+      :disabled="sizingLocked"
       :title="maximized ? $t('common.restore') : $t('common.maximize')"
       @click="onToggleMaximize"
     >
@@ -33,7 +40,11 @@ import { BorderOutlined, CloseOutlined, CopyOutlined, MinusOutlined } from '@ant
  * 新窗口创建即非最大化。
  */
 defineProps({
-  sizable: { type: Boolean, default: false }
+  sizable: { type: Boolean, default: false },
+  // 尺寸冻结（录制期间）：最小化/最大化按钮禁用。主进程另有防御拒绝
+  // （APP_WINDOW_MAXIMIZE_TOGGLE 查 isResizable），双保险覆盖 Win+方向键、
+  // 双击标题栏拖拽区等系统路径；最小化会暂停 rAF 使视频出现冻结段，同禁
+  sizingLocked: { type: Boolean, default: false }
 })
 
 const isDarwin = window.electronAPI.platform === 'darwin'

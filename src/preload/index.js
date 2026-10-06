@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   minimizeWindow: () => ipcRenderer.invoke(IPC.APP_WINDOW_MINIMIZE),
   toggleMaximizeWindow: () => ipcRenderer.invoke(IPC.APP_WINDOW_MAXIMIZE_TOGGLE),
+  recordingLock: (payload) => ipcRenderer.invoke(IPC.APP_RECORDING_LOCK, payload),
   closeWindowRequest: () => ipcRenderer.invoke(IPC.APP_CLOSE_WINDOW_REQUEST),
   onRequestClose: (callback) => {
     const listener = () => callback()

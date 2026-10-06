@@ -11,6 +11,7 @@ import {
   enterWorldMode,
   exitWorldMode,
   takePendingChart,
+  setRecordingLock,
   setWindowTitle
 } from './windowManager'
 import { computeTitles, composeWindowTitles } from './titleService'
@@ -195,7 +196,15 @@ export const registerIpc = () => {
   ipcMain.handle(IPC.APP_WINDOW_MAXIMIZE_TOGGLE, (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { ok: true }
+    // 尺寸冻结期间（录制锁/首页锁）不切换：isResizable 即冻结态
+    if (!win.isResizable()) return { ok: true }
     win.isMaximized() ? win.unmaximize() : win.maximize()
+    return { ok: true }
+  })
+
+  // 录制期间冻结窗口尺寸：渲染层录制状态机（XkGraph3D）在开录/收尾对称调用
+  ipcMain.handle(IPC.APP_RECORDING_LOCK, (event, { lock }) => {
+    setRecordingLock(BrowserWindow.fromWebContents(event.sender), !!lock)
     return { ok: true }
   })
 

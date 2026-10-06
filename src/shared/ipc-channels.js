@@ -42,6 +42,9 @@ export const IPC = {
   // 自绘窗口控制按钮（XkWindowControls，替代原生 titleBarOverlay）
   APP_WINDOW_MINIMIZE: 'app:window-minimize',
   APP_WINDOW_MAXIMIZE_TOGGLE: 'app:window-maximize-toggle',
+  // 录制期间冻结窗口尺寸（环绕录制/导出录屏：渲染层录制状态机对称调用，
+  // 主进程 setRecordingLock 冻结 resizable/maximizable/minimizable，不动尺寸）
+  APP_RECORDING_LOCK: 'app:recording-lock',
   // 走 close()：可被图表页「未保存确认」拦截——与原生标题栏 X 等价；
   // 区别于 APP_CLOSE_WINDOW（destroy()，确认后的直接关闭，绕过拦截）
   APP_CLOSE_WINDOW_REQUEST: 'app:close-window-request',

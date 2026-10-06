@@ -23,6 +23,10 @@ export interface UseEditActionsOptions {
   afterEdit: () => void
   /** 大纲导入完成后收起导入对话框 */
   closeOutlineImport: () => void
+  /** 录制期间只读判定（可选注入，默认恒 false）：画布直操建点/建边的
+   *  emit 入口双保险——组件层手势守卫（XkGraph3D）之外的再守一次，
+   *  防未来新增直发路径绕过 dispatch 与组件守卫 */
+  isRecording?: () => boolean
 }
 
 /**
@@ -40,7 +44,8 @@ export function useEditActions({
   selectionLinkIndexes,
   graph3dRef,
   afterEdit,
-  closeOutlineImport
+  closeOutlineImport,
+  isRecording = () => false
 }: UseEditActionsOptions) {
   const undo = () => {
     /**
@@ -164,6 +169,7 @@ export function useEditActions({
     des?: string
     world?: unknown
   }) => {
+    if (isRecording()) return
     const result = doc.createNode({
       name,
       des: des ?? '',
@@ -187,6 +193,7 @@ export function useEditActions({
     target: string
     name: string
   }) => {
+    if (isRecording()) return
     const result = doc.createEdge({ source, target, name: name ?? '', des: '' })
     if (result.ok === false) message.error(result.error)
   }

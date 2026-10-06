@@ -5,23 +5,23 @@
     </a>
     <template #overlay>
       <a-menu style="width: 200px">
-        <a-menu-item key="1" @click="dispatch('create_new_file')">
+        <a-menu-item key="1" :disabled="recording" @click="dispatch('create_new_file')">
           {{ $t('menu.newFile') }}
         </a-menu-item>
-        <a-menu-item key="2" @click="dispatch('open_file')">
+        <a-menu-item key="2" :disabled="recording" @click="dispatch('open_file')">
           {{ $t('menu.openFile') }}
         </a-menu-item>
-        <a-menu-item key="12" @click="dispatch('close_file')">
+        <a-menu-item key="12" :disabled="recording" @click="dispatch('close_file')">
           {{ $t('menu.closeFile') }}
         </a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="3" @click="dispatch('undo')">
+        <a-menu-item key="3" :disabled="recording" @click="dispatch('undo')">
           <a-row>
             <a-col flex="120px">{{ $t('keybinding.names.undo') }}</a-col>
             <a-col flex="auto">{{ undoLabel }}</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="4" @click="dispatch('redo')">
+        <a-menu-item key="4" :disabled="recording" @click="dispatch('redo')">
           <a-row>
             <a-col flex="120px">{{ $t('keybinding.names.redo') }}</a-col>
             <a-col flex="auto">{{ redoLabel }}</a-col>
@@ -31,16 +31,16 @@
         <!-- 创建节点：与工具栏按钮/画布双击同一条管道——菜单里删有建无的
              不对称修复（创建连接不加菜单项：二元操作只能武装成两击流，
              是模态，手势+触点提示已覆盖） -->
-        <a-menu-item key="17" @click="dispatch('create_node')">
+        <a-menu-item key="17" :disabled="recording" @click="dispatch('create_node')">
           {{ $t('chart.createNode') }}
         </a-menu-item>
-        <a-menu-item key="7" @click="dispatch('delete_node')">
+        <a-menu-item key="7" :disabled="recording" @click="dispatch('delete_node')">
           <a-row>
             <a-col flex="120px">{{ $t('chart.deleteNode') }}</a-col>
             <a-col flex="auto">Delete</a-col>
           </a-row>
         </a-menu-item>
-        <a-menu-item key="9" @click="dispatch('delete_edge')">
+        <a-menu-item key="9" :disabled="recording" @click="dispatch('delete_edge')">
           {{ $t('chart.deleteEdge') }}
         </a-menu-item>
         <a-menu-divider />
@@ -81,7 +81,7 @@
           </a-menu-item>
         </a-sub-menu>
         <a-menu-divider />
-        <a-menu-item key="14" @click="dispatch('import_outline')">
+        <a-menu-item key="14" :disabled="recording" @click="dispatch('import_outline')">
           {{ $t('menu.importOutline') }}
         </a-menu-item>
         <!-- 新手教程：录制中禁用——教程遮罩盖画布会毁录制画面 -->
@@ -93,7 +93,7 @@
         >
           {{ $t('menu.tour') }}
         </a-menu-item>
-        <a-menu-item key="13" @click="dispatch('open_settings')">
+        <a-menu-item key="13" :disabled="recording" @click="dispatch('open_settings')">
           {{ $t('common.settings') }}
         </a-menu-item>
       </a-menu>
@@ -115,11 +115,14 @@ const saveLabel = computed(() => formatBindingLabel(keybindings.value.save, isDa
 const menuTrigger = isDarwin ? ['click'] : ['hover']
 // 录制状态（导出子菜单的禁用/文案/danger 态）：ChartView 是单一来源，
 // 这里只读展示；动作分发与键盘快捷键共用 dispatch 入口（useShortcuts 提供）
-defineProps({
+const props = defineProps({
   exportingVideo: { type: Boolean, default: false },
   screenRecording: { type: Boolean, default: false },
   dispatch: { type: Function, required: true }
 })
+// 录制期间（环绕/录屏任一）：改图/换图/换呈现的菜单项全禁——与 dispatch
+// 黑名单（useShortcuts）同名单双保险；保留保存/另存为/导出图片/导出 HTML
+const recording = computed(() => props.exportingVideo || props.screenRecording)
 </script>
 
 <style scoped>
