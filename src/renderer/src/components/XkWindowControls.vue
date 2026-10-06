@@ -19,7 +19,13 @@
       :title="maximized ? $t('common.restore') : $t('common.maximize')"
       @click="onToggleMaximize"
     >
-      <CopyOutlined v-if="maximized" />
+      <!-- Windows「向下还原」形自绘：两个等大方框错位叠放，后框被前框
+           遮住只画可见 L 形（path）。antd 图标库无还原图标，此前借
+           CopyOutlined 是复制语义（观感像复制按钮），改自绘与系统观感对齐 -->
+      <svg v-if="maximized" class="xk-wc-restore-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 4.5H19.5V15H15V9H9Z" />
+        <rect x="4.5" y="9" width="10.5" height="10.5" />
+      </svg>
       <BorderOutlined v-else />
     </button>
     <button class="xk-wc-btn" :title="$t('common.close')" @click="onClose">
@@ -30,7 +36,7 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
-import { BorderOutlined, CloseOutlined, CopyOutlined, MinusOutlined } from '@ant-design/icons-vue'
+import { BorderOutlined, CloseOutlined, MinusOutlined } from '@ant-design/icons-vue'
 
 /**
  * sizable：是否显示最小化/最大化（图表页与世界树页经 enterXxxMode 解锁
@@ -98,5 +104,17 @@ const onClose = () => window.electronAPI.closeWindowRequest()
 .xk-wc-btn:hover {
   background: var(--xk-hover);
   color: var(--xk-text);
+}
+
+/* 自绘还原图标：16px 大于 antd 的 14px（14/15 观感偏小）；笔画 1.6
+   （24 viewBox 折算 ≈1.07px，视觉粗细对齐 antd outline）；miter 方角贴合
+   Windows 观感 */
+.xk-wc-restore-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: miter;
 }
 </style>
