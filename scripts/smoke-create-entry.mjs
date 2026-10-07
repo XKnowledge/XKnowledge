@@ -184,7 +184,7 @@ expectTrue(
 )
 
 // 5. 第三扇门：菜单「创建节点」——与删除节点同组（菜单里删有建无的不对称
-//    修复），经 shortcutActive/shortcutWatch 分发到同一 createNodeAtCenter
+//    修复），经 dispatch('create_node') 分发到同一 createNodeAtCenter
 await page.locator('.sider-menu-style a').hover() // Windows trigger=hover
 await page.locator('.ant-dropdown-menu-item', { hasText: '创建节点' }).click()
 expectTrue('菜单「创建节点」打开建点编辑器', await waitEditorCount('node', 1))

@@ -35,18 +35,11 @@ try {
 }
 const page = await app.firstWindow()
 page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
-// antd Tour 贴边目标固噪白名单：vc-tour Mask 的 COVER 透明 rect 直接拿
-// pos.left/pos.top 当宽高，而 pos 是目标 rect 外扩 gap 6 的结果——贴窗口
-// 边缘的目标（菜单图标 left/top=0，DPI 亚像素 -0.4）会算出 width/height
-// ≈ -6。浏览器忽略负 rect、遮罩渲染无损（antd Vue 4.2.6 无上游修复），
-// 不算应用错误（对照实验：不开教程的空图 0 错误）
-const isKnownTourNoise = (text) =>
-  /^Error: <rect> attribute (width|height): A negative value is not valid\./.test(text)
+// 注：rendering 级 SVG 报错（如 <rect> 负宽高）page.on('console') 收不到，
+// 需 CDP Log.entryAdded（15a4cf9 的诊断先例）；教程贴边锚点的负值报错
+// 已在该提交从源头修复（锚点换离边元素），无需白名单
 page.on('console', (msg) => {
-  if (msg.type() === 'error') {
-    const text = msg.text()
-    if (!isKnownTourNoise(text)) errors.push(`console.error: ${text}`)
-  }
+  if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`)
 })
 
 const shot = async (name) => {

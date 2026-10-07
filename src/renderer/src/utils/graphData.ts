@@ -48,7 +48,7 @@ export const SEARCH_ACTIVE_COLOR = SCENE_COLORS.light.active
 
 /**
  * 图谱节点（chartData 纯数据形态；symbolSize 在防御性代码中可缺）。
- * 域类型的唯一出处：graphMerge/historyActions/outlineParser/store 等
+ * 域类型的唯一出处：graphMerge/historyOps/outlineParser/store 等
  * 经 `import type` 引用，避免形状多处漂移。
  */
 export interface GraphNode {
@@ -135,7 +135,7 @@ export const mergeGraphNodes = (
 export const linkEnd = (v: LinkEnd): string =>
   typeof v === 'object' && v !== null ? v.name : (v as string)
 
-/** 边的三元组键：两端名 + 边名（顺序敏感），与 historyActions.sameEdge 同语义。
+/** 边的三元组键：两端名 + 边名（顺序敏感），与 historyOps.sameEdge 同语义。
  *  框选批量边的选中集用它做成员判定——多重边（同端点对不同边名）天然区分 */
 export const linkKey = (l: { source: LinkEnd; target: LinkEnd; name?: string }): string =>
   `${linkEnd(l.source)}\u0000${linkEnd(l.target)}\u0000${l.name}`

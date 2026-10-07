@@ -76,6 +76,8 @@ export interface ElectronApi {
   platform: string
   minimizeWindow(): Promise<{ ok: true }>
   toggleMaximizeWindow(): Promise<{ ok: true }>
+  /** 录制期间冻结窗口尺寸（resizable/maximizable/minimizable），开录/收尾对称调用 */
+  recordingLock(payload: { lock: boolean }): Promise<{ ok: true }>
   /** 走 close()：图表页的未保存确认拦截照常生效 */
   closeWindowRequest(): Promise<{ ok: true }>
   onRequestClose(callback: () => void): () => void

@@ -122,11 +122,12 @@ try {
   /* 教程未自动弹出，继续 */
 }
 
-// 3. 开侧边栏（编辑栏是最后一个工具栏按钮，同 smoke-chart-info），
+// 3. 开侧边栏（编辑栏按钮用显式锚点，同 dd305ae 对 smoke-keybindings 的
+//    修法——位置锚点在工具栏增删按钮后会漂移到别的按钮），
 //    改简介置脏 → 断言脏链路（标题圆点）。侧栏已被教程前置打开时不再
 //    点（再点一下是收起）
 if (!(await page2.locator('.sider-style').isVisible())) {
-  await page2.locator('.no-move-button').last().click()
+  await page2.locator('[data-toolbar-action="toggle_sider"]').click()
 }
 const textarea = page2.locator('.attr-panel textarea')
 await textarea.waitFor({ state: 'visible', timeout: 5_000 })
@@ -139,17 +140,17 @@ expectOk(
   JSON.stringify(dirtyTitles)
 )
 
-// 4. 探针点击画布命中节点（同 smoke-3d 的采样模式：中心+四向偏移，命中边
-//    继续探）→ onGraphNodeClick 把侧栏切到「当前节点」表单；在名称框填
-//    半截新名、不点确认——「正在打字、未提交」的编辑态，焦点留在框内
-//    （比原 Insert 流程的复位视图移焦点更贴近真实用户被打断的场景）
+// 4. 探针点击画布命中节点（采样为下方环形扫描——smoke-3d 的中心±70 网格
+//    是密图设计，本图全空）→ onGraphNodeClick 把侧栏切到「当前节点」表单；
+//    在名称框填半截新名、不点确认——「正在打字、未提交」的编辑态，焦点
+//    留在框内（比原 Insert 流程的复位视图移焦点更贴近真实用户被打断的场景）
 const canvasBox = await page2.locator('.graph3d-container').boundingBox()
 if (!canvasBox) throw new Error('画布 boundingBox 不可得')
 const cx = canvasBox.x + canvasBox.width / 2
 const cy = canvasBox.y + canvasBox.height / 2
 await shot('00-canvas-before-probe')
-// 环形扫描采样：中心 + 半径按画布短边比例的三个环 × 8 向。3 节点小图
-// zoomToFit 撑满后节点散在外围，smoke-3d 的中心±70 网格（密图设计）全空
+// 环形扫描采样：中心 + 半径按画布短边比例的三个环 × 8 向（共 25 个探针）。
+// 单节点图 zoomToFit 后必居画布中部，中心探针确定性命中，外环为兜底
 const step = Math.round(Math.min(canvasBox.width, canvasBox.height) / 6)
 const probes = [[cx, cy]]
 for (const r of [step, step * 2, step * 3]) {
@@ -171,7 +172,7 @@ for (const [x, y] of probes) {
   hitName = probeState.node
   if (hitName) break
 }
-expectOk('探针命中节点（侧栏已切当前节点表单）', !!hitName, '五个探针均未命中节点/仅命中边')
+expectOk('探针命中节点（侧栏已切当前节点表单）', !!hitName, '25 个探针均未命中节点/仅命中边')
 // XkCurrentNode 的名称框是该表单第一个 textarea（:visible 过滤掉 v-show 隐藏的其他表单）
 const nameArea = page2.locator('.sider-style form textarea:visible').first()
 await nameArea.waitFor({ state: 'visible', timeout: 5_000 })

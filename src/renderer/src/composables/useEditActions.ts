@@ -32,7 +32,7 @@ export interface UseEditActionsOptions {
 /**
  * 图谱编辑动作的 UI 编排：撤销/重做、三路删除、复制/粘贴、大纲导入与
  * 画布直操建点建边。数据变换、校验与历史在 useDocument（补偿语义在
- * utils/historyActions、合并语义在 utils/graphMerge，多重边安全），
+ * utils/historyOps、合并语义在 utils/graphMerge，多重边安全），
  * 这里只做选中态读取、播报（画布直操错误走全局 message；侧栏表单错误
  * 由 ChartView 回显红条）与面板复位（afterEdit）。
  */

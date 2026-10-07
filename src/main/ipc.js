@@ -202,9 +202,11 @@ export const registerIpc = () => {
     return { ok: true }
   })
 
-  // 录制期间冻结窗口尺寸：渲染层录制状态机（XkGraph3D）在开录/收尾对称调用
-  ipcMain.handle(IPC.APP_RECORDING_LOCK, (event, { lock }) => {
-    setRecordingLock(BrowserWindow.fromWebContents(event.sender), !!lock)
+  // 录制期间冻结窗口尺寸：渲染层录制状态机（XkGraph3D）在开录/收尾对称
+  // 调用。payload 缺省的 invoke 在解构 undefined 时会抛 TypeError（转为
+  // invoke 拒绝、被渲染层 catch 吞掉无症状），防御性归一
+  ipcMain.handle(IPC.APP_RECORDING_LOCK, (event, payload) => {
+    setRecordingLock(BrowserWindow.fromWebContents(event.sender), !!payload?.lock)
     return { ok: true }
   })
 
