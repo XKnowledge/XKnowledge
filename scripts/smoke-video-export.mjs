@@ -83,6 +83,23 @@ const waitForToast = async (text, timeout = 5000) => {
 
 const recordingState = () =>
   page.evaluate(() => document.querySelector('.graph3d-wrap')?.dataset.videoRecording ?? '')
+// 录制画布尺寸与活体源画布一致：收侧栏的 DOM 重排须先于录制画布定尺寸，
+// 否则 recCanvas 焊死收起前宽度、drawImage 无目标尺寸裁掉右缘（评审
+// Critical #1 的回归位）。data-recording-buffer 由 XkGraph3D 在创建录制
+// 画布时写入「宽x高」；失败时 detail 带实测值便于定位
+const assertRecBufferMatches = async (label) => {
+  const info = await page.evaluate(() => {
+    const buf = document.querySelector('.graph3d-wrap')?.dataset.recordingBuffer
+    const canvases = [...document.querySelectorAll('.graph3d-wrap canvas')]
+    return {
+      buf,
+      canvases: canvases.map((c) => `${c.width}x${c.height}(css ${c.clientWidth}x${c.clientHeight})`)
+    }
+  })
+  const c0 = info.canvases[0] ?? ''
+  const ok = !!info.buf && info.canvases.length > 0 && parseInt(info.buf.split('x')[0], 10) === parseInt(c0.split('x')[0], 10)
+  check(label, ok, `buf=${info.buf} canvases=[${info.canvases.join(', ')}]`)
+}
 // 导出入口已收进左上角菜单「导出」子菜单：data 锚点随按钮迁到菜单项（li）上，
 // 复位视图按钮仍在侧栏属性面板
 const exportItem = page.locator('[data-export-video]')
@@ -190,6 +207,7 @@ check('orbit-reset-view-disabled', await resetBtn.isDisabled())
 await closeExportMenu()
 // 只读锁定：侧栏强制收起（开录前 1.1 开着的）+ 窗口尺寸冻结 + 菜单黑名单
 check('orbit-sider-collapsed', !(await page.locator('.sider-style').isVisible()))
+await assertRecBufferMatches('orbit-rec-buffer-matches-canvas')
 check('orbit-window-frozen', (await windowResizable()) === false)
 await assertMenuReadonly('orbit')
 await shot('02a-orbit-start')
@@ -228,6 +246,7 @@ await recordItem.click()
 await page.waitForTimeout(500)
 check('screen-anchor', (await recordingState()) === 'screen')
 check('screen-sider-forced-collapse', !(await page.locator('.sider-style').isVisible()))
+await assertRecBufferMatches('screen-rec-buffer-matches-canvas')
 
 // 6.1 控制卡片：录屏中出现（悬浮画布右下角，暂停/结束两 icon 按钮 + ⠿ 手柄）
 const card = page.locator('[data-recording-card]')
@@ -384,6 +403,18 @@ check(
     .getAttribute('data-video-recording')) === 'screen'
 )
 check('form-sider-forced-collapse', !(await page2.locator('.sider-style').isVisible()))
+// 录制全程侧栏锁定收起：录屏进行中点中心单节点（onGraphNodeClick 的
+// switchSider 唤起路径被 isRecording 守卫拦下），侧栏不得弹出——侧栏
+// 宽度是画布宽度的一部分，弹出即改录制画面尺寸。此窗口中心点击已在
+// 前置循环证实可命中节点，点两次抗库层 hover 轮询吞 click
+await page2.mouse.click(formBox.x + formBox.width / 2, formBox.y + formBox.height / 2)
+await page2.waitForTimeout(400)
+await page2.mouse.click(formBox.x + formBox.width / 2, formBox.y + formBox.height / 2)
+await page2.waitForTimeout(400)
+check(
+  'form-recording-node-click-sider-stays-collapsed',
+  !(await page2.locator('.sider-style').isVisible())
+)
 
 await shot('03-final')
 

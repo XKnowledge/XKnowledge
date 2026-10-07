@@ -624,10 +624,11 @@ const {
 const createNodeAtCenter = () => graph3dRef.value?.openNodeEditorAtCenter()
 
 /** 开录前收拾（与环绕已有 closeEditor/closeSearch 并列）：先缩侧边栏，
- *  再开始录制——侧栏宽度是画布宽度的一部分；收起同步完成后才进
- *  onExportVideo 翻录制态（开合守卫不会拦到收起动作）。不走 toggleSider：
- *  那是「编辑栏」按钮的智能切换，侧栏停在「当前节点/边」表单时它会把
- *  侧栏切到属性页而非收起 */
+ *  再开始录制——侧栏宽度是画布宽度的一部分，收起重排必须在录制画布定
+ *  尺寸前落定（等待由 XkGraph3D 的 waitForCanvasStable 承担：重排 → RO →
+ *  库内 debounce 重设是跨任务链，帧数不定）。不走 toggleSider：那是
+ *  「编辑栏」按钮的智能切换，侧栏停在「当前节点/边」表单时它会把侧栏
+ *  切到属性页而非收起 */
 const collapseSiderForRecording = () => {
   if (!siderVisible.value) return
   siderVisible.value = false
@@ -636,11 +637,15 @@ const collapseSiderForRecording = () => {
 }
 const doExportVideo = async () => {
   collapseSiderForRecording()
-  await onExportVideo()
+  await onExportVideo() // exportVideo 本体先等画布缓冲尺寸稳定再定录制尺寸
 }
 const doToggleScreenRecord = async () => {
-  // 仅开录路径收侧栏；停止路径不需要
-  if (!screenRecording.value) collapseSiderForRecording()
+  // 仅开录路径：收侧栏 + 等画布尺寸稳定（停止路径不需要）。startScreenRecording
+  // 是同步签名，等待经 expose 的 waitForCanvasStable 在编排层完成
+  if (!screenRecording.value) {
+    collapseSiderForRecording()
+    await graph3dRef.value?.waitForCanvasStable()
+  }
   await onToggleScreenRecord()
 }
 

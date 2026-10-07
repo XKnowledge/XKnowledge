@@ -9,6 +9,7 @@
     :data-highlight-edge="highlightLink?.name ?? ''"
     :data-selection-count="selectionNodes.length + selectionLinks.length"
     :data-video-recording="videoMode"
+    :data-recording-buffer="recordingBuffer"
   >
     <!-- 3D 库独占挂载点：three-render-objects 初始化时 innerHTML='' 清空本容器，
          Vue 渲染的覆盖层必须放外面，否则冷启动时被库吞掉（HMR 补 DOM 会造成
@@ -955,6 +956,9 @@ const resetView = () => {
 // 录制状态：'' 无 | 'orbit' 环绕动画 | 'screen' 实时录屏，两态互斥；
 // data-video-recording 锚点供冒烟断言
 const videoMode = ref('')
+// 录制画布缓冲尺寸「宽x高」（data-recording-buffer 冒烟锚点）：创建录制
+// 画布时写入、收尾清空——断言录制画布的定尺寸时刻晚于收侧栏的布局重排
+const recordingBuffer = ref('')
 // 环绕录制 Esc 取消信号（resolve 定长等待 Promise）
 let orbitCancel = null
 // 录屏会话句柄（stopScreenRecording 消费后清空）
@@ -1011,6 +1015,34 @@ const ORBIT_SWEEP = Math.PI * 2
  *  cameraPosition 双参 setter 无动画立即生效。锁交互靠 capture 截断
  *  （库层监听均为 bubble）+ 侧栏视角/布局入口禁用（ChartView 层）；
  *  水印与 PNG 单源；Esc 中途取消丢弃产物 */
+/** 等画布缓冲尺寸稳定（连续 CANVAS_STABLE_FRAMES 帧不变；CANVAS_WAIT_MAX_FRAMES
+ *  帧兜底防病态抖动挂死）：侧栏收起/窗口缩放的重排经 ResizeObserver →
+ *  Kapsule debounce(1ms) digest → setSize 是跨任务链、帧数不定（实测双 rAF
+ *  盖不住）——开录前等 canvas.width/height 不再变化，录制画布才按最终
+ *  尺寸定宽，否则按旧宽焊死、右缘裁剪。无布局变化时 ~3 帧即返回（约 50ms） */
+const CANVAS_STABLE_FRAMES = 3
+const CANVAS_WAIT_MAX_FRAMES = 60
+const waitForCanvasStable = () =>
+  new Promise((resolve) => {
+    if (!graph) return resolve()
+    const el = graph.renderer().domElement
+    let lastW = -1
+    let lastH = -1
+    let stable = 0
+    let waited = 0
+    const tick = () => {
+      const w = el.width
+      const h = el.height
+      stable = w === lastW && h === lastH ? stable + 1 : 0
+      lastW = w
+      lastH = h
+      waited++
+      if (stable >= CANVAS_STABLE_FRAMES || waited >= CANVAS_WAIT_MAX_FRAMES) resolve()
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+
 const exportVideo = async (durationMs = 10000) => {
   if (!graph || videoMode.value) return
   const picked = pickMimeType()
@@ -1023,58 +1055,76 @@ const exportVideo = async (durationMs = 10000) => {
   closeSearch() // 搜索开着会被命中跳转抢走相机
   videoMode.value = 'orbit'
   const canvasEl = graph.renderer().domElement
-  for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.addEventListener(ev, blockCanvasInput, true)
-  window.addEventListener('keydown', onOrbitEsc)
-  const target = graph.controls().target
-  const look = { x: target.x, y: target.y, z: target.z }
-  const restoreScale = applyRecordingScale()
-  window.electronAPI.recordingLock({ lock: true }).catch(() => {})
-  const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
-  const rec = createRecorder({ canvas: recCanvas, mimeType })
-  const startTs = performance.now()
-  let swept = 0
-  let raf = requestAnimationFrame(function loop() {
-    const t = Math.min(1, (performance.now() - startTs) / durationMs)
-    const angle = ORBIT_SWEEP * t - swept
-    swept += angle
-    const cam = graph.cameraPosition()
-    const dx = cam.x - look.x
-    const dz = cam.z - look.z
-    const cos = Math.cos(angle)
-    const sin = Math.sin(angle)
-    graph.cameraPosition(
-      { x: look.x + dx * cos - dz * sin, y: cam.y, z: look.z + dx * sin + dz * cos },
-      look
-    )
-    draw()
-    raf = requestAnimationFrame(loop)
-  })
+  // 收尾件声明在 try 外：装配/录制任一环抛错（编码器失败等）时 finally 仍
+  // 能解锁窗口、摘监听、清录制态——否则 videoMode 卡 'orbit'（互斥守卫使
+  // 两种录制都开不了）+ 窗口永久冻结 + 输入截断监听残留
+  let restoreScale = null
+  let raf = 0
   let cancelled = false
-  await new Promise((resolve) => {
-    const timer = setTimeout(resolve, durationMs)
-    orbitCancel = () => {
-      cancelled = true
-      clearTimeout(timer)
-      resolve()
-    }
-  })
-  orbitCancel = null
-  cancelAnimationFrame(raf)
-  const blob = await rec.stop()
-  // 恢复交互与渲染分辨率（无论取消与否）；窗口尺寸锁同点解除——Esc 取消/
-  // 保存框取消/正常完成三路径共用这段收尾
-  restoreScale()
-  window.electronAPI.recordingLock({ lock: false }).catch(() => {})
-  for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.removeEventListener(ev, blockCanvasInput, true)
-  window.removeEventListener('keydown', onOrbitEsc)
-  videoMode.value = ''
+  let blob = null
+  try {
+    for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.addEventListener(ev, blockCanvasInput, true)
+    window.addEventListener('keydown', onOrbitEsc)
+    // 开录前等画布缓冲尺寸稳定（收侧栏重排的跨任务重设链走完）再定录制尺寸
+    await waitForCanvasStable()
+    const target = graph.controls().target
+    const look = { x: target.x, y: target.y, z: target.z }
+    restoreScale = applyRecordingScale()
+    window.electronAPI.recordingLock({ lock: true }).catch(() => {})
+    const { canvas: recCanvas, draw } = createRecordingCanvas(canvasEl, sceneColors.value.watermark)
+    recordingBuffer.value = `${recCanvas.width}x${recCanvas.height}`
+    const rec = createRecorder({ canvas: recCanvas, mimeType })
+    const startTs = performance.now()
+    let swept = 0
+    raf = requestAnimationFrame(function loop() {
+      const t = Math.min(1, (performance.now() - startTs) / durationMs)
+      const angle = ORBIT_SWEEP * t - swept
+      swept += angle
+      const cam = graph.cameraPosition()
+      const dx = cam.x - look.x
+      const dz = cam.z - look.z
+      const cos = Math.cos(angle)
+      const sin = Math.sin(angle)
+      graph.cameraPosition(
+        { x: look.x + dx * cos - dz * sin, y: cam.y, z: look.z + dx * sin + dz * cos },
+        look
+      )
+      draw()
+      raf = requestAnimationFrame(loop)
+    })
+    await new Promise((resolve) => {
+      const timer = setTimeout(resolve, durationMs)
+      orbitCancel = () => {
+        cancelled = true
+        clearTimeout(timer)
+        resolve()
+      }
+    })
+    orbitCancel = null
+    cancelAnimationFrame(raf)
+    blob = await rec.stop()
+  } finally {
+    // 恢复交互与渲染分辨率（无论取消/异常与否）；窗口尺寸锁同点解除——
+    // Esc 取消/保存框取消/正常完成/装配与录制异常四路径共用这段收尾
+    if (raf) cancelAnimationFrame(raf)
+    orbitCancel = null
+    if (restoreScale) restoreScale()
+    window.electronAPI.recordingLock({ lock: false }).catch(() => {})
+    for (const ev of ORBIT_BLOCK_EVENTS) canvasEl.removeEventListener(ev, blockCanvasInput, true)
+    window.removeEventListener('keydown', onOrbitEsc)
+    videoMode.value = ''
+    recordingBuffer.value = ''
+  }
   if (cancelled) {
     message.info(t('chart.recordingCancelled'))
     return
   }
-  // 主进程保存框：用户在框里取消（canceled）时静默返回，不视为错误
-  const res = await saveVideoBlob(blob, ext)
-  if (!res?.canceled) message.info(t('chart.videoExported'))
+  // 主进程保存框：用户在框里取消（canceled）时静默返回，不视为错误；
+  // 异常路径 blob 为 null，跳过保存
+  if (blob) {
+    const res = await saveVideoBlob(blob, ext)
+    if (!res?.canceled) message.info(t('chart.videoExported'))
+  }
 }
 
 /** 实时录屏：同一合成管线（水印单源）但不锁交互不转相机——录的正是用户
@@ -1089,20 +1139,32 @@ const startScreenRecording = () => {
   }
   closeEditor()
   videoMode.value = 'screen'
-  const restoreScale = applyRecordingScale()
-  window.electronAPI.recordingLock({ lock: true }).catch(() => {})
-  const { canvas: recCanvas, draw } = createRecordingCanvas(
-    graph.renderer().domElement,
-    sceneColors.value.watermark
-  )
-  const rec = createRecorder({ canvas: recCanvas, mimeType: picked[0] })
-  let raf = requestAnimationFrame(function loop() {
-    if (videoMode.value !== 'screen') return
-    draw()
-    raf = requestAnimationFrame(loop)
-  })
-  screenSession = { rec, raf, ext: picked[1], restoreScale }
-  return true
+  // 装配失败（编码器创建等）当场还原录制态+解锁再抛出——会话未建立时无人
+  // 收尾；不能用 finally（成功路径会话存续到 stopScreenRecording 才收尾）
+  let restoreScale = null
+  try {
+    restoreScale = applyRecordingScale()
+    window.electronAPI.recordingLock({ lock: true }).catch(() => {})
+    const { canvas: recCanvas, draw } = createRecordingCanvas(
+      graph.renderer().domElement,
+      sceneColors.value.watermark
+    )
+    recordingBuffer.value = `${recCanvas.width}x${recCanvas.height}`
+    const rec = createRecorder({ canvas: recCanvas, mimeType: picked[0] })
+    let raf = requestAnimationFrame(function loop() {
+      if (videoMode.value !== 'screen') return
+      draw()
+      raf = requestAnimationFrame(loop)
+    })
+    screenSession = { rec, raf, ext: picked[1], restoreScale }
+    return true
+  } catch (e) {
+    if (restoreScale) restoreScale()
+    window.electronAPI.recordingLock({ lock: false }).catch(() => {})
+    videoMode.value = ''
+    recordingBuffer.value = ''
+    throw e
+  }
 }
 
 const stopScreenRecording = async () => {
@@ -1111,10 +1173,16 @@ const stopScreenRecording = async () => {
   screenSession = null
   videoMode.value = '' // 先清态：停 rAF 循环
   cancelAnimationFrame(session.raf)
-  // paused 态下 stop 合法（规范允许 paused→inactive，已录分片正常封包）
-  const blob = await session.rec.stop()
-  session.restoreScale()
-  window.electronAPI.recordingLock({ lock: false }).catch(() => {})
+  // paused 态下 stop 合法（规范允许 paused→inactive，已录分片正常封包）；
+  // stop 抛错也要解锁窗口（finally），保存只在拿到 blob 后进行
+  let blob = null
+  try {
+    blob = await session.rec.stop()
+  } finally {
+    session.restoreScale()
+    window.electronAPI.recordingLock({ lock: false }).catch(() => {})
+    recordingBuffer.value = ''
+  }
   const res = await saveVideoBlob(blob, session.ext)
   if (!res?.canceled) message.info(t('chart.recordingSaved'))
 }
@@ -1132,6 +1200,7 @@ defineExpose({
   setRepulsion,
   exportPng,
   exportVideo,
+  waitForCanvasStable,
   startScreenRecording,
   stopScreenRecording,
   pauseScreenRecording,
