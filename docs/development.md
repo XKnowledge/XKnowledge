@@ -38,7 +38,7 @@ yarn dev         # 开发模式启动（electron-vite dev --watch，DevTools 自
 1. `yarn test` —— 单元测试全绿（约 2 秒，没有理由跳过）；
 2. `yarn typecheck` —— vue-tsc 无错；
 3. `npx eslint .` —— 无 lint 问题；
-4. `npx prettier --write .` —— 格式化改动文件（CI 与仓库风格以 prettier 为准）；
+4. `npx prettier --write .` —— 格式化改动文件（README.md 与 docs/architecture.md 为手工排版、已入 `.prettierignore`；CI 不跑 prettier，格式自律靠提交时执行本步）；
 5. UI / 交互改动跑对应的冒烟脚本（见 §4.2）。
 
 几条贯穿全仓的约定（背景与理由见 [软件结构文档](./architecture.md)）：
@@ -54,7 +54,7 @@ yarn dev         # 开发模式启动（electron-vite dev --watch，DevTools 自
 
 ### 4.1 单元测试（`yarn test`）
 
-vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒跑完。截至 v2.5.0 为 484 用例 / 34 文件（数量随版本增长，以 `yarn test` 输出为准），按被测层分目录：
+vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒跑完。截至 v2.5.0 为 609 用例 / 40 文件（数量随版本增长，以 `yarn test` 输出为准），按被测层分目录：
 
 | 目录              | 覆盖                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------- |
@@ -72,7 +72,7 @@ vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒�
 
 ### 4.2 冒烟测试（E2E）
 
-`scripts/smoke-*.mjs` 共 21 个，playwright-core 驱动**真实 Electron 应用**走真实路径（框选、剪贴板、保存框、录制……），每个脚本头部注释写明覆盖点与断言清单。
+`scripts/smoke-*.mjs` 共 23 个，playwright-core 驱动**真实 Electron 应用**走真实路径（框选、剪贴板、保存框、录制……），每个脚本头部注释写明覆盖点与断言清单。
 
 ```bash
 yarn build                        # 先构建（冒烟跑的是打包产物路径）
@@ -82,7 +82,7 @@ node scripts/smoke-copy-paste.mjs # 跑单个冒烟
 注意：
 
 - **应用不能在运行**（含 `yarn dev`）——单实例锁会让新实例启动即退出；
-- 截图与断言产物默认落 `.artifacts/smoke-shots-*` 各脚本专属目录，环境变量 `SMOKESHOT_DIR` 可覆盖；
+- 截图与断言产物默认落 `.artifacts/` 下（多数脚本共用 `smoke-shots` 目录且启动时各自清场，**不要并行跑多个冒烟**），环境变量 `SMOKESHOT_DIR` 可覆盖；
 - 定位 UI 元素依赖源码中的 `data-*` 锚点（如 `data-export-*`、`data-reset-view`），改动相关 DOM 时同步维护；
 - 改交互行为时，先改/补对应冒烟的断言再改实现，脚本即回归清单。
 
@@ -115,20 +115,22 @@ CI 定义在 `.github/workflows/build.yml`：
 发版流程（依仓库惯例）：
 
 1. `package.json` 版本号升级，单独提交（`chore：版本号升级至 vX.Y.Z`）；
-2. 撰写 `docs/release-notes/vX.Y.Z.md`（沿用既有结构：新增功能 / 问题修复 / 其他 /内部 commit 清单，可从 `git log vPREV..HEAD` 整理）；
+2. 撰写 `docs/release-notes/vX.Y.Z.md`（目录按需创建——本仓库未入库历史发版说明；结构：新增功能 / 问题修复 / 其他 / 内部 commit 清单，可从 `git log vPREV..HEAD` 整理，亦可直接写进 GitHub Release 正文）；
 3. 提交后打 tag 并推送，CI 自动出包发 Release。
 
 ## 8. 提交信息规范
 
 单行超长、信息密度高的中文提交信息是本仓库的鲜明风格：`类型：主题——关键决策与理由、根因、影响面、踩坑、测试证据`。类型前缀沿用既有惯例：
 
-| 前缀      | 用途                   |
-| --------- | ---------------------- |
-| `feat：`  | 新功能                 |
-| `fix：`   | 缺陷修复（含根因分析） |
-| `docs：`  | 文档                   |
-| `test：`  | 测试补充               |
-| `chore：` | 版本号、构建等杂项     |
+| 前缀         | 用途                   |
+| ------------ | ---------------------- |
+| `feat：`     | 新功能                 |
+| `fix：`      | 缺陷修复（含根因分析） |
+| `refactor：` | 功能零改变的重构       |
+| `perf：`     | 性能优化               |
+| `docs：`     | 文档                   |
+| `test：`     | 测试补充               |
+| `chore：`    | 版本号、构建等杂项     |
 
 要点：
 
@@ -138,10 +140,12 @@ CI 定义在 `.github/workflows/build.yml`：
 
 ## 9. 相关文档
 
-| 文档                                                                                   | 内容                                       |
-| -------------------------------------------------------------------------------------- | ------------------------------------------ |
-| [architecture.md](./architecture.md)                                                   | 软件结构：架构、模块职责、IPC 契约、数据流 |
-| [user-guide.md](./user-guide.md)                                                       | 面向最终用户的用户手册                     |
-| [future-features.md](./future-features.md)                                             | 功能规划与调研                             |
-| [release-notes/](./release-notes/)                                                     | 各版本更新说明                             |
-| [superpowers/specs/](./superpowers/specs/)、[superpowers/plans/](./superpowers/plans/) | 各功能的设计文档与实施计划归档             |
+| 文档                                                                                   | 内容                                           |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [architecture.md](./architecture.md)                                                   | 软件结构：架构、模块职责、IPC 契约、数据流     |
+| [user-guide.md](./user-guide.md)                                                       | 面向最终用户的用户手册                         |
+| [future-features.md](./future-features.md)                                             | 功能规划与调研（本地文件，未入库）             |
+| [release-notes/](./release-notes/)                                                     | 各版本更新说明（目录按需创建，未入库）         |
+| [superpowers/specs/](./superpowers/specs/)、[superpowers/plans/](./superpowers/plans/) | 各功能的设计文档与实施计划归档（本地，未入库） |
+
+标注「本地文件，未入库」的三行在 clone 仓库后不存在（已被 `.gitignore` 排除）；`docs/release-notes/` 目录发版时按需创建。
