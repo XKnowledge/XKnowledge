@@ -72,6 +72,13 @@ export const createWindow = (onWindowClosed, route = '') => {
     if (recordingLocked.has(webContentsId)) setRecordingLock(current_window, false)
   })
 
+  // 渲染进程崩溃同理：无导航发生、unlock 永不到来，崩溃即恢复解锁态——
+  // 否则窗口冻结在空白态（渲染层录制状态机已丢），用户只能走任务栏/Alt+F4
+  // 关闭。同 enterChartMode 的 goneHandler 先例
+  current_window.webContents.on('render-process-gone', () => {
+    if (recordingLocked.has(webContentsId)) setRecordingLock(current_window, false)
+  })
+
   current_window.on('ready-to-show', () => {
     current_window.show()
   })

@@ -290,6 +290,33 @@ describe('createChartWindow / takePendingChart：新窗口图表暂存', () => {
     expect(takePendingChart(201)).toBeNull()
     expect(takePendingChart(202)).toEqual({ content: 'b', path: 'b.xk' })
   })
+
+  it('渲染进程崩溃（render-process-gone）即解锁并清登记（防锁残留）', () => {
+    const wcHandlers = {}
+    const win = {
+      ...makeChartWindow(306),
+      setMaximizable: vi.fn(),
+      setMinimizable: vi.fn(),
+      setResizable: vi.fn()
+    }
+    win.webContents.on = vi.fn((evt, h) => {
+      wcHandlers[evt] = h
+    })
+    BrowserWindow.mockImplementation(function () {
+      return win
+    })
+    createChartWindow({ content: '{}', path: '' })
+    setRecordingLock(win, true)
+    vi.clearAllMocks()
+    wcHandlers['render-process-gone']()
+    expect(win.setResizable).toHaveBeenCalledWith(true)
+    expect(win.setMaximizable).toHaveBeenCalledWith(true)
+    expect(win.setMinimizable).toHaveBeenCalledWith(true)
+    // 登记已清：未锁时解锁为空操作（不再碰窗口）
+    vi.clearAllMocks()
+    setRecordingLock(win, false)
+    expect(win.setResizable).not.toHaveBeenCalled()
+  })
 })
 
 describe('setRecordingLock：录制期间冻结窗口尺寸', () => {
