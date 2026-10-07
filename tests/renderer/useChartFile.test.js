@@ -178,12 +178,20 @@ describe('useChartFile —— saveAs / 登记与门控', () => {
       const api = mockElectronAPI({
         saveFile: vi.fn().mockRejectedValue(new Error('[FILE_CONFLICT] x'))
       })
-      const { filePath, saveNodeVisible, persistFile } = makeSetup()
+      const {
+        filePath,
+        saveNodeVisible,
+        persistFile,
+        mountFileLifecycle,
+        unmountFileLifecycle
+      } = makeSetup()
+      mountFileLifecycle() // 定时器只在此注册——不 mount 则 advance 无定时器可触发、断言恒真
       filePath.value = 'D:/a.xk'
       saveNodeVisible.value = true
       await persistFile() // 冲突 → autoSaveSuspended = true
       vi.advanceTimersByTime(60_000)
       expect(api.saveFile).toHaveBeenCalledTimes(1) // 仅冲突那次，定时器不重试
+      unmountFileLifecycle()
     } finally {
       vi.useRealTimers()
     }
