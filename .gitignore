@@ -31,6 +31,8 @@ docs/superpowers/
 docs/future-features.md
 docs/roadmap.md
 
-# 代码重构方案（本地留存，不入库）
+# 代码重构方案
 docs/refactor-plan.md
 docs/chartview-split-checklist.md
+docs/plan.md
+docs/fix-plan.md
