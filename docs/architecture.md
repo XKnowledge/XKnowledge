@@ -204,7 +204,7 @@ XKnowledge/
 
 首页卡片所需元数据（fileName/title/description/nodeCount/linkCount/categories）预收集进 `examples/examples.manifest.json`（随仓库提交、随打包进 asar），`listExamples` 快慢两层：
 
-- **快路径**：目录 `.xk` 文件名集合与清单一致 → 直接信任清单（~1ms），不再逐文件读取（207 个串行约 85ms——首页「新建空白卡先出、停顿、卡片齐现」两段式的根源，实测停顿 103ms → 21ms）。「图库看得见的打得开」在清单**生成时**成立；此后文件被换坏的极端情形由 `openExample` 复用的 `readChartFile` 损坏拦截兜底（点击时提示打开失败而非白屏）。
+- **快路径**：目录 `.xk` 文件名集合与清单一致 → 直接信任清单（~1ms），不再逐文件读取（本节写作时点 207 个、串行约 85ms——首页「新建空白卡先出、停顿、卡片齐现」两段式的根源，实测停顿 103ms → 21ms）。「图库看得见的打得开」在清单**生成时**成立；此后文件被换坏的极端情形由 `openExample` 复用的 `readChartFile` 损坏拦截兜底（点击时提示打开失败而非白屏）。
 - **慢路径**：清单缺失/损坏/不一致（开发态增删示例）→ 退回逐文件读取并重写清单，下次回到快路径；打包态 asar 只读、重写静默失败（包内清单构建时已保证一致，快路径恒命中）。
 
 配套机制：`scripts/generate-example-manifest.mjs`（`yarn generate:examples`，prebuild 自动跑，内容相同不重写）；同步守护测试对清单与目录现扫结果逐字节对比，改示例忘重新生成时测试红。清单按 fileName 码点序存储（与 readdir 序无关，跨平台字节稳定）；categories 的 `undefined` 归一为空串保证序列化往返等值（渲染端 filterExamples /catColor 均已 `?? ''` 防御，展示零影响）。
