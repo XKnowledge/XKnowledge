@@ -277,6 +277,14 @@ describe('录制期间只读黑名单（isRecording 注入）', () => {
     expect(actions[fnName]).toHaveBeenCalledTimes(1)
   })
 
+  it('录制中放行 export_png / open_search（导出与搜索经 graph3dRef 直连）', () => {
+    const { dispatch, graph3dRef } = setup({ isRecording: () => true })
+    dispatch('export_png')
+    dispatch('open_search')
+    expect(graph3dRef.value.exportPng).toHaveBeenCalledTimes(1)
+    expect(graph3dRef.value.openSearch).toHaveBeenCalledTimes(1)
+  })
+
   it('录制中键盘路径同样被拦：Ctrl+Z 不撤销', () => {
     const ctx = setup({ isRecording: () => true })
     ctx.shortcut(keyEvent({ ctrlKey: true, key: 'z' }))

@@ -171,6 +171,23 @@ describe('useChartFile —— saveAs / 登记与门控', () => {
       vi.useRealTimers()
     }
   })
+
+  it('FILE_CONFLICT 暂停期间 60s 到点不写盘（suspended 门控的定时器路径）', async () => {
+    vi.useFakeTimers()
+    try {
+      const api = mockElectronAPI({
+        saveFile: vi.fn().mockRejectedValue(new Error('[FILE_CONFLICT] x'))
+      })
+      const { filePath, saveNodeVisible, persistFile } = makeSetup()
+      filePath.value = 'D:/a.xk'
+      saveNodeVisible.value = true
+      await persistFile() // 冲突 → autoSaveSuspended = true
+      vi.advanceTimersByTime(60_000)
+      expect(api.saveFile).toHaveBeenCalledTimes(1) // 仅冲突那次，定时器不重试
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('useChartFile —— closeFile 退出确认', () => {

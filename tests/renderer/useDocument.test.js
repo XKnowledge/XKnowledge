@@ -197,6 +197,15 @@ describe('deleteSelection：框选批量删除', () => {
     expect(doc.chartData.value.nodes.map((n) => n.name).sort()).toEqual(['A', 'B', 'C'])
     expect(doc.chartData.value.links.map((l) => l.name).sort()).toEqual(['e1', 'e2'])
   })
+
+  it('重做一步再删整批（redo 经 reactive 代理对账闭包 raw——toRaw 归一回归位）', () => {
+    const { doc } = makeLoadedDoc()
+    doc.deleteSelection(['A', 'B'], [1])
+    doc.undo()
+    doc.redo()
+    expect(doc.chartData.value.nodes.map((n) => n.name)).toEqual(['C'])
+    expect(doc.chartData.value.links).toEqual([])
+  })
 })
 
 describe('paste / importOutline：合并批次', () => {
