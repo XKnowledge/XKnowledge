@@ -68,19 +68,6 @@ const toastSeen = async (text) =>
 const wrap = page.locator('.graph3d-wrap')
 const nodeCount = () => wrap.getAttribute('data-node-count')
 const selCount = () => wrap.getAttribute('data-selection-count')
-const waitSelCount = async (expected, timeout = 5_000) => {
-  try {
-    await page.waitForFunction(
-      (want) =>
-        document.querySelector('.graph3d-wrap')?.getAttribute('data-selection-count') === want,
-      expected,
-      { timeout }
-    )
-  } catch {
-    /* 超时由调用方断言兜底 */
-  }
-  return selCount()
-}
 /** 手势前冲刷悬停（three-render-objects 的 click 派发用悬停轮询对象） */
 const settleMouse = async (x, y) => {
   await page.mouse.move(x, y)

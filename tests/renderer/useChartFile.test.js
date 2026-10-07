@@ -184,7 +184,7 @@ describe('useChartFile —— closeFile 退出确认', () => {
   })
 
   it('已脏 + 取消：留在当前页；放弃：关窗前先清登记再跳回', async () => {
-    const api = mockElectronAPI({
+    mockElectronAPI({
       confirmUnsaved: vi.fn().mockResolvedValueOnce('cancel').mockResolvedValueOnce('discard')
     })
     const { closeFile, saveNodeVisible, router } = makeSetup()
