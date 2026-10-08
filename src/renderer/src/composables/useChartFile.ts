@@ -62,12 +62,17 @@ export function useChartFile({
     })
   })
 
-  /** 装载/换图后维护文件身份并向主进程登记（path 为空表示未命名，只清不登） */
+  /** 装载/换图后维护文件身份并向主进程登记（path 为空表示未命名，只清不登）。
+   *  同时清零未保存标记：装载进来的是刚从磁盘（或示例副本）读出的内容，
+   *  与上一份文档无关；本 ref 归编排层所有、不随路由销毁，不清就会让
+   *  下一个文件一进来就带未保存圆点（同一窗口「关闭文件回首页 → 再打开」
+   *  复用同一个 ChartView 实例）。置位端口同理只在 dirty:true 上（见下） */
   const registerOpenedFile = (path: string, name?: unknown) => {
     filePath.value = path
     // 图库名（示例副本 path 为空时唯一可用的图名，导出 HTML 标题用）；
     // 打开本地文件/另存后有 filePath，标题以文件名优先
     chartName.value = typeof name === 'string' ? name : ''
+    saveNodeVisible.value = false
     window.electronAPI.fileOpened({ path }).catch((err) => {
       console.error('登记文件打开状态失败', err)
     })
@@ -198,6 +203,12 @@ export function useChartFile({
       if (choice === 'save') {
         const ok = await saveFile()
         if (!ok) return // 保存失败留在图表页（报错沿用 saveFile 现有分支）
+      } else {
+        // 放弃：这份未保存内容已被用户主动丢弃，标记必须清零再离开——
+        // 否则回首页/开下一个文件时旧脏态还在（本 ref 不随路由销毁），
+        // 新文件一进来就带未保存圆点、未改任何东西关窗也弹三选一确认，
+        // 60 秒自动保存还会对着新文件空转写盘
+        saveNodeVisible.value = false
       }
     }
     // 清掉本窗口的打开登记（空路径只清不登）：不清的话，再次打开同一文件

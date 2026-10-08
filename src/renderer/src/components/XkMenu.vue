@@ -37,7 +37,7 @@
         <a-menu-item key="7" :disabled="recording" @click="dispatch('delete_node')">
           <a-row>
             <a-col flex="120px">{{ $t('chart.deleteNode') }}</a-col>
-            <a-col flex="auto">Delete</a-col>
+            <a-col flex="auto">{{ deleteLabel }}</a-col>
           </a-row>
         </a-menu-item>
         <a-menu-item key="9" :disabled="recording" @click="dispatch('delete_edge')">
@@ -112,6 +112,7 @@ const isDarwin = window.electronAPI.platform === 'darwin'
 const undoLabel = computed(() => formatBindingLabel(keybindings.value.undo, isDarwin))
 const redoLabel = computed(() => formatBindingLabel(keybindings.value.redo, isDarwin))
 const saveLabel = computed(() => formatBindingLabel(keybindings.value.save, isDarwin))
+const deleteLabel = computed(() => formatBindingLabel(keybindings.value.delete, isDarwin))
 const menuTrigger = isDarwin ? ['click'] : ['hover']
 // 录制状态（导出子菜单的禁用/文案/danger 态）：ChartView 是单一来源，
 // 这里只读展示；动作分发与键盘快捷键共用 dispatch 入口（useShortcuts 提供）

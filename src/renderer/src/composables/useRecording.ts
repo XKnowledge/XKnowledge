@@ -34,9 +34,18 @@ export function useRecording(graph3dRef: Ref<Graph3DRecordingHandle | null>) {
 
   const onToggleScreenRecord = async () => {
     if (screenRecording.value) {
-      await graph3dRef.value?.stopScreenRecording()
-      screenRecording.value = false
-      screenPaused.value = false
+      // 旗标复位走 finally：stopScreenRecording 内部最后一步是写盘
+      // （编码器失败/磁盘错误会 reject），若复位写在 await 之后就会整段
+      // 跳过，screenRecording 卡在 true——dispatch 黑名单随即吞掉全部
+      // 编辑动作（建点/删除/粘贴/撤销）、菜单永远显示「停止录屏」、
+      // 导出视频永久禁用、窗口尺寸锁不解除，用户只能重启应用。
+      // 异常仍向上抛（调用方负责提示），只保证状态机自洽
+      try {
+        await graph3dRef.value?.stopScreenRecording()
+      } finally {
+        screenRecording.value = false
+        screenPaused.value = false
+      }
       return
     }
     if (exportingVideo.value) return

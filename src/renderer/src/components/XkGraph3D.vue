@@ -113,6 +113,7 @@ import {
   linkKey,
   labelThreshold,
   searchGraphNodes,
+  sameNameSet,
   SCENE_COLORS
 } from '../utils/graphData.js'
 
@@ -800,6 +801,10 @@ onUnmounted(() => {
     cancelAnimationFrame(screenSession.raf)
     screenSession.rec.stop()
     screenSession.restoreScale()
+    // 与 stopScreenRecording 的 finally 对称：解除主进程窗口尺寸锁、清
+    // 录制缓冲标注（审计 #13——否则热更新卸载组件后窗口卡在不可缩放）
+    window.electronAPI.recordingLock({ lock: false }).catch(() => {})
+    recordingBuffer.value = ''
     screenSession = null
   }
   videoMode.value = ''
@@ -822,6 +827,10 @@ watch(
     if (!graph) return
     applySimulationScale()
     graph.graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
+    // 节点类目可能随编辑变化：可见性 accessor 闭包的是 buildNodeVisible
+    // 调用时的 name→category 快照，不重装就会出现「照旧渲染 vs 手势层
+    // 拾取判不可见」的互相矛盾（审计 #9）
+    applyVisibility()
     applyLabels()
     // 编辑/重灌后命中重算（当前项名保持或重置第 1 个，不飞相机；
     // 换图的显式关闭由 ChartView 调 closeSearch）
@@ -915,7 +924,10 @@ watch(
       preFocusCamera = { x: cam.x, y: cam.y, z: cam.z, lookAt: cam.lookAt ?? { x: 0, y: 0, z: 0 } }
       focusCamera(new Set(next))
     } else if (had && has) {
-      focusCamera(new Set(next))
+      // 集合内容未变不重复取景：focusNodeNames 是 computed，chartData 任何
+      // 变更（含邻域毫无变化的普通编辑/撤销）都让它换新数组、deep watch 必
+      // 触发，不比内容会把相机拽回根本没变的邻域（审计 #8）
+      if (!sameNameSet(next, prev)) focusCamera(new Set(next))
     } else if (had && !has) {
       restoreFocusCamera()
     }

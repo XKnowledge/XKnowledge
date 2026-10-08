@@ -305,6 +305,36 @@ describe('搜索：命中计数 + Enter 循环步进', () => {
     input.fire('input')
     expect(findByTestId(root, 'xk-search-count').textContent).toBe('')
   })
+
+  it('图例显隐改变命中集：计数与序号即时跟随（重置到第 1 个），不等下一次敲键（审计 #17）', () => {
+    const { root, viewer } = mount()
+    // 模拟真实 viewer 的 setState 语义：hiddenCategories 变更时按类目重算
+    // searchHits（viewer.js 同款重算，桩默认只记 patch）
+    const realSetState = viewer.setState
+    const CAT = { A: '基础', B: '进阶', C: '基础' }
+    viewer.setState = (patch) => {
+      realSetState(patch)
+      if ('hiddenCategories' in patch) {
+        viewer.state.searchHits = ['A', 'B', 'C'].filter((n) => !patch.hiddenCategories.has(CAT[n]))
+      }
+    }
+    const input = findByTestId(root, 'xk-search-input')
+    viewer.state.searchHits = ['A', 'B', 'C']
+    input.value = 'x'
+    input.fire('input')
+    input.fire('keydown', { key: 'Enter' })
+    input.fire('keydown', { key: 'Enter' })
+    expect(findByTestId(root, 'xk-search-count').textContent).toBe('3 · 3')
+    collectChips(root)[0].fire('click') // 隐藏「基础」：A/C 出局，剩 B
+    expect(findByTestId(root, 'xk-search-count').textContent).toBe('1 · 1')
+    expect(viewer.flyTo).toHaveBeenLastCalledWith('B')
+  })
+
+  it('搜索为空时点图例：计数保持清空（refreshSearch 的 input.value 守卫）', () => {
+    const { root } = mount()
+    collectChips(root)[0].fire('click')
+    expect(findByTestId(root, 'xk-search-count').textContent).toBe('')
+  })
 })
 
 describe('主题：初始跟随系统，按钮循环切换', () => {

@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { message } from 'ant-design-vue'
 import { useShortcuts } from '../../src/renderer/src/composables/useShortcuts'
+import { i18n } from '../../src/renderer/src/i18n.js'
+import { zhCN } from '../../src/shared/locales/zh-CN.js'
+
+// node 环境：antd message 模块级 mock（useEditActions.test 同款惯例）
+vi.mock('ant-design-vue', () => ({
+  message: { error: vi.fn(), info: vi.fn(), success: vi.fn() }
+}))
 
 // keydown 事件用结构兼容的普通对象：matchEvent 只读修饰键/key，
 // isTypingContext 守卫读 target——不耦合真实浏览器事件
@@ -65,6 +73,8 @@ const setup = (over = {}) => {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
+  i18n.global.locale.value = 'zh-CN' // 播报文案断言钉中文
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
@@ -203,6 +213,18 @@ describe('Delete 三路分发（框选集优先，否则最后点击对象）', 
     ctx.shortcut(keyEvent({ key: 'Delete' }))
     expect(ctx.actions.deleteNode).toHaveBeenCalledTimes(1)
   })
+
+  it('macOS ⌫（Backspace）走删除三路分发（审计 #21 默认键别名）', () => {
+    const ctx = setup({ isDarwin: true })
+    ctx.shortcut(keyEvent({ key: 'Backspace' }))
+    expect(ctx.actions.deleteNode).toHaveBeenCalledTimes(1)
+  })
+
+  it('非 darwin 上 Backspace 不触发删除', () => {
+    const { shortcut, actions } = setup()
+    shortcut(keyEvent({ key: 'Backspace' }))
+    expect(actions.deleteNode).not.toHaveBeenCalled()
+  })
 })
 
 describe('isTypingContext 守卫：跟动作走、不跟键走', () => {
@@ -295,5 +317,33 @@ describe('录制期间只读黑名单（isRecording 注入）', () => {
     const ctx = setup({ isRecording: () => true })
     ctx.shortcut(keyEvent({ ctrlKey: true, key: 's' }))
     expect(ctx.actions.saveFile).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('dispatch 对返回 Promise 的动作兜底（审计 #11：导出失败全程无提示）', () => {
+  it('动作 Promise 拒绝：message.error 统一提示，不再静默', async () => {
+    const { dispatch, actions } = setup()
+    actions.onExportVideo.mockRejectedValue(new Error('编码器失败'))
+    dispatch('export_video')
+    await vi.waitFor(() => expect(message.error).toHaveBeenCalledTimes(1))
+    expect(message.error).toHaveBeenCalledWith(zhCN.common.actionFailed)
+  })
+
+  it('停止录屏失败同样提示（screen_record 路径）', async () => {
+    const { dispatch, actions } = setup()
+    actions.onToggleScreenRecord.mockRejectedValue(new Error('写盘失败'))
+    dispatch('screen_record')
+    await vi.waitFor(() => expect(message.error).toHaveBeenCalledTimes(1))
+  })
+
+  it('动作成功或同步动作：不提示', async () => {
+    const { dispatch, actions } = setup()
+    actions.onExportVideo.mockResolvedValue(undefined)
+    dispatch('export_video')
+    actions.saveFile.mockResolvedValue(true)
+    dispatch('save_file')
+    dispatch('undo')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(message.error).not.toHaveBeenCalled()
   })
 })

@@ -38,6 +38,20 @@ export interface WorldIndex {
   userDir: string | null
 }
 
+/** 导出交互式 HTML 的 viewer 数据（serializeGraphForViewer 产物）。主进程
+ *  composeHtmlViewer 要求非 null 对象且带 nodes 数组——传字符串会直接
+ *  viewer_data_invalid 拒绝 */
+export interface ViewerData {
+  version: number
+  title: string
+  lang: string
+  /** 斥力随导出携带（未传/非正数省略） */
+  repulsion?: number
+  categories: { name: string }[]
+  nodes: { name: string; des: string; symbolSize: number; category: string }[]
+  links: { source: string; target: string; name: string; des: string }[]
+}
+
 export interface ElectronApi {
   /** 打开对话框并读取：取消 { canceled }；同文件已在别窗打开 { alreadyOpen }（已聚焦该窗）；
    *  示例文件 path 置空走副本语义（保存必弹另存）。返回形状按分支互斥，调用方渐进判属性 */
@@ -52,7 +66,7 @@ export interface ElectronApi {
   saveFile(payload: { path: string; content: string }): Promise<SaveResult>
   saveFileAs(payload: { content: string }): Promise<SaveResult>
   saveVideoFile(payload: { bytes: Uint8Array; defaultName: string; ext: string }): Promise<SaveResult>
-  exportHtmlFile(payload: { data: string; defaultName: string }): Promise<SaveResult>
+  exportHtmlFile(payload: { data: ViewerData; defaultName: string }): Promise<SaveResult>
   /** 系统剪贴板读写（序列化/解析在渲染层走 shared/graphClipboard） */
   writeGraphClipboard(text: string): Promise<void>
   readGraphClipboard(): Promise<{ text: string }>

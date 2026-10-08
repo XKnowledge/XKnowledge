@@ -20,13 +20,22 @@ export const validateChartStructure = (parsed) => {
   if (!Array.isArray(parsed.nodes)) {
     return 'missing_nodes'
   }
-  if (parsed.nodes.some((node) => !node || typeof node !== 'object')) {
-    return 'invalid_node_item'
+  // name 是节点主键（撤销/重做按名定位，序列化器缺失即废数据）：缺失/
+  // 空串/非字符串与重名都拒——无名节点 redo 按名过滤会全删、同名节点
+  // 互相覆盖，UI 建不出这种数据，只有外部/手工编辑的文件会带上
+  const names = new Set()
+  for (const node of parsed.nodes) {
+    if (!node || typeof node !== 'object') {
+      return 'invalid_node_item'
+    }
+    if (typeof node.name !== 'string' || !node.name || names.has(node.name)) {
+      return 'invalid_node_item'
+    }
+    names.add(node.name)
   }
   if (!Array.isArray(parsed.links)) {
     return 'missing_links'
   }
-  const names = new Set(parsed.nodes.map((node) => node.name))
   const dangling = parsed.links.some(
     (link) => !link || !names.has(link?.source) || !names.has(link?.target)
   )

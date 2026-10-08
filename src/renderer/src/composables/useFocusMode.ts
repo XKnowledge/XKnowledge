@@ -61,13 +61,16 @@ export function useFocusMode({
     if (focusNodeId.value) syncCurrentNodeByName(focusNodeId.value)
   }
 
-  // 焦点节点被删：回退默认焦点；全图删空 → '' → 邻域空 = 全图恢复正常色
+  // 焦点节点消失（删除换数组 / 改名原地替换数组元素）：回退默认焦点；
+  // 全图删空 → '' → 邻域空 = 全图恢复正常色。watch 走「名字快照」而非
+  // nodes 数组引用——改名走 chart.nodes[index] = newNode（useDocument.
+  // changeNode），数组引用不变、按引用比较永不触发，焦点就静默失效
   watch(
-    () => chartData.value?.nodes,
-    (nodes) => {
+    () => chartData.value?.nodes?.map((n) => n.name),
+    (names) => {
       if (focusMode.value === 'off' || !focusNodeId.value) return
-      if (!nodes?.some((n) => n.name === focusNodeId.value)) {
-        const next = defaultFocusNode(nodes ?? [], chartData.value?.links ?? [])
+      if (!names?.includes(focusNodeId.value)) {
+        const next = defaultFocusNode(chartData.value?.nodes ?? [], chartData.value?.links ?? [])
         focusNodeId.value = next
         if (next) syncCurrentNodeByName(next)
       }

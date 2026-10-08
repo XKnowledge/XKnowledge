@@ -6,6 +6,7 @@ import {
   isValidBinding,
   normalizeRecordedEvent,
   matchEvent,
+  matchDeleteEvent,
   bindingEquals,
   findConflict,
   formatBindingLabel,
@@ -112,6 +113,27 @@ describe('matchEvent：精确匹配判定', () => {
   })
   it('key 不匹配直接 false', () => {
     expect(matchEvent({ ctrlKey: true, key: 'x' }, DEFAULT_BINDINGS.save)).toBe(false)
+  })
+})
+
+describe('matchDeleteEvent：删除键的 darwin backspace 别名（审计 #21）', () => {
+  it('darwin + 默认 delete 绑定：⌫（Backspace）与 fn+⌫（Delete）都命中', () => {
+    expect(matchDeleteEvent({ key: 'Backspace' }, DEFAULT_BINDINGS.delete, true)).toBe(true)
+    expect(matchDeleteEvent({ key: 'Delete' }, DEFAULT_BINDINGS.delete, true)).toBe(true)
+  })
+  it('非 darwin：Backspace 不命中（键盘有独立 Delete 键）', () => {
+    expect(matchDeleteEvent({ key: 'Backspace' }, DEFAULT_BINDINGS.delete, false)).toBe(false)
+    expect(matchDeleteEvent({ key: 'Delete' }, DEFAULT_BINDINGS.delete, false)).toBe(true)
+  })
+  it('用户改键后别名不跟随：delete 绑到 x 后 Backspace 不再触发', () => {
+    const rebound = { modifiers: [], key: 'x' }
+    expect(matchDeleteEvent({ key: 'Backspace' }, rebound, true)).toBe(false)
+    expect(matchDeleteEvent({ key: 'x' }, rebound, true)).toBe(true)
+  })
+  it('修饰键仍精确：Shift+⌫ 不命中无修饰的默认绑定', () => {
+    expect(
+      matchDeleteEvent({ key: 'Backspace', shiftKey: true }, DEFAULT_BINDINGS.delete, true)
+    ).toBe(false)
   })
 })
 

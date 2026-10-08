@@ -87,6 +87,20 @@ export const matchEvent = (event: RecordableEvent, binding: KeyBinding): boolean
   return true
 }
 
+/** 删除动作的按键判定（含 darwin 别名）：macOS 键盘没有独立 Delete 键
+ *  （⌫ 报 Backspace，仅 fn+⌫ 报 Delete），默认绑定 'delete' 精确匹配在
+ *  darwin 上永不命中。默认未被改写时接受 backspace 别名；用户改键后
+ *  按键映射归用户，别名不跟随（防改键后旧键仍触发） */
+export const matchDeleteEvent = (
+  event: RecordableEvent,
+  binding: KeyBinding,
+  isDarwin: boolean
+): boolean =>
+  matchEvent(event, binding) ||
+  (isDarwin &&
+    bindingEquals(binding, DEFAULT_BINDINGS.delete) &&
+    matchEvent(event, { ...binding, key: 'backspace' }))
+
 /** 两个绑定是否同一组合（modifiers 视作集合，与顺序无关——手改存储乱序也稳） */
 export const bindingEquals = (a: KeyBinding, b: KeyBinding): boolean =>
   a.key === b.key && [...a.modifiers].sort().join(',') === [...b.modifiers].sort().join(',')

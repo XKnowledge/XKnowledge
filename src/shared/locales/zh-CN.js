@@ -20,6 +20,7 @@ export const zhCN = {
     restore: '向下还原',
     closeEsc: '关闭 (Esc)',
     openFailedDetail: '打开失败：文件读取失败或已损坏',
+    actionFailed: '操作失败',
     collapse: '收起',
     name: '名称',
     description: '描述'

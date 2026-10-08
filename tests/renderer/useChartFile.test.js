@@ -219,4 +219,45 @@ describe('useChartFile —— closeFile 退出确认', () => {
     await closeFile()
     expect(router.push).toHaveBeenCalledWith('/')
   })
+
+  it('已脏 + 放弃：未保存标记清零（不回首页不带旧脏态）', async () => {
+    // 同一窗口「关闭文件回首页 → 再打开/新建」复用同一个 ChartView 实例，
+    // saveNodeVisible 是编排层的 ref 而非随路由销毁。放弃修改意味着这份
+    // 未保存内容已被用户主动丢弃，标记必须清零：否则下一个文件一进来就
+    // 带未保存圆点、没改任何东西关窗也弹三选一、60 秒自动保存空转写盘
+    mockElectronAPI({ confirmUnsaved: vi.fn().mockResolvedValue('discard') })
+    const { closeFile, saveNodeVisible } = makeSetup()
+    saveNodeVisible.value = true
+    await closeFile()
+    expect(saveNodeVisible.value).toBe(false)
+  })
+
+  it('已脏 + 取消：标记保持（留在当前页，未保存内容仍在）', async () => {
+    mockElectronAPI({ confirmUnsaved: vi.fn().mockResolvedValue('cancel') })
+    const { closeFile, saveNodeVisible } = makeSetup()
+    saveNodeVisible.value = true
+    await closeFile()
+    expect(saveNodeVisible.value).toBe(true)
+  })
+
+  it('已脏 + 保存失败：标记保持（saveFile 失败路径不误清）', async () => {
+    mockElectronAPI({
+      confirmUnsaved: vi.fn().mockResolvedValue('save'),
+      saveFile: vi.fn().mockRejectedValue(new Error('disk full'))
+    })
+    const { closeFile, saveNodeVisible } = makeSetup()
+    saveNodeVisible.value = true
+    await closeFile()
+    expect(saveNodeVisible.value).toBe(true)
+  })
+
+  it('registerOpenedFile：装载新图即清零未保存标记', async () => {
+    // 装载路径（ChartView.loadChartData → registerOpenedFile）是脏标记的
+    // 另一个泄漏点：换图后上一份文档已不在窗口里
+    mockElectronAPI()
+    const { registerOpenedFile, saveNodeVisible } = makeSetup()
+    saveNodeVisible.value = true
+    registerOpenedFile('D:/新图.xk', '新图')
+    expect(saveNodeVisible.value).toBe(false)
+  })
 })

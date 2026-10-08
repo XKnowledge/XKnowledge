@@ -125,6 +125,23 @@ describe('useFocusMode（聚焦状态机）', () => {
     expect(s.syncCurrentNodeByName).toHaveBeenCalledWith('A')
   })
 
+  it('焦点节点被改名（原地替换数组元素，引用不变）：同样回退，不再静默失效（审计 #12）', async () => {
+    const s = makeSetup()
+    s.focusMode.value = 'focus'
+    s.focusNodeId.value = 'C'
+    // 模拟 useDocument.changeNode 的改名路径：nodes[index] = newNode + 邻边端点改写
+    const chart = s.chartData.value
+    chart.nodes[2] = node('C2')
+    chart.links.forEach((l) => {
+      if (l.source === 'C') l.source = 'C2'
+      if (l.target === 'C') l.target = 'C2'
+    })
+    await nextTick()
+    expect(s.focusNodeId.value).toBe('A') // 回退默认焦点（度数最高）
+    expect(s.syncCurrentNodeByName).toHaveBeenCalledWith('A')
+    expect(s.focusNodeNames.value.length).toBeGreaterThan(0) // 不再空集（空集=聚焦静默失效）
+  })
+
   it('焦点删后全图删空：焦点为空串（邻域空 = 全图恢复）', async () => {
     const s = makeSetup()
     s.focusMode.value = 'focus'

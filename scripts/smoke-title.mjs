@@ -46,8 +46,16 @@ const shot = async (name) => {
   console.log(`shot: ${name}`)
 }
 const titleText = () => page.locator('.xk-title-text').first().innerText()
-const nativeTitle = () =>
-  app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getTitle())
+/** 原生标题按窗口下标取（首页/图表页/打开文件新窗口各一个时下标稳定） */
+const nativeTitle = (index = 0) =>
+  app.evaluate(({ BrowserWindow }, i) => BrowserWindow.getAllWindows()[i].getTitle(), index)
+/** 图表页窗口的原生标题（首页在 index 0，打开文件后新窗口在末尾） */
+const chartNativeTitle = () =>
+  app.evaluate(({ BrowserWindow }) => {
+    const wins = BrowserWindow.getAllWindows()
+    const chart = wins.find((w) => w.webContents.getURL().includes('/chart')) ?? wins[wins.length - 1]
+    return chart.getTitle()
+  })
 const expectEq = (label, actual, expected) => {
   const pass = actual === expected
   console.log(`${pass ? 'PASS' : 'FAIL'} ${label}: ${actual}${pass ? '' : `（期望 ${expected}）`}`)
@@ -81,13 +89,41 @@ await page.evaluate(() => window.electronAPI.fileOpened({ path: '' }))
 await page.waitForTimeout(500)
 expectEq('空路径上报后标题条', await titleText(), '金融 — XKnowledge')
 
-// 5. 位置：标题紧挨菜单图标（53px sider + 12px 间距），不与居中的按钮组重叠
+// 5. 真实「打开本地文件」链路（首页 BasicLayout → openFile → 同窗口装载）：
+//    这是标题时序的回归锚点。装载经 registerOpenedFile 上报 file:opened，
+//    而 enterChartMode 会无条件把标题设成「未命名」——两者同通道 FIFO，
+//    onMounted 里若先装载后挂生命周期，后到的 enterChartMode 就会把文件名
+//    盖回「未命名」，标题要等首次编辑才纠正。此前本脚本第 3 步在第 2 步
+//    （enter-chart-mode 已到达）之后才补报路径，恰好绕开了真实顺序。
+//    原生「打开」对话框无法自动化，用 stub 固定返回本步临时文件。
+const tmpDir = path.join(SHOT_DIR, 'open-file')
+fs.mkdirSync(tmpDir, { recursive: true })
+const tmpChart = path.join(tmpDir, '冒烟标题.xk')
+fs.writeFileSync(
+  tmpChart,
+  JSON.stringify({
+    version: 2,
+    nodes: [{ name: 'A', des: '', symbolSize: 50, category: '测试' }],
+    links: []
+  })
+)
+await app.evaluate(({ dialog }, filePath) => {
+  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [filePath] })
+}, tmpChart)
+await page.locator('#uploadFile').click()
+await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
+await page.waitForTimeout(1_200) // 等装载与 enter-chart-mode 两条 invoke 都落地
+expectEq('真实打开文件后标题条', await titleText(), '冒烟标题 — XKnowledge')
+expectEq('真实打开文件后原生标题', await chartNativeTitle(), '冒烟标题 — XKnowledge')
+await shot('04-real-open-file')
+
+// 6. 位置：标题紧挨菜单图标（53px sider + 12px 间距），不与居中的按钮组重叠
 const titleBox = await page.locator('.chart-title').boundingBox()
 const nearMenu = titleBox && titleBox.x < 250
 console.log(`${nearMenu ? 'PASS' : 'FAIL'} 标题紧邻菜单图标: x=${titleBox?.x}`)
 if (!nearMenu) failures++
 
-// 6. 按钮组容器从菜单右侧起（x≈53），证明标题绝对定位未挤偏其居中
+// 7. 按钮组容器从菜单右侧起（x≈53），证明标题绝对定位未挤偏其居中
 const toolbarBox = await page.locator('.move-header').boundingBox()
 const toolbarIntact = toolbarBox && Math.abs(toolbarBox.x - 53) < 5
 console.log(`${toolbarIntact ? 'PASS' : 'FAIL'} 按钮组容器未被挤偏: x=${toolbarBox?.x}（应≈53）`)

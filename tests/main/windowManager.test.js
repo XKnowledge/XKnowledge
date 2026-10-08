@@ -22,23 +22,43 @@ import {
 } from '../../src/main/windowManager'
 import { IPC } from '../../src/shared/ipc-channels'
 
-/** 造一个 fake BrowserWindow，带图表模式进入/退出用到的方法 */
-const fakeWindow = (overrides = {}) => ({
-  id: 1,
-  on: vi.fn(),
-  once: vi.fn(),
-  removeListener: vi.fn(),
-  isDestroyed: vi.fn(() => false),
-  setMaximizable: vi.fn(),
-  setMinimizable: vi.fn(),
-  setResizable: vi.fn(),
-  setMinimumSize: vi.fn(),
-  setSize: vi.fn(),
-  setTitle: vi.fn(),
-  unmaximize: vi.fn(),
-  webContents: { id: 1, send: vi.fn(), isDestroyed: vi.fn(() => false) },
-  ...overrides
-})
+/** 造一个 fake BrowserWindow，带图表模式进入/退出用到的方法。
+ *  webContents 用真实的事件登记实现（而非 vi.fn 空壳）：生产代码里
+ *  enterChartMode 的崩溃兜底挂在 webContents 上、createWindow 的同款兜底
+ *  也挂它——空壳会把「挂错对象」这类错误契约放过去。 */
+const fakeWindow = (overrides = {}) => {
+  const wcListeners = new Map()
+  return {
+    id: 1,
+    on: vi.fn(),
+    once: vi.fn(),
+    removeListener: vi.fn(),
+    isDestroyed: vi.fn(() => false),
+    setMaximizable: vi.fn(),
+    setMinimizable: vi.fn(),
+    setResizable: vi.fn(),
+    setMinimumSize: vi.fn(),
+    setSize: vi.fn(),
+    setTitle: vi.fn(),
+    unmaximize: vi.fn(),
+    webContents: {
+      id: 1,
+      send: vi.fn(),
+      isDestroyed: vi.fn(() => false),
+      on: (evt, h) => {
+        if (!wcListeners.has(evt)) wcListeners.set(evt, new Set())
+        wcListeners.get(evt).add(h)
+        return undefined
+      },
+      removeListener: (evt, h) => {
+        wcListeners.get(evt)?.delete(h)
+        return undefined
+      },
+      listenerCount: (evt) => wcListeners.get(evt)?.size ?? 0
+    },
+    ...overrides
+  }
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -316,6 +336,79 @@ describe('createChartWindow / takePendingChart：新窗口图表暂存', () => {
     vi.clearAllMocks()
     setRecordingLock(win, false)
     expect(win.setResizable).not.toHaveBeenCalled()
+  })
+})
+
+describe('enterChartMode：关窗拦截的崩溃兜底', () => {
+  /** 分类记录监听器：winHandlers 只收挂在窗口本体上的，wcHandlers 收
+   *  webContents 上的（fakeWindow 的 webContents 已实现真实事件登记，
+   *  这里在它之上再记一份按事件名索引的引用以便断言挂载目标） */
+  const trackedWindow = (id) => {
+    const winHandlers = {}
+    const wcHandlers = {}
+    const win = fakeWindow({
+      // 窗口 id 也要唯一：chartModeWindows 是模块级 Map，fakeWindow 默认
+      // id=1 会让「已进入图表模式」的幂等守卫直接 return（同名用例互相干扰）
+      id,
+      on: vi.fn((evt, h) => {
+        winHandlers[evt] = h
+      }),
+      removeListener: vi.fn((evt) => {
+        delete winHandlers[evt]
+      })
+    })
+    win.webContents.id = id
+    const realWcOn = win.webContents.on
+    const realWcOff = win.webContents.removeListener
+    win.webContents.on = (evt, h) => {
+      wcHandlers[evt] = h
+      return realWcOn(evt, h)
+    }
+    win.webContents.removeListener = (evt, h) => {
+      delete wcHandlers[evt]
+      return realWcOff(evt, h)
+    }
+    return { win, winHandlers, wcHandlers }
+  }
+
+  it('render-process-gone 兜底挂在 webContents 上（BrowserWindow 不转发该事件）', () => {
+    // 挂到 BrowserWindow 上是死代码：崩溃后无人响应 request-close，关窗
+    // 拦截永不解除，窗口永远关不掉（点 X/Alt+F4 只对已死的 webContents
+    // 发消息）。断言挂载目标而非只断言行为——旧用例用 vi.fn() 收任意事件名，
+    // 恰好把这个错误契约放过去了
+    const { win, winHandlers, wcHandlers } = trackedWindow(401)
+    enterChartMode(win)
+
+    expect(typeof wcHandlers['render-process-gone']).toBe('function')
+    expect(winHandlers['render-process-gone']).toBeUndefined()
+    // 关闭拦截与假死兜底仍在窗口本体上（它们是 BrowserWindow 事件）
+    expect(typeof winHandlers['close']).toBe('function')
+    expect(typeof winHandlers['unresponsive']).toBe('function')
+    expect(typeof winHandlers['responsive']).toBe('function')
+  })
+
+  it('崩溃兜底解除关窗拦截：窗口可被关闭', () => {
+    const { win, winHandlers, wcHandlers } = trackedWindow(402)
+    enterChartMode(win)
+    expect(winHandlers['close']).toBeDefined()
+
+    wcHandlers['render-process-gone']()
+
+    // 拦截已摘：不再对已死的渲染进程发 request-close
+    expect(winHandlers['close']).toBeUndefined()
+    expect(win.webContents.send).not.toHaveBeenCalledWith(IPC.APP_REQUEST_CLOSE)
+    // 再走 exitChartMode 不抛（登记已清，空操作）
+    expect(() => exitChartMode(win)).not.toThrow()
+  })
+
+  it('exitChartMode 从 webContents 摘掉崩溃兜底（对称，防重入叠加）', () => {
+    const { win, wcHandlers } = trackedWindow(403)
+    enterChartMode(win)
+    expect(wcHandlers['render-process-gone']).toBeDefined()
+
+    exitChartMode(win)
+
+    expect(wcHandlers['render-process-gone']).toBeUndefined()
   })
 })
 

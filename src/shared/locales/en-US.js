@@ -19,6 +19,7 @@ export const enUS = {
     restore: 'Restore Down',
     closeEsc: 'Close (Esc)',
     openFailedDetail: 'Failed to open: file could not be read or is corrupted',
+    actionFailed: 'Action failed',
     collapse: 'Collapse',
     name: 'Name',
     description: 'Description'

@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
+  // webContents.fromId 收的是 BrowserWindow id、webContents.fromId 收的是
+  // webContents id——两套独立计数器。这里两个都提供，才能钉住「用了哪一套」
   BrowserWindow: { fromWebContents: vi.fn(), fromId: vi.fn() },
+  webContents: { fromId: vi.fn() },
   dialog: { showMessageBox: vi.fn() },
   clipboard: { writeText: vi.fn(), readText: vi.fn() },
   // examplePaths 经 app.getAppPath() 定位 examples 目录
@@ -48,7 +51,7 @@ vi.mock('../../src/main/exportHtml', () => ({
   saveHtmlFile: vi.fn(async () => ({ path: 'C:/out.html' }))
 }))
 
-import { ipcMain, BrowserWindow, clipboard } from 'electron'
+import { ipcMain, BrowserWindow, webContents, clipboard } from 'electron'
 import * as fileService from '../../src/main/fileService'
 import { saveHtmlFile } from '../../src/main/exportHtml'
 import { listExamples, openExample } from '../../src/main/exampleService'
@@ -83,6 +86,23 @@ const fakeWindow = (overrides = {}) => ({
 
 const senderOf = (id) => ({ sender: { id } })
 
+/**
+ * 装配「webContents id → 窗口」解析链的两层 mock（与生产一致）：
+ * webContents.fromId(id) 收 webContents id，BrowserWindow.fromWebContents(wc)
+ * 再取窗口。两套 id 空间独立，因此这里显式把 id 与它自己的 webContents 对象
+ * 绑成一对——多窗口用例里若把 fromWebContents 钉成固定返回值，refreshTitles
+ * 循环第二个窗口就会解析错对象（旧测试正是靠这个错误契约才「通过」的）。
+ * 未登记的 id 返回 null（等价于窗口已销毁）。
+ */
+const mockIdResolution = (idToWin) => {
+  const wcById = new Map(Object.keys(idToWin).map((id) => [id, { id: Number(id) }]))
+  webContents.fromId.mockImplementation((id) => wcById.get(String(id)) ?? null)
+  BrowserWindow.fromWebContents.mockImplementation((wc) =>
+    wc ? (idToWin[String(wc.id)] ?? null) : null
+  )
+  return wcById
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   registerIpc()
@@ -107,7 +127,7 @@ describe('FILE_OPEN：同文件聚焦', () => {
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/a.xk' })
 
     // 窗口 1 再打开同一文件
-    BrowserWindow.fromId.mockReturnValue(holder)
+    webContents.fromId.mockReturnValue(holder)
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['C:/a.xk']
@@ -122,7 +142,7 @@ describe('FILE_OPEN：同文件聚焦', () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(1), { path: 'C:/a.xk' })
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
 
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
@@ -139,7 +159,7 @@ describe('FILE_OPEN：同文件聚焦', () => {
     BrowserWindow.fromWebContents.mockReturnValue(fakeWindow())
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/a.xk' })
 
-    BrowserWindow.fromId.mockReturnValue(null) // 窗口没了
+    webContents.fromId.mockReturnValue(null) // 窗口没了
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['C:/a.xk']
@@ -154,7 +174,7 @@ describe('FILE_OPEN：同文件聚焦', () => {
     const holder = fakeWindow({ isMinimized: vi.fn(() => true) })
     BrowserWindow.fromWebContents.mockReturnValue(holder)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/a.xk' })
-    BrowserWindow.fromId.mockReturnValue(holder)
+    webContents.fromId.mockReturnValue(holder)
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['C:/a.xk']
@@ -175,7 +195,7 @@ describe('FILE_OPENED：文件-窗口登记', () => {
     const closedCb = win.once.mock.calls.find(([evt]) => evt === 'closed')?.[1]
     expect(closedCb).toBeTypeOf('function')
 
-    BrowserWindow.fromId.mockReturnValue(null) // 关闭后 fromId 找不到
+    webContents.fromId.mockReturnValue(null) // 关闭后 fromId 找不到
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['C:/a.xk']
@@ -192,7 +212,7 @@ describe('FILE_OPENED：文件-窗口登记', () => {
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/a.xk' })
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/b.xk' })
 
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['C:/a.xk']
@@ -212,7 +232,7 @@ describe('FILE_OPENED：文件-窗口登记', () => {
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: '' })
 
     // 再次打开同一文件应正常读取，而不是聚焦到已回首页的窗口 2
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     fileService.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['C:/close-1.xk']
@@ -245,6 +265,22 @@ describe('FILE_OPENED：closed 监听器去重', () => {
     expect(closedCalls).toHaveLength(1)
   })
 
+  it('未命名窗口（空路径上报）同样注册 closed 清理：dirty 条目不再死堆积（审计 #18）', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
+    // 新建空白图：file:opened 上报空路径——修复前 closed 监听只挂在
+    // if (path) 内，未命名窗口的 dirtyWindows 条目关窗后永不清理
+    await handlerOf(IPC.FILE_OPENED)(senderOf(10), { path: '' })
+    const closedCalls = win.once.mock.calls.filter(([evt]) => evt === 'closed')
+    expect(closedCalls).toHaveLength(1)
+    const closedCb = closedCalls[0][1]
+    expect(closedCb).toBeTypeOf('function')
+    // 弄脏后关窗：回调可执行（dirtyWindows.delete + refreshTitles 不炸）
+    await handlerOf(IPC.FILE_DIRTY)(senderOf(10), { dirty: true })
+    expect(() => closedCb()).not.toThrow()
+  })
+
   it('窗口关闭时清理该窗口登记的全部文件记录', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
@@ -254,7 +290,7 @@ describe('FILE_OPENED：closed 监听器去重', () => {
     closedCb()
 
     // fromId 仍返回活窗口：若记录未被 closed 清理，会误走聚焦而非读取
-    BrowserWindow.fromId.mockReturnValue(fakeWindow())
+    webContents.fromId.mockReturnValue(fakeWindow())
     fileService.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:/dup-4.xk'] })
     fileService.readChartFile.mockResolvedValue({ content: '{}', path: 'C:/dup-4.xk' })
     const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
@@ -421,7 +457,7 @@ describe('FILE_OPENED：窗口标题联动', () => {
   it('登记路径后窗口标题设为「文件名 — XKnowledge」', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t1.xk' })
     expect(setWindowTitle).toHaveBeenCalledWith(win, 't1 — XKnowledge', 't1 — XKnowledge')
   })
@@ -429,11 +465,8 @@ describe('FILE_OPENED：窗口标题联动', () => {
   it('第二个窗口打开同名文件时，两个窗口都带目录链', async () => {
     const win2 = fakeWindow()
     const win3 = fakeWindow()
-    const byId = { 2: win2, 3: win3 }
-    BrowserWindow.fromId.mockImplementation((id) => byId[id])
-    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    mockIdResolution({ 2: win2, 3: win3 })
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t2.xk' })
-    BrowserWindow.fromWebContents.mockReturnValue(win3)
     await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t2.xk' })
     // refreshTitles 按登记顺序逐窗口调用，后登记的 win3 是最后一次调用
     expect(setWindowTitle).toHaveBeenCalledWith(
@@ -451,15 +484,11 @@ describe('FILE_OPENED：窗口标题联动', () => {
   it('空路径上报（关闭文件）触发重算：另一同名窗口恢复短标题，本窗口标题不动', async () => {
     const win2 = fakeWindow()
     const win3 = fakeWindow()
-    const byId = { 2: win2, 3: win3 }
-    BrowserWindow.fromId.mockImplementation((id) => byId[id])
-    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    mockIdResolution({ 2: win2, 3: win3 })
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t3.xk' })
-    BrowserWindow.fromWebContents.mockReturnValue(win3)
     await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t3.xk' })
 
     setWindowTitle.mockClear()
-    BrowserWindow.fromWebContents.mockReturnValue(win2)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: '' })
     expect(setWindowTitle).toHaveBeenCalledTimes(1)
     expect(setWindowTitle).toHaveBeenCalledWith(win3, 't3 — XKnowledge', 't3 — XKnowledge') // 重名解除恢复短名
@@ -469,11 +498,8 @@ describe('FILE_OPENED：窗口标题联动', () => {
   it('窗口 closed 清理登记后，其余同名窗口恢复短标题', async () => {
     const win2 = fakeWindow()
     const win3 = fakeWindow()
-    const byId = { 2: win2, 3: win3 }
-    BrowserWindow.fromId.mockImplementation((id) => byId[id])
-    BrowserWindow.fromWebContents.mockReturnValue(win2)
+    mockIdResolution({ 2: win2, 3: win3 })
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t4.xk' })
-    BrowserWindow.fromWebContents.mockReturnValue(win3)
     await handlerOf(IPC.FILE_OPENED)(senderOf(3), { path: 'C:\\下载\\t4.xk' })
 
     const closedCb = win2.once.mock.calls.find(([evt]) => evt === 'closed')?.[1]
@@ -485,10 +511,52 @@ describe('FILE_OPENED：窗口标题联动', () => {
 
   it('fromId 找不到窗口（已销毁）时跳过，不抛异常', async () => {
     BrowserWindow.fromWebContents.mockReturnValue(fakeWindow())
-    BrowserWindow.fromId.mockReturnValue(null)
+    webContents.fromId.mockReturnValue(null)
     // handler 为同步函数返回普通对象，不能用 .resolves
     const res = await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\t5.xk' })
     expect(res).toEqual({ ok: true })
+  })
+
+  it('登记簿存的是 webContents id，必须经 webContents.fromId 解析窗口', async () => {
+    // 两套 id 空间独立：dev 模式下 detach 的 DevTools 会占掉一个
+    // webContents id 而不占 BrowserWindow id，此后「BrowserWindow id ===
+    // webContents id」的巧合不再成立。用「两套映射故意不同」来钉住用了哪一套：
+    // byWc 才是正确解析，byBw 是修复前的错误来源
+    vi.clearAllMocks()
+    registerIpc()
+    const win = fakeWindow()
+    const wrongWin = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    webContents.fromId.mockImplementation((id) => (id === 42 ? win : null))
+    // 修复前会拿 sender.id 直查 BrowserWindow.fromId → 命中错误窗口
+    BrowserWindow.fromId.mockReturnValue(wrongWin)
+
+    await handlerOf(IPC.FILE_OPENED)(senderOf(42), { path: 'C:\\资料\\t9.xk' })
+
+    expect(webContents.fromId).toHaveBeenCalledWith(42)
+    expect(setWindowTitle).toHaveBeenCalledWith(win, 't9 — XKnowledge', 't9 — XKnowledge')
+    expect(setWindowTitle).not.toHaveBeenCalledWith(wrongWin, expect.anything(), expect.anything())
+  })
+
+  it('FILE_OPEN 同文件聚焦：持有者经 webContents.fromId 解析，不聚焦无关窗口', async () => {
+    vi.clearAllMocks()
+    registerIpc()
+    const holder = fakeWindow()
+    const wrongWin = fakeWindow()
+    // 窗口 55 登记持有 C:/dup.xk
+    BrowserWindow.fromWebContents.mockReturnValue(holder)
+    webContents.fromId.mockImplementation((id) => (id === 55 ? holder : null))
+    await handlerOf(IPC.FILE_OPENED)(senderOf(55), { path: 'C:/dup.xk' })
+
+    // 第二次打开同一文件：应聚焦 holder 并返回 alreadyOpen，不读盘
+    fileService.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:/dup.xk'] })
+    BrowserWindow.fromId.mockReturnValue(wrongWin)
+    const res = await handlerOf(IPC.FILE_OPEN)(senderOf(99))
+
+    expect(res).toEqual({ alreadyOpen: true })
+    expect(holder.focus).toHaveBeenCalled()
+    expect(wrongWin.focus).not.toHaveBeenCalled()
+    expect(fileService.readChartFile).not.toHaveBeenCalled()
   })
 })
 
@@ -496,7 +564,7 @@ describe('FILE_DIRTY：未保存圆点', () => {
   it('已登记窗口上报 dirty 后标题双位置带圆点', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d1.xk' })
     setWindowTitle.mockClear()
     await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
@@ -519,7 +587,7 @@ describe('FILE_DIRTY：未保存圆点', () => {
   it('上报 dirty: false 恢复干净标题', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d2.xk' })
     await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
     setWindowTitle.mockClear()
@@ -530,7 +598,7 @@ describe('FILE_DIRTY：未保存圆点', () => {
   it('file:opened 上报重置 dirty：登记后立即按干净态计算标题', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true }) // 未命名窗口先弄脏
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d3.xk' })
     expect(setWindowTitle).toHaveBeenLastCalledWith(win, 'd3 — XKnowledge', 'd3 — XKnowledge')
@@ -539,7 +607,7 @@ describe('FILE_DIRTY：未保存圆点', () => {
   it('空路径上报（关闭文件）同样重置 dirty', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
-    BrowserWindow.fromId.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d4.xk' })
     await handlerOf(IPC.FILE_DIRTY)(senderOf(2), { dirty: true })
     // 关闭文件：空路径上报清登记并重置 dirty；本窗口无登记项不再设标题
@@ -548,6 +616,27 @@ describe('FILE_DIRTY：未保存圆点', () => {
     // 同窗口再开新文件：若 dirty 未被重置，此处会带圆点
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\d5.xk' })
     expect(setWindowTitle).toHaveBeenLastCalledWith(win, 'd5 — XKnowledge', 'd5 — XKnowledge')
+  })
+
+  it('file:opened 非字符串 path：归一为未命名上报——不抛错、不毒化登记簿（审计 #19）', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    webContents.fromId.mockReturnValue(win)
+    // 修复前：truthy 非字符串被当 Map 键存下，refreshTitles → segmentsOf
+    // 的 p.split 直接抛 TypeError，此后任何窗口的任何标题更新全炸
+    const res = await handlerOf(IPC.FILE_OPENED)(senderOf(12), { path: 42 })
+    expect(res).toEqual({ ok: true })
+    // 登记簿未被毒化：后续标题更新照常
+    setWindowTitle.mockClear()
+    await handlerOf(IPC.FILE_OPENED)(senderOf(12), { path: 'C:\\t19.xk' })
+    expect(setWindowTitle).toHaveBeenLastCalledWith(win, 't19 — XKnowledge', 't19 — XKnowledge')
+  })
+
+  it('file:opened 无 payload 裸调用：解构不抛，归一为未命名上报（审计 #19）', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    const res = await handlerOf(IPC.FILE_OPENED)(senderOf(13))
+    expect(res).toEqual({ ok: true })
   })
 })
 

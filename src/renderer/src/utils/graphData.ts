@@ -264,6 +264,13 @@ export const focusNeighborhood = (
   return visited
 }
 
+/** 名字集合相等（长度 + 逐项包含，无序）：聚焦相机 watcher 用它短路
+ *  「集合内容未变」的重复合发——focusNodeNames 是 computed，chartData
+ *  任何变更都让它换新数组、deep watch 必触发，不比内容就会把相机拽回
+ *  根本没变的邻域 */
+export const sameNameSet = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((name) => b.includes(name))
+
 /** 图实例节点侧的重着色 datum（读取 name/category） */
 export interface PaintNode {
   name: string

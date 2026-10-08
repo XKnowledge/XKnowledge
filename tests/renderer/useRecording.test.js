@@ -108,6 +108,25 @@ describe('useRecording（录制状态机）', () => {
     expect(screenPaused.value).toBe(false)
   })
 
+  it('onToggleScreenRecord 停止失败：等待拒绝但两个旗标仍须复位', async () => {
+    // 停止路径的五步收尾（restoreScale/recordingLock/摘监听）已在组件层
+    // finally 内完成，这里保证编排层的旗标不因下层异常而卡死——否则
+    // screenRecording 恒真会让 dispatch 黑名单吞掉全部编辑动作、菜单
+    // 永远显示「停止录屏」、导出视频永久禁用（只能重启应用）
+    const graph = makeGraph({
+      stopScreenRecording: vi.fn(() => Promise.reject(new Error('encoder died')))
+    })
+    const { screenRecording, screenPaused, onToggleScreenRecord, onToggleRecordPause } =
+      useRecording(ref(graph))
+    await onToggleScreenRecord()
+    onToggleRecordPause()
+    expect(screenRecording.value).toBe(true)
+
+    await expect(onToggleScreenRecord()).rejects.toThrow('encoder died')
+    expect(screenRecording.value).toBe(false)
+    expect(screenPaused.value).toBe(false)
+  })
+
   it('graph3dRef 为 null：导出/开录不抛，旗标不立', async () => {
     const { exportingVideo, screenRecording, onExportVideo, onToggleScreenRecord } = useRecording(
       ref(null)

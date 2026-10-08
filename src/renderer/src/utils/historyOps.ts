@@ -11,6 +11,7 @@
  * 在数组尾部，撤销时优先命中最近变更的那条。
  */
 import { toRaw } from 'vue'
+import { deepClone } from './graphData'
 import type { ChartData, GraphLink, GraphNode } from './graphData'
 
 /** 历史条目 = 操作对象：负载经工厂闭包捕获，栈内不再有 any 形状约定 */
@@ -28,6 +29,15 @@ export interface BatchPayload {
 /** 三元组同键判断（与 graphData.linkKey 同语义：两端顺序敏感） */
 const sameEdge = (l: GraphLink, edge: GraphLink): boolean =>
   l.source === edge.source && l.target === edge.target && l.name === edge.name
+
+/** 边键快照（值冻结）：changeNode 改名会原地改写数组内边的端点，按活引用
+ *  存在历史里的对象会随之漂移——查找键必须在工厂时按值冻结，undo/redo
+ *  才能与「撤销改名还原后的数组内容」对上 */
+const edgeKey = (edge: GraphLink): GraphLink => ({
+  source: edge.source,
+  target: edge.target,
+  name: edge.name
+})
 
 const findEdgeIndex = (links: GraphLink[], edge: GraphLink): number =>
   links.findLastIndex((l) => sameEdge(l, edge))
@@ -51,6 +61,8 @@ const pushBatch = (chart: ChartData, batch: BatchPayload): void => {
  * - 边按对象引用：操作对象捕获的就是 push 进 chartData 的同一批深拷贝
  *   产物，引用比对天然只命中本批；按三元组/端点对匹配会误删用户手工建
  *   的同端点边
+ * - 引用成立的前提：改边/删边撤销时把捕获的活引用原对象写回数组、不换
+ *   身份（useDocument 的 changeEdge/deleteEdgeAt 经 toRaw 捕获）
  * - 引用本批节点的悬空边是既有数据，保留不动（与 createNode 撤销对齐）
  * chart 可能是响应式代理（useDocument 的 chartData 经深层 reactive 读出），
  * 代理与闭包捕获的 raw 对象身份不等——成员判定前必须 toRaw 归一，否则
@@ -116,33 +128,46 @@ export const deleteNodeOp = (node: GraphNode, adjacentLinks: GraphLink[]): Histo
   }
 })
 
-/** 建边：undo 按三元组移除本条（多重边安全），redo push 回 */
-export const createEdgeOp = (edge: GraphLink): HistoryOp => ({
-  undo: (chart) => removeOneEdge(chart, edge),
-  redo: (chart) => {
-    chart.links.push(edge)
+/** 建边：undo 按冻结键移除本条（多重边安全），redo push 回克隆（不与
+ *  后续编辑共享活对象） */
+export const createEdgeOp = (edge: GraphLink): HistoryOp => {
+  const key = edgeKey(edge)
+  return {
+    undo: (chart) => removeOneEdge(chart, key),
+    redo: (chart) => {
+      chart.links.push(deepClone(edge))
+    }
   }
-})
+}
 
-/** 改边：undo 按新键定位还原 oldEdge，redo 按旧键定位写到 newEdge */
-export const changeEdgeOp = (oldEdge: GraphLink, newEdge: GraphLink): HistoryOp => ({
-  undo: (chart) => {
-    const i = findEdgeIndex(chart.links, newEdge)
-    if (i > -1) chart.links[i] = oldEdge
-  },
-  redo: (chart) => {
-    const i = findEdgeIndex(chart.links, oldEdge)
-    if (i > -1) chart.links[i] = newEdge
+/** 改边：undo 按冻结的新键定位还原 oldEdge，redo 按冻结的旧键定位写到
+ *  newEdge（活引用对象原样写回，保持身份供整批撤销按引用命中） */
+export const changeEdgeOp = (oldEdge: GraphLink, newEdge: GraphLink): HistoryOp => {
+  const oldKey = edgeKey(oldEdge)
+  const newKey = edgeKey(newEdge)
+  return {
+    undo: (chart) => {
+      const i = findEdgeIndex(chart.links, newKey)
+      if (i > -1) chart.links[i] = oldEdge
+    },
+    redo: (chart) => {
+      const i = findEdgeIndex(chart.links, oldKey)
+      if (i > -1) chart.links[i] = newEdge
+    }
   }
-})
+}
 
-/** 删边：undo push 回，redo 按三元组只删本条 */
-export const deleteEdgeOp = (edge: GraphLink): HistoryOp => ({
-  undo: (chart) => {
-    chart.links.push(edge)
-  },
-  redo: (chart) => removeOneEdge(chart, edge)
-})
+/** 删边：undo 把捕获的活引用对象 push 回（身份不变，整批撤销按引用命中），
+ *  redo 按冻结键只删本条 */
+export const deleteEdgeOp = (edge: GraphLink): HistoryOp => {
+  const key = edgeKey(edge)
+  return {
+    undo: (chart) => {
+      chart.links.push(edge)
+    },
+    redo: (chart) => removeOneEdge(chart, key)
+  }
+}
 
 /**
  * 整批追加（粘贴与大纲导入同构）：一批节点/边被 push 进图——undo 按

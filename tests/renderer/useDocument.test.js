@@ -127,6 +127,17 @@ describe('changeNode：侧栏节点表单提交', () => {
     expect(doc.chartData.value.links[0].source).toBe('A')
   })
 
+  it('空名称（含纯空白）被拒绝：与画布路径同款校验，数据不动、无历史、无通知（审计 #14）', () => {
+    const { doc, changes } = makeLoadedDoc()
+    const r = doc.changeNode(0, node('  '))
+    expect(r.ok).toBe(false)
+    expect(r.error).toBeTruthy()
+    expect(doc.chartData.value.nodes[0].name).toBe('A')
+    expect(doc.chartData.value.links[0].source).toBe('A')
+    expect(doc.historyList.value).toHaveLength(0)
+    expect(changes).toEqual([])
+  })
+
   it('历史快照与 chartData 脱钩（撤销按快照还原，不受后续改动影响）', () => {
     const { doc } = makeLoadedDoc()
     doc.changeNode(0, node('A2'))
@@ -285,6 +296,62 @@ describe('undo / redo：历史栈不变量', () => {
     expect(doc.undo()).toBe(false)
     expect(doc.redo()).toBe(false)
     expect(changes).toEqual([])
+  })
+})
+
+describe('改名与边编辑交叉：历史键按提交时的值冻结（2026-10-08 审计 #6/#7）', () => {
+  it('撤销「粘贴 → 改批次边」两步回到粘贴前，重做不产生重复边（#6 改边路径）', () => {
+    const { doc } = makeLoadedDoc()
+    doc.paste([node('P'), node('Q')], [link('P', 'Q', 'pq')])
+    doc.changeEdge(2, link('P', 'Q', 'pq2'))
+    doc.undo()
+    doc.undo()
+    expect(doc.chartData.value.nodes.map((n) => n.name)).toEqual(['A', 'B', 'C'])
+    expect(doc.chartData.value.links.map((l) => l.name)).toEqual(['e1', 'e2'])
+    doc.redo()
+    doc.redo()
+    expect(doc.chartData.value.nodes.map((n) => n.name)).toEqual(['A', 'B', 'C', 'P', 'Q'])
+    expect(doc.chartData.value.links.map((l) => l.name)).toEqual(['e1', 'e2', 'pq2'])
+  })
+
+  it('撤销「粘贴 → 删批次边」两步回到粘贴前，不留悬空边（#6 删边路径）', () => {
+    const { doc } = makeLoadedDoc()
+    doc.paste([node('P'), node('Q')], [link('P', 'Q', 'pq')])
+    doc.deleteEdgeAt(2)
+    doc.undo()
+    doc.undo()
+    expect(doc.chartData.value.nodes.map((n) => n.name)).toEqual(['A', 'B', 'C'])
+    expect(doc.chartData.value.links.map((l) => l.name)).toEqual(['e1', 'e2'])
+  })
+
+  it('改名后撤销边编辑：按提交时键定位，回到初始边（#7 变名改边链）', () => {
+    const { doc } = makeLoadedDoc()
+    doc.changeEdge(0, link('A', 'B', 'n1'))
+    doc.changeNode(1, node('B2')) // 改名原地改写数组内边端点
+    doc.changeEdge(0, link('A', 'B2', 'n2'))
+    doc.undo()
+    doc.undo()
+    doc.undo()
+    expect(doc.chartData.value.nodes.map((n) => n.name)).toEqual(['A', 'B', 'C'])
+    expect(doc.chartData.value.links[0]).toEqual(link('A', 'B', 'e1'))
+    expect(doc.chartData.value.links[1]).toEqual(link('B', 'C', 'e2'))
+  })
+
+  it('改名后撤销/重做建边与改边：数据回原位、无重复平行边（#7 建边链）', () => {
+    const { doc } = makeDoc()
+    doc.load({ nodes: [node('A'), node('B')], links: [] })
+    doc.createEdge(link('A', 'B', 'e1'))
+    doc.changeNode(1, node('B2'))
+    doc.changeEdge(0, link('A', 'B2', 'e2'))
+    doc.undo()
+    doc.undo()
+    doc.undo()
+    expect(doc.chartData.value.links).toEqual([])
+    doc.redo()
+    doc.redo()
+    doc.redo()
+    expect(doc.chartData.value.nodes.map((n) => n.name)).toEqual(['A', 'B2'])
+    expect(doc.chartData.value.links).toEqual([link('A', 'B2', 'e2')])
   })
 })
 

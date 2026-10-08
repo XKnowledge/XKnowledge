@@ -371,6 +371,15 @@ const {
 onMounted(async () => {
   window.addEventListener('keydown', shortcut)
 
+  // 文件生命周期先挂载，装载在其后：enterChartMode 会无条件把标题设成
+  // 「未命名」（它拿不到文件身份，消歧需要主进程的跨窗口全局视角），
+  // 而装载经 registerOpenedFile 上报 file:opened 后才由主进程按登记簿
+  // 覆写为文件名。两条 invoke 同通道 FIFO，顺序颠倒就会让 enterChartMode
+  // 后到、把刚算好的文件名标题又盖回「未命名」——标题要等首次编辑
+  // （file:dirty 重算）才纠正。顺序与 windowManager 的注释一致：
+  // 「进图表页先给默认标题；装载/保存上报路径后按登记簿覆盖」
+  mountFileLifecycle()
+
   // 同窗口跳转（首页打开/模板）：从 chartStore 取数据装载
   const local = takePendingChart()
   if (local) {
@@ -387,9 +396,6 @@ onMounted(async () => {
       message.error(t('chart.loadFailed'))
     }
   }
-  // 文件生命周期挂载：解锁窗口并注册关闭确认 + 60 秒自动保存
-  // （门控与关闭确认的实现见 useChartFile）
-  mountFileLifecycle()
   // 首次进图表页自动开新手教程（看过/跳过一次即标记，菜单可重开）；
   // nextTick 等装载与首帧布局完成、锚点就位再开
   nextTick(() => maybeAutoStartTour())
@@ -677,7 +683,8 @@ const { shortcut, dispatch } = useShortcuts({
     onToggleScreenRecord: doToggleScreenRecord,
     startTour
   },
-  isRecording: () => isRecording.value
+  isRecording: () => isRecording.value,
+  isDarwin: isMacOS // 删除键别名：macOS ⌫（Backspace）触发默认 delete 绑定
 })
 
 // 按钮名语言相关：computed 让语言切换后即时跟随（ref 常量不会刷新）。

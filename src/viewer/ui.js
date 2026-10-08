@@ -65,6 +65,11 @@ export const createUi = (root, data, viewer, { lang = 'zh' } = {}) => {
       else hidden.add(c.name)
       chip.dataset.off = hidden.has(c.name) ? '1' : ''
       viewer.setState({ hiddenCategories: hidden })
+      // 图例显隐改变命中集（viewer 重算 searchHits）：计数与序号即时跟随、
+      // 重置到第 1 个，不等下一次敲键（refreshSearch 以 input.value 为守卫，
+      // 空搜索时清空计数无副作用）
+      hitIndex = 0
+      refreshSearch()
     })
     legend.appendChild(chip)
   }

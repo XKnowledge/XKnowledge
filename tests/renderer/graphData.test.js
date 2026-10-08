@@ -9,6 +9,7 @@ import {
   defaultFocusNode,
   focusNeighborhood,
   searchGraphNodes,
+  sameNameSet,
   deepClone,
   emptyNode,
   emptyEdge,
@@ -885,5 +886,17 @@ describe('emptyNode / emptyEdge：侧栏表单空模板', () => {
 
   it('emptyEdge 回到空边模板', () => {
     expect(emptyEdge()).toEqual({ source: '', target: '', name: '', des: '' })
+  })
+})
+
+describe('sameNameSet：名字集合相等（聚焦相机 watcher 的重复合发短路）', () => {
+  it('内容相同即相等（顺序无关、空集相等）：邻域 computed 换新数组不重复取景', () => {
+    expect(sameNameSet(['A', 'B', 'C'], ['C', 'B', 'A'])).toBe(true)
+    expect(sameNameSet([], [])).toBe(true)
+  })
+
+  it('长度不同或成员不同返回 false：换焦点/改跳数仍要取景', () => {
+    expect(sameNameSet(['A', 'B'], ['A', 'B', 'C'])).toBe(false)
+    expect(sameNameSet(['A', 'B'], ['A', 'D'])).toBe(false)
   })
 })

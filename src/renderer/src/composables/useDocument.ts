@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, toRaw, type Ref } from 'vue'
 import { deepClone } from '../utils/graphData'
 import {
   appendBatchOp,
@@ -140,9 +140,12 @@ export function useDocument({ onChange }: UseDocumentOptions): DocumentHandle {
   /**
    * 侧栏节点表单提交（原 XkCurrentNode 内联逻辑收口）：改名时同步改写
    * 所有引用旧名的边端点；改名才做重名校验（名不变时旧条目即自己）。
+   * 空名先拒（与画布建点同款校验）——name 是主键，空名落库后搜索/撤销
+   * 全部失灵
    */
   const changeNode = (index: number, node: GraphNode): IntentResult => {
     const chart = chartData.value!
+    if (!node.name?.trim()) return { ok: false, error: t('validation.nodeNameRequired') }
     const oldNode = deepClone(chart.nodes[index])
     const newNode = deepClone(node)
     const oldName = oldNode.name
@@ -163,10 +166,12 @@ export function useDocument({ onChange }: UseDocumentOptions): DocumentHandle {
     return { ok: true }
   }
 
-  /** 侧栏边表单提交（原 XkCurrentEdge 内联逻辑收口）：按索引替换，无校验 */
+  /** 侧栏边表单提交（原 XkCurrentEdge 内联逻辑收口）：按索引替换，无校验。
+   *  oldEdge 经 toRaw 捕获数组内的活引用（非克隆）：撤销把它原对象写回
+   *  数组、身份不变，整批撤销（removeBatch 按引用命中本批）才不漏删 */
   const changeEdge = (index: number, edge: GraphLink): IntentResult => {
     const chart = chartData.value!
-    const oldEdge = deepClone(chart.links[index])
+    const oldEdge = toRaw(chart.links[index])
     const newEdge = deepClone(edge)
     record(changeEdgeOp(oldEdge, newEdge))
     chart.links[index] = newEdge
@@ -193,11 +198,12 @@ export function useDocument({ onChange }: UseDocumentOptions): DocumentHandle {
     return true
   }
 
-  /** 删边：只删目标索引 */
+  /** 删边：只删目标索引；操作对象捕获 toRaw 活引用（undo 原对象 push 回，
+   *  身份不变——整批撤销按引用命中本批边） */
   const deleteEdgeAt = (index: number): boolean => {
     if (index < 0) return false
     const chart = chartData.value!
-    record(deleteEdgeOp(deepClone(chart.links[index])))
+    record(deleteEdgeOp(toRaw(chart.links[index])))
     chart.links = chart.links.filter((_, i) => i !== index)
     onChange({ dirty: true })
     return true

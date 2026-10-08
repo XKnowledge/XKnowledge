@@ -68,6 +68,28 @@ describe('validateChartStructure', () => {
     expect(validateChartStructure(nullNode)).toBe('invalid_node_item')
   })
 
+  it('节点缺 name / name 非字符串 / 重名被拒绝（name 是主键，审计 #15）', () => {
+    const noName = JSON.parse(VALID_CHART)
+    noName.nodes = [{ des: 'x' }, { des: 'y' }]
+    noName.links = []
+    expect(validateChartStructure(noName)).toBe('invalid_node_item')
+    const nonString = JSON.parse(VALID_CHART)
+    nonString.nodes = [{ name: 42, des: '', category: '' }]
+    nonString.links = []
+    expect(validateChartStructure(nonString)).toBe('invalid_node_item')
+    const empty = JSON.parse(VALID_CHART)
+    empty.nodes = [{ name: '', des: '', category: '' }]
+    empty.links = []
+    expect(validateChartStructure(empty)).toBe('invalid_node_item')
+    const dup = JSON.parse(VALID_CHART)
+    dup.nodes = [
+      { name: 'A', des: '', symbolSize: 50, category: 'c' },
+      { name: 'A', des: '', symbolSize: 50, category: 'c' }
+    ]
+    dup.links = []
+    expect(validateChartStructure(dup)).toBe('invalid_node_item')
+  })
+
   it('缺少 links 被拒绝', () => {
     const noLinks = JSON.parse(VALID_CHART)
     delete noLinks.links

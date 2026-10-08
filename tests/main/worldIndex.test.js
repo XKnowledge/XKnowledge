@@ -160,6 +160,43 @@ describe('loadWorldIndex', () => {
     await loadWorldIndex()
     expect(globalThis.__worldCalls).toHaveLength(2) // 全缓存命中，无永续失效
   })
+
+  it('缓存写盘失败（rename EPERM，Windows 目标被占用场景）：数据照常返回、临时文件被清理（审计 #10）', async () => {
+    await fs.promises.writeFile(join(root, 'examples', 'A.xk'), mkChart(['甲']))
+    const realRename = fs.promises.rename
+    const spy = vi.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
+      if (to === join(userData, 'world-index.json')) {
+        throw Object.assign(new Error(`EPERM: ${to}`), { code: 'EPERM' })
+      }
+      return realRename(from, to)
+    })
+    try {
+      const idx = await loadWorldIndex() // 修复前：缓存写盘 reject 一路穿透
+      expect(idx.graphs.map((g) => g.title)).toEqual(['A'])
+      expect(idx.brokenCount).toBe(0)
+      const leftovers = (await fs.promises.readdir(userData)).filter((f) => f.includes('.tmp-'))
+      expect(leftovers).toEqual([]) // 临时文件不残留
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('设置写盘失败（非缓存）：仍向上抛（调用方负责提示），临时文件同样被清理', async () => {
+    const realRename = fs.promises.rename
+    const spy = vi.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
+      if (to === join(userData, 'world-settings.json')) {
+        throw Object.assign(new Error(`EPERM: ${to}`), { code: 'EPERM' })
+      }
+      return realRename(from, to)
+    })
+    try {
+      await expect(setWorldUserDir(null)).rejects.toThrow('EPERM')
+      const leftovers = (await fs.promises.readdir(userData)).filter((f) => f.includes('.tmp-'))
+      expect(leftovers).toEqual([])
+    } finally {
+      spy.mockRestore()
+    }
+  })
 })
 
 describe('readWorldGraph', () => {

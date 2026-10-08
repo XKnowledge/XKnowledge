@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain, webContents } from 'electron'
 import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
 import * as worldIndex from './worldIndex'
@@ -36,8 +36,7 @@ const openedFiles = new Map()
 /**
  * 有未保存修改的窗口：webContents.id 集合。渲染端翻转 saveNodeVisible 时经
  * file:dirty 上报维护；file:opened 上报（含空路径）重置——装载即干净；
- * 窗口 closed 时随登记簿一并清理。未命名窗口从未存过文件、没挂 closed
- * 监听，其残留条目无害（webContents id 单调递增不复用）。
+ * 窗口 closed 时随登记簿一并清理（未命名窗口同样挂 closed 监听）。
  */
 const dirtyWindows = new Set()
 
@@ -45,6 +44,17 @@ const dirtyWindows = new Set()
 // 上报 file:opened，若每次都新注册 once('closed') 会在长会话下无上限累积
 // （MaxListenersExceededWarning），故每个窗口只挂一个，关闭时清其全部记录。
 const cleanupAttached = new WeakSet()
+
+/**
+ * 登记簿里的 id 是 webContents.id（见 openedFiles/dirtyWindows 说明），而
+ * BrowserWindow.fromId 收的是 BrowserWindow id——两套计数器彼此独立
+ * （Electron 文档分列，且 dev 模式 detach 的 DevTools 只占 webContents id），
+ * 直接互查会返回 null（标题静默不更新）或命中无关窗口。统一经这一层解析。
+ */
+const windowByWebContentsId = (id) => {
+  const wc = webContents.fromId(id)
+  return wc ? BrowserWindow.fromWebContents(wc) : null
+}
 
 /**
  * 按 openedFiles 登记簿重算所有已登记窗口的标题（setWindowTitle：任务栏 +
@@ -60,7 +70,7 @@ const refreshTitles = () => {
     dirty: dirtyWindows.has(webContentsId)
   }))
   for (const [id, titles] of computeTitles(entries)) {
-    setWindowTitle(BrowserWindow.fromId(id), titles.display, titles.taskbar)
+    setWindowTitle(windowByWebContentsId(id), titles.display, titles.taskbar)
   }
 }
 
@@ -104,10 +114,12 @@ export const registerIpc = () => {
     const path = res.filePaths[0]
 
     // 同一文件已在某窗口打开：把该窗口提到最上层，不再重复装载。
-    // show + focus 组合对付 Windows 前台锁定（单独 focus 可能只闪任务栏）
+    // show + focus 组合对付 Windows 前台锁定（单独 focus 可能只闪任务栏）。
+    // 持有者按 webContents id 登记，解析必须同空间——混用会聚焦到无关
+    // 窗口并返回 alreadyOpen，用户选的文件永远打不开
     const holderId = openedFiles.get(path)
     if (holderId !== undefined) {
-      const holder = BrowserWindow.fromId(holderId)
+      const holder = windowByWebContentsId(holderId)
       if (holder && !holder.isDestroyed()) {
         if (holder.isMinimized()) holder.restore()
         holder.show()
@@ -127,7 +139,11 @@ export const registerIpc = () => {
     return read
   })
 
-  ipcMain.handle(IPC.FILE_OPENED, (event, { path }) => {
+  ipcMain.handle(IPC.FILE_OPENED, (event, payload) => {
+    // path 防御性归一：truthy 非字符串被当 Map 键存下会毒化登记簿——
+    // refreshTitles → segmentsOf 的 p.split 直接抛错，此后任何窗口的任何
+    // 标题更新全炸；无 payload 的裸调用（解构即抛）同样归一为未命名上报
+    const path = typeof payload?.path === 'string' ? payload.path : ''
     const id = event.sender.id
     // 装载/换文件即干净：防「关闭文件回首页、同窗口再开新文件」残留旧圆点
     dirtyWindows.delete(id)
@@ -138,20 +154,22 @@ export const registerIpc = () => {
     }
     if (path) {
       openedFiles.set(path, id)
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (win && !cleanupAttached.has(win)) {
-        cleanupAttached.add(win)
-        win.once('closed', () => {
-          // 清掉本窗口登记的全部记录（换文件后旧记录已即时清过，正常只有一条；
-          // 按窗口 id 而非按 path 判断，别的窗口覆盖登记的文件不受影响）
-          for (const [recorded, holderId] of openedFiles) {
-            if (holderId === id) openedFiles.delete(recorded)
-          }
-          dirtyWindows.delete(id)
-          // 本窗口关闭后，与其同名的其他窗口可恢复短标题
-          refreshTitles()
-        })
-      }
+    }
+    // closed 清理对未命名窗口同样注册（它们没有 path，dirty 条目一样要清，
+    // 否则死 id 堆积到进程退出）；去重经 cleanupAttached
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !cleanupAttached.has(win)) {
+      cleanupAttached.add(win)
+      win.once('closed', () => {
+        // 清掉本窗口登记的全部记录（换文件后旧记录已即时清过，正常只有一条；
+        // 按窗口 id 而非按 path 判断，别的窗口覆盖登记的文件不受影响）
+        for (const [recorded, holderId] of openedFiles) {
+          if (holderId === id) openedFiles.delete(recorded)
+        }
+        dirtyWindows.delete(id)
+        // 本窗口关闭后，与其同名的其他窗口可恢复短标题
+        refreshTitles()
+      })
     }
     // 有路径与空路径上报都重算：登记变化可能影响其他同名窗口的标题
     refreshTitles()

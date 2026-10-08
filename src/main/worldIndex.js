@@ -17,10 +17,17 @@ const SETTINGS_VERSION = 1
 const cacheFile = () => path.join(app.getPath('userData'), 'world-index.json')
 const settingsFile = () => path.join(app.getPath('userData'), 'world-settings.json')
 
+/** 原子写：先写临时文件再 rename 覆盖。失败时清理临时文件（Windows 上
+ *  目标被杀软/OneDrive/第二实例占用，rename 抛 EPERM/EBUSY 不清就堆积） */
 const atomicWrite = async (filePath, text) => {
   const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`
-  await fs.promises.writeFile(tmp, text, 'utf-8')
-  await fs.promises.rename(tmp, filePath)
+  try {
+    await fs.promises.writeFile(tmp, text, 'utf-8')
+    await fs.promises.rename(tmp, filePath)
+  } catch (err) {
+    await fs.promises.unlink(tmp).catch(() => {})
+    throw err
+  }
 }
 
 /**
@@ -156,6 +163,8 @@ export const loadWorldIndex = async () => {
     nodes.push(...entry.nodes)
   }
   graphs.sort((a, b) => (a.id < b.id ? -1 : 1)) // 稳定输出，缓存/重建/测试可复现
+  // 缓存写盘尽力而为：产物是纯缓存（损坏即弃、全量可重建），rename 被占用
+  // 抛 EPERM 时吞掉——不能让「数据已全部读成功」的世界树打不开（审计 #10）
   await atomicWrite(
     cacheFile(),
     JSON.stringify({
@@ -163,7 +172,7 @@ export const loadWorldIndex = async () => {
       entries: Object.fromEntries(entries),
       builtAt: Date.now()
     })
-  )
+  ).catch(() => {})
   return { graphs, nodes, stitches: buildStitches(nodes), brokenCount: broken.count, userDir }
 }
 

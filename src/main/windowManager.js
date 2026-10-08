@@ -296,7 +296,12 @@ export const enterChartMode = (current_window) => {
 
   current_window.on('close', closeHandler)
   current_window.on('closed', closedHandler)
-  current_window.on('render-process-gone', goneHandler)
+  // render-process-gone 是 WebContents 事件，BrowserWindow 不转发它
+  // （Electron 的 BrowserWindow 包装只转发 unresponsive/responsive，见
+  // createWindow 里挂在 webContents 上的同款兜底）——挂错对象就是死代码：
+  // 渲染进程崩溃后无人响应 request-close，关窗拦截永不解除，点 X/Alt+F4
+  // 只会对已死的 webContents 发消息，窗口永远关不掉
+  current_window.webContents.on('render-process-gone', goneHandler)
   current_window.on('unresponsive', unresponsiveHandler)
   current_window.on('responsive', responsiveHandler)
 }
@@ -313,7 +318,7 @@ export const exitChartMode = (current_window) => {
 
   current_window.removeListener('close', handlers.closeHandler)
   current_window.removeListener('closed', handlers.closedHandler)
-  current_window.removeListener('render-process-gone', handlers.goneHandler)
+  current_window.webContents.removeListener('render-process-gone', handlers.goneHandler)
   current_window.removeListener('unresponsive', handlers.unresponsiveHandler)
   current_window.removeListener('responsive', handlers.responsiveHandler)
   chartModeWindows.delete(id)

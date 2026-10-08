@@ -1,7 +1,9 @@
 import { type Ref } from 'vue'
-import { matchEvent } from '../utils/keybindings.js'
+import { message } from 'ant-design-vue'
+import { matchDeleteEvent, matchEvent } from '../utils/keybindings.js'
 import { shortcutModifierActive } from '../utils/platformModifier.js'
 import { bindings as keybindings } from '../store/keybindingStore.js'
+import { t } from '../i18n.js'
 
 /** XkGraph3D 实例上快捷键用到的 expose 面 */
 export interface ShortcutGraphHandle {
@@ -40,6 +42,9 @@ export interface UseShortcutsOptions {
   /** 录制期间只读判定（环绕/录屏任一进行中，ChartView 谓词单源注入）：
    *  黑名单动作（改图/换图/换呈现）在 dispatch 入口直接吞掉 */
   isRecording?: () => boolean
+  /** macOS 删除键别名（window.electronAPI.platform 注入）：⌫ 报 Backspace，
+   *  默认 delete 绑定在 darwin 上靠别名命中（keybindings.matchDeleteEvent） */
+  isDarwin?: boolean
 }
 
 /** 录制期间禁的动作名单（判定口径「非修改非尺寸都允许」）：改图数据
@@ -78,7 +83,8 @@ export function useShortcuts({
   selectionLinkIndexes,
   currentEdgeDataIndex,
   actions,
-  isRecording = () => false
+  isRecording = () => false,
+  isDarwin = false
 }: UseShortcutsOptions) {
   // 动作注册表：编排层注入的函数 + ref 直连项（设置/大纲导入/导出 PNG/搜索
   // 无需经编排层转发）。dispatch 查表直调——不经任何中间状态。
@@ -113,7 +119,13 @@ export function useShortcuts({
     if (isRecording() && RECORDING_BLOCKED_ACTIONS.has(actionName)) return
     const action = actionMap[actionName]
     if (action) {
-      action()
+      // 异步动作（导出视频/停止录屏等）失败时统一兜底提示：编排链上无人
+      // 接 reject（菜单 @click 不接返回值、无全局 unhandledrejection），
+      // 不补 catch 就是控制台以外零反馈（审计 #11）
+      const result: unknown = action()
+      if (result instanceof Promise) {
+        result.catch(() => message.error(t('common.actionFailed')))
+      }
     } else {
       console.warn(`未定义的操作: ${actionName}`)
     }
@@ -156,8 +168,10 @@ export function useShortcuts({
       {
         // 删「框选集优先，否则最后点击的对象」：框选批量删（delete_selection）；
         // 无框选时最后点过边（且未再点节点）删边，否则删节点；两边 index 在对方
-        // 被点击时对称清空，无选中时各自函数的 <0 守卫兜底，按键无动作
-        match: () => !isTypingContext && matchEvent(event, keybindings.value.delete),
+        // 被点击时对称清空，无选中时各自函数的 <0 守卫兜底，按键无动作。
+        // 判定走 matchDeleteEvent：darwin 上默认 delete 键接受 ⌫（Backspace）
+        // 别名（macOS 键盘无独立 Delete 键）
+        match: () => !isTypingContext && matchDeleteEvent(event, keybindings.value.delete, isDarwin),
         action: () => {
           if (selectionNodeNames.value.length || selectionLinkIndexes.value.length) {
             dispatch('delete_selection')
