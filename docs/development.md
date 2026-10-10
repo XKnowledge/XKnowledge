@@ -115,7 +115,7 @@ CI 定义在 `.github/workflows/build.yml`：
 发版流程（依仓库惯例）：
 
 1. `package.json` 版本号升级，单独提交（`chore：版本号升级至 vX.Y.Z`）；
-2. 撰写 `docs/release-notes/vX.Y.Z.md`（目录按需创建——本仓库未入库历史发版说明；结构：新增功能 / 问题修复 / 其他 / 内部 commit 清单，可从 `git log vPREV..HEAD` 整理，亦可直接写进 GitHub Release 正文）；
+2. 撰写 `docs/release-notes/vX.Y.Z.md` 本地留档（已 `.gitignore` 排除、不入库——对外展示直接写进 GitHub Release 正文；结构：新增功能 / 问题修复 / 其他 / 内部 commit 清单，可从 `git log vPREV..HEAD` 整理）；
 3. 提交后打 tag 并推送，CI 自动出包发 Release。
 
 ## 8. 提交信息规范
@@ -148,4 +148,4 @@ CI 定义在 `.github/workflows/build.yml`：
 | [release-notes/](./release-notes/)                                                     | 各版本更新说明（目录按需创建，未入库）         |
 | [superpowers/specs/](./superpowers/specs/)、[superpowers/plans/](./superpowers/plans/) | 各功能的设计文档与实施计划归档（本地，未入库） |
 
-标注「本地文件，未入库」的三行在 clone 仓库后不存在（已被 `.gitignore` 排除）；`docs/release-notes/` 目录发版时按需创建。
+标注「本地文件，未入库」的三行在 clone 仓库后不存在（已被 `.gitignore` 排除）。

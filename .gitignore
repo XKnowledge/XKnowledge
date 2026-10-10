@@ -36,3 +36,6 @@ docs/refactor-plan.md
 docs/chartview-split-checklist.md
 docs/plan.md
 docs/fix-plan.md
+
+# 发版说明（本地留档，不入库——对外正文直接写进 GitHub Release）
+docs/release-notes/
