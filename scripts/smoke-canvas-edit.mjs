@@ -136,6 +136,18 @@ const awaitEditorFocus = () =>
 await page.waitForSelector('.xk-example-card', { timeout: 15_000 })
 await page.locator('.new-blank-card').click()
 await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
+// 1.1 新手教程防御：全新 userData 首次进图表页会自动开教程（dbdedea），
+//     遮罩会拦画布双击/拖拽手势——出现即点关闭（同真实用户跳过，stopTour
+//     顺手写「看过」标记）；非首次环境无教程，超时静默通过（同
+//     smoke-autosave 2.1 的先例；本机跑过一次后 localStorage 有标记，教程
+//     不再弹）
+try {
+  await page.locator('.ant-tour-close').waitFor({ state: 'visible', timeout: 3_000 })
+  await page.locator('.ant-tour-close').click()
+  await page.waitForTimeout(300)
+} catch {
+  /* 教程未自动弹出，继续 */
+}
 await page.waitForTimeout(1_500) // 等 3D 引擎挂载与 enterChartMode 生效
 expectEq('空白图节点计数', await nodeCount(), '0')
 await shot('01-blank-chart')

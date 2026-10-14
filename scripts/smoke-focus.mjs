@@ -104,10 +104,27 @@ await page.locator('.xk-example-card').first().dblclick()
 await page.waitForSelector('.graph3d-container', { timeout: 15_000 })
 await page.waitForTimeout(1_500) // 等 enterChartMode 生效
 
+// 2.1 新手教程防御：全新 userData 首次进图表页会自动开教程（dbdedea），
+//     其 onBeforeStart 置 siderVisible=true 会吃掉「编辑栏」按钮的翻转
+//     语义，遮罩还会拦画布交互——出现即点关闭（同真实用户跳过，stopTour
+//     顺手写「看过」标记）；非首次环境无教程，超时静默通过（同
+//     smoke-autosave 2.1 的先例；本机跑过一次后 localStorage 有标记，教程
+//     不再弹）
+try {
+  await page.locator('.ant-tour-close').waitFor({ state: 'visible', timeout: 3_000 })
+  await page.locator('.ant-tour-close').click()
+  await page.waitForTimeout(300)
+} catch {
+  /* 教程未自动弹出，继续 */
+}
+
 // 2. 点工具栏「编辑栏」按钮唤出侧边栏（属性面板默认显示）。
 // 「编辑栏」文字是按钮旁 label div 不在 a-button 内，点文字无效；
 // 图标 png 被 vite 内联成 data URL 无文件名可匹配，按 buttonList 顺序取末个
-await page.locator('.no-move-button').last().click()
+// 教程前置打开过侧栏时不再点（再点一下是收起，同 smoke-autosave 的守卫）
+if (!(await page.locator('.sider-style').isVisible())) {
+  await page.locator('.no-move-button').last().click()
+}
 const focusRow = page.locator('.focus-row')
 await focusRow.waitFor({ state: 'visible', timeout: 5_000 })
 
