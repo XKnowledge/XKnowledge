@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="100%" font-family="-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">关闭确认流程：窗口关闭按钮到三分支结局</title>
+  <desc id="d">用户点窗口 X 时主进程推送 app:request-close，ChartView 判断有无未保存修改：无则直接 invoke app:close-window 销毁窗口；有则 invoke app:confirm-unsaved 弹模态三按钮——cancel 什么都不做、discard 直接关窗、save 经 saveFile() 成功才关窗失败留在当前页。</desc>
+  <style>
+    text { fill: var(--fg); }
+    .name { font-size: 13.5px; font-weight: 600; }
+    .name-user { fill: var(--user); } .name-ren { fill: var(--ren); }
+    .desc { font-size: 11px; fill: var(--fg2); }
+    .lbl { font-size: 12px; fill: var(--fg2); }
+    .ln { fill: none; stroke: var(--line2); stroke-width: 1.4; marker-end: url(#ah); }
+    .lnp { fill: none; stroke: var(--line2); stroke-width: 1.4; }
+    .box-user { fill: var(--user-bg); stroke: var(--user); stroke-width: 1.4; }
+    .box-ren { fill: var(--ren-bg); stroke: var(--ren); stroke-width: 1.4; }
+    .box-neutral { fill: var(--neutral-bg); stroke: var(--line2); stroke-width: 1.2; }
+    .endpoint { fill: var(--neutral-solid); stroke: var(--line2); stroke-width: 1.2; }
+    .end-txt { font-size: 12.5px; font-weight: 600; fill: var(--fg); }
+    .diamond { fill: var(--ren-bg); stroke: var(--ren); stroke-width: 1.4; }
+    .mk { fill: var(--line2); }
+    svg { --fg: #1f2328; --fg2: #59636e; --line2: #8c959f; --neutral-bg: #afb8c133; --neutral-solid: #eaeef2;
+      --user: #cf222e; --user-bg: #cf222e12; --ren: #1a7f37; --ren-bg: #1a7f3712; }
+    @media (prefers-color-scheme: dark) {
+      svg { --fg: #e6edf3; --fg2: #9198a1; --line2: #6e7681; --neutral-bg: #6e768126; --neutral-solid: #2d333b;
+        --user: #f85149; --user-bg: #f851491a; --ren: #3fb950; --ren-bg: #3fb9501a; }
+    }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" class="mk"/>
+    </marker>
+  </defs>
+
+  <!-- 用户动作 -->
+  <rect x="130" y="36" width="240" height="64" rx="8" class="box-user"/>
+  <text x="250" y="62" text-anchor="middle" class="name name-user">用户点窗口 X</text>
+  <text x="250" y="84" text-anchor="middle" class="desc">（图表模式已拦截 close）</text>
+
+  <path d="M 250 100 L 250 141" class="ln"/>
+  <text x="266" y="126" class="lbl">主进程推送 app:request-close</text>
+
+  <!-- 判断 -->
+  <polygon points="120,200 250,145 380,200 250,255" class="diamond"/>
+  <text x="250" y="196" text-anchor="middle" class="name name-ren">有无未保存修改？</text>
+  <text x="250" y="216" text-anchor="middle" class="desc">ChartView</text>
+
+  <!-- 无分支 -->
+  <path d="M 250 255 L 250 301" class="ln"/>
+  <text x="262" y="284" class="lbl">无</text>
+  <rect x="115" y="305" width="270" height="68" rx="8" class="box-ren"/>
+  <text x="250" y="332" text-anchor="middle" class="name name-ren">invoke app:close-window</text>
+  <text x="250" y="356" text-anchor="middle" class="desc">destroy() 直接关窗（绕过拦截）</text>
+  <path d="M 250 373 L 250 411" class="ln"/>
+  <rect x="170" y="415" width="160" height="44" rx="22" class="endpoint"/>
+  <text x="250" y="443" text-anchor="middle" class="end-txt">窗口关闭</text>
+
+  <!-- 有分支 -->
+  <path d="M 380 200 L 685 200 L 685 301" class="ln"/>
+  <text x="480" y="190" class="lbl">有</text>
+
+  <rect x="440" y="305" width="490" height="68" rx="8" class="box-user"/>
+  <text x="685" y="332" text-anchor="middle" class="name name-user">invoke app:confirm-unsaved</text>
+  <text x="685" y="356" text-anchor="middle" class="desc">模态三按钮：保存 / 放弃 / 取消（模态于触发窗口）</text>
+
+  <!-- 三分支：水平母线 + 三条独立下垂箭头 -->
+  <path d="M 685 373 L 685 380" class="lnp"/>
+  <path d="M 510 380 L 840 380" class="lnp"/>
+  <path d="M 510 380 L 510 421" class="ln"/>
+  <path d="M 665 380 L 665 421" class="ln"/>
+  <path d="M 840 380 L 840 421" class="ln"/>
+
+  <rect x="440" y="425" width="140" height="80" rx="8" class="box-neutral"/>
+  <text x="510" y="458" text-anchor="middle" class="name">cancel</text>
+  <text x="510" y="482" text-anchor="middle" class="desc">什么都不做</text>
+
+  <rect x="595" y="425" width="140" height="80" rx="8" class="box-ren"/>
+  <text x="665" y="458" text-anchor="middle" class="name name-ren">discard</text>
+  <text x="665" y="482" text-anchor="middle" class="desc">app:close-window</text>
+  <path d="M 665 505 L 665 536" class="ln"/>
+  <rect x="595" y="540" width="140" height="44" rx="22" class="endpoint"/>
+  <text x="665" y="568" text-anchor="middle" class="end-txt">窗口关闭</text>
+
+  <rect x="750" y="425" width="180" height="96" rx="8" class="box-user"/>
+  <text x="840" y="454" text-anchor="middle" class="name name-user">save</text>
+  <text x="840" y="478" text-anchor="middle" class="desc">saveFile() 成功才关窗</text>
+  <text x="840" y="498" text-anchor="middle" class="desc">失败留在当前页</text>
+</svg>

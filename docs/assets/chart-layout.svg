@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 600" width="100%" font-family="-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">图表页（编辑视图）界面布局</title>
+  <desc id="d">窗口顶部为标题条（左上角菜单按钮、文件名与未保存圆点），其下是工具栏（创建节点、删除节点、删除连接、编辑栏四按钮）；主区左侧为 3D 力导向图画布（画布左上有图例、右上有图内搜索框），右侧为约 270px 侧边栏，属性面板与节点、连接表单交替出现。</desc>
+  <style>
+    text { fill: var(--fg); }
+    .zone { font-size: 14px; font-weight: 600; }
+    .z-pre { fill: var(--pre); } .z-main { fill: var(--main); } .z-data { fill: var(--data); } .z-ren { fill: var(--ren); } .z-user { fill: var(--user); }
+    .cap { font-size: 11px; fill: var(--fg2); }
+    .title-txt { font-size: 13px; fill: var(--fg2); }
+    .btn-txt { font-size: 11.5px; fill: var(--main); }
+    .win { fill: none; stroke: var(--line); stroke-width: 1.6; }
+    .toolbar { fill: var(--main-bg); }
+    .btn { fill: var(--sub-bg); stroke: var(--main); stroke-width: 1; }
+    .menu-btn { fill: var(--pre-bg); stroke: var(--pre); stroke-width: 1.3; }
+    .menu-line { stroke: var(--pre); stroke-width: 2; stroke-linecap: round; }
+    .canvas { fill: var(--ren-bg); stroke: var(--ren); stroke-width: 1.4; }
+    .legend { fill: var(--data-bg); stroke: var(--data); stroke-width: 1.2; }
+    .legend-dot { fill: var(--data); }
+    .sider { fill: var(--user-bg); stroke: var(--user); stroke-width: 1.4; }
+    .sider-pane { fill: var(--sub-bg); stroke: var(--user); stroke-width: 0.8; stroke-dasharray: 3 3; }
+    .search { fill: var(--sub-bg); stroke: var(--line2); stroke-width: 1; }
+    .dirty-dot { fill: var(--data); }
+    .dirty-lbl { font-size: 11px; fill: var(--data); }
+    svg { --fg: #1f2328; --fg2: #59636e; --line: #8c959f; --line2: #8c959f; --sub-bg: #ffffff66;
+      --main: #0969da; --main-bg: #0969da0a; --pre: #8250df; --pre-bg: #8250df14;
+      --data: #9a6700; --data-bg: #9a67000f; --ren: #1a7f37; --ren-bg: #1a7f370d;
+      --user: #cf222e; --user-bg: #cf222e0a; }
+    @media (prefers-color-scheme: dark) {
+      svg { --fg: #e6edf3; --fg2: #9198a1; --line: #6e7681; --line2: #6e7681; --sub-bg: #ffffff0d;
+        --main: #4493f8; --main-bg: #4493f80a; --pre: #ab7df8; --pre-bg: #ab7df81a;
+        --data: #e3b341; --data-bg: #e3b3410d; --ren: #3fb950; --ren-bg: #3fb9500c;
+        --user: #f85149; --user-bg: #f851490a; }
+    }
+  </style>
+
+  <!-- 窗口 -->
+  <rect x="30" y="30" width="860" height="530" rx="10" class="win"/>
+
+  <!-- 标题条 -->
+  <rect x="52" y="48" width="40" height="40" rx="7" class="menu-btn"/>
+  <path d="M 61 59 L 83 59" class="menu-line"/>
+  <path d="M 61 68 L 83 68" class="menu-line"/>
+  <path d="M 61 77 L 76 77" class="menu-line"/>
+  <text x="110" y="73" class="title-txt">文件名</text>
+  <circle cx="158" cy="69" r="4.5" class="dirty-dot"/>
+  <text x="170" y="73" class="title-txt">— XKnowledge</text>
+  <text x="858" y="73" text-anchor="end" class="dirty-lbl">未保存圆点（修改后出现）</text>
+
+  <!-- 工具栏 -->
+  <rect x="30" y="94" width="860" height="52" class="toolbar"/>
+  <rect x="52"  y="104" width="100" height="32" rx="6" class="btn"/>
+  <text x="102" y="124" text-anchor="middle" class="btn-txt">创建节点</text>
+  <rect x="160" y="104" width="100" height="32" rx="6" class="btn"/>
+  <text x="210" y="124" text-anchor="middle" class="btn-txt">删除节点</text>
+  <rect x="268" y="104" width="100" height="32" rx="6" class="btn"/>
+  <text x="318" y="124" text-anchor="middle" class="btn-txt">删除连接</text>
+  <rect x="376" y="104" width="100" height="32" rx="6" class="btn"/>
+  <text x="426" y="124" text-anchor="middle" class="btn-txt">编辑栏</text>
+  <text x="494" y="124" class="cap">工具栏（编辑栏展开 / 收起侧边栏）</text>
+
+  <!-- 3D 画布 -->
+  <rect x="46" y="160" width="548" height="376" rx="8" class="canvas"/>
+  <text x="320" y="342" text-anchor="middle" class="zone z-ren">3D 力导向图画布</text>
+  <text x="320" y="366" text-anchor="middle" class="cap">左键旋转 · 滚轮缩放 · 右键平移 · 双击空白建点 · Shift+拖框选 · Ctrl/⌘+拖连边</text>
+
+  <!-- 图例 -->
+  <rect x="62" y="176" width="116" height="118" rx="8" class="legend"/>
+  <text x="76" y="198" class="zone z-data" style="font-size:12.5px">图例</text>
+  <circle cx="80" cy="218" r="5" class="legend-dot"/>
+  <path d="M 92 218 L 164 218" class="cap" style="stroke: var(--line2); stroke-width: 1;"/>
+  <circle cx="80" cy="240" r="5" class="legend-dot" style="fill: var(--main);"/>
+  <path d="M 92 240 L 164 240" class="cap" style="stroke: var(--line2); stroke-width: 1;"/>
+  <circle cx="80" cy="262" r="5" class="legend-dot" style="fill: var(--ren);"/>
+  <path d="M 92 262 L 164 262" class="cap" style="stroke: var(--line2); stroke-width: 1;"/>
+  <text x="76" y="284" class="cap">点击切换类目显隐</text>
+
+  <!-- 图内搜索 -->
+  <rect x="436" y="176" width="142" height="32" rx="16" class="search"/>
+  <text x="507" y="196" text-anchor="middle" class="cap">图内搜索 Ctrl+F</text>
+
+  <!-- 侧边栏 -->
+  <rect x="610" y="160" width="262" height="376" rx="8" class="sider"/>
+  <text x="741" y="188" text-anchor="middle" class="zone z-user">侧边栏（约 270px）</text>
+  <rect x="626" y="204" width="230" height="140" rx="6" class="sider-pane"/>
+  <text x="741" y="262" text-anchor="middle" class="cap">属性面板</text>
+  <text x="741" y="284" text-anchor="middle" class="cap">（渲染设置 / 图谱简介 / 复位视图）</text>
+  <path d="M 726 356 L 756 356" class="cap" style="stroke: var(--line2); stroke-width: 1.2; marker-end: url(#ah);"/>
+  <path d="M 756 368 L 726 368" class="cap" style="stroke: var(--line2); stroke-width: 1.2; marker-end: url(#ah);"/>
+  <rect x="626" y="380" width="230" height="140" rx="6" class="sider-pane"/>
+  <text x="741" y="438" text-anchor="middle" class="cap">节点 / 连接表单</text>
+  <text x="741" y="460" text-anchor="middle" class="cap">（XkCurrentNode / XkCurrentEdge）</text>
+
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" style="fill: var(--line2);"/>
+    </marker>
+  </defs>
+</svg>

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 1136" width="100%" font-family="-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">XKnowledge 总体架构：主进程、preload、渲染进程三层与 IPC</title>
+  <desc id="d">Electron 主进程持有六个模块（index、windowManager、ipc、titleService、fileService、fileGuard），经 preload 的 contextBridge 暴露 electronAPI 白名单，渲染进程三条路由（首页 / 世界树 / 图表编辑页）；通道名单集中在 src/shared/ipc-channels.js 由主进程与 preload 共同引用。</desc>
+  <style>
+    text { fill: var(--fg); }
+    .h1 { font-size: 17px; font-weight: 600; }
+    .h2 { font-size: 14.5px; font-weight: 600; }
+    .name { font-size: 13.5px; font-weight: 600; fill: var(--fg); }
+    .name-main { fill: var(--main); } .name-pre { fill: var(--pre); } .name-ren { fill: var(--ren); }
+    .desc { font-size: 11.5px; fill: var(--fg2); }
+    .lbl { font-size: 12px; fill: var(--fg2); }
+    .lbl-main { fill: var(--main); } .lbl-pre { fill: var(--pre); }
+    .ln { fill: none; stroke: var(--line2); stroke-width: 1.4; marker-end: url(#ah); }
+    .ln-dot { fill: none; stroke: var(--line2); stroke-width: 1.3; stroke-dasharray: 5 4; }
+    .box-main { fill: var(--main-bg); stroke: var(--main); stroke-width: 1.5; }
+    .box-pre  { fill: var(--pre-bg);  stroke: var(--pre);  stroke-width: 1.5; }
+    .box-ren  { fill: var(--ren-bg);  stroke: var(--ren);  stroke-width: 1.5; }
+    .box-sub  { fill: var(--sub-bg);  stroke: var(--sub-ln); stroke-width: 1; }
+    .box-shared { fill: var(--neutral-bg); stroke: var(--line2); stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .mk { fill: var(--line2); }
+    svg {
+      --fg: #1f2328; --fg2: #59636e; --line2: #8c959f;
+      --main: #0969da; --main-bg: #0969da14; --pre: #8250df; --pre-bg: #8250df12;
+      --ren: #1a7f37; --ren-bg: #1a7f3712; --sub-ln: #0969da55; --sub-bg: #0969da0a;
+      --neutral-bg: #afb8c133;
+    }
+    @media (prefers-color-scheme: dark) {
+      svg { --fg: #e6edf3; --fg2: #9198a1; --line2: #6e7681;
+        --main: #4493f8; --main-bg: #4493f81f; --pre: #ab7df8; --pre-bg: #ab7df81a;
+        --ren: #3fb950; --ren-bg: #3fb9501a; --sub-ln: #4493f866; --sub-bg: #4493f80f;
+        --neutral-bg: #6e768126; }
+    }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" class="mk"/>
+    </marker>
+  </defs>
+
+  <!-- 主进程层 -->
+  <rect x="70" y="36" width="780" height="352" rx="10" class="box-main"/>
+  <text x="460" y="68" text-anchor="middle" class="h1">Electron 主进程（src/main）</text>
+  <g>
+    <rect x="92"  y="88" width="368" height="76" rx="6" class="box-sub"/>
+    <text x="108" y="114" class="name name-main">index.js</text>
+    <text x="108" y="138" class="desc">应用入口：单实例锁、创建窗口、注册 IPC</text>
+
+    <rect x="470" y="88" width="368" height="76" rx="6" class="box-sub"/>
+    <text x="486" y="114" class="name name-main">windowManager.js</text>
+    <text x="486" y="138" class="desc">窗口工厂、图表 / 世界模式、pendingCharts 暂存</text>
+
+    <rect x="92"  y="178" width="368" height="76" rx="6" class="box-sub"/>
+    <text x="108" y="204" class="name name-main">ipc.js</text>
+    <text x="108" y="228" class="desc">IPC 注册中心、openedFiles 登记</text>
+    <text x="108" y="246" class="desc">（同文件去重聚焦）</text>
+
+    <rect x="470" y="178" width="368" height="76" rx="6" class="box-sub"/>
+    <text x="486" y="204" class="name name-main">titleService.js</text>
+    <text x="486" y="228" class="desc">窗口标题计算（同名目录链消歧，纯函数）</text>
+
+    <rect x="92"  y="268" width="368" height="76" rx="6" class="box-sub"/>
+    <text x="108" y="294" class="name name-main">fileService.js</text>
+    <text x="108" y="318" class="desc">.xk 读写、结构校验、对话框、原子写入</text>
+
+    <rect x="470" y="268" width="368" height="76" rx="6" class="box-sub"/>
+    <text x="486" y="294" class="name name-main">fileGuard.js</text>
+    <text x="486" y="318" class="desc">路径授权 + mtime 冲突检测</text>
+  </g>
+
+  <!-- 主进程 ↔ preload -->
+  <path d="M 330 392 L 330 444" class="ln"/>
+  <text x="348" y="416" class="lbl lbl-main">ipcMain.handle / webContents.send</text>
+  <path d="M 590 444 L 590 392" class="ln"/>
+  <text x="608" y="426" class="lbl lbl-pre">invoke（请求-响应）</text>
+
+  <!-- preload 层 -->
+  <rect x="70" y="452" width="780" height="104" rx="10" class="box-pre"/>
+  <text x="460" y="482" text-anchor="middle" class="h2">src/preload（contextBridge，sandbox）</text>
+  <text x="460" y="510" text-anchor="middle" class="desc">window.electronAPI：28 个 invoke 方法 + platform 值 + 3 个推送订阅</text>
+  <text x="460" y="532" text-anchor="middle" class="desc">（onRequestClose / onTitleChanged / onMaximizeChanged，均返回解绑函数）</text>
+
+  <!-- preload ↔ 渲染层 -->
+  <path d="M 330 616 L 330 564" class="ln"/>
+  <text x="348" y="596" class="lbl lbl-pre">invoke（请求-响应）</text>
+  <path d="M 590 564 L 590 616" class="ln"/>
+  <text x="608" y="586" class="lbl">推送 onRequestClose / onTitleChanged</text>
+  <text x="608" y="606" class="lbl">/ onMaximizeChanged</text>
+
+  <!-- 渲染层 -->
+  <rect x="70" y="620" width="780" height="380" rx="10" class="box-ren"/>
+  <text x="460" y="652" text-anchor="middle" class="h1">渲染进程（src/renderer，Vue 3 + vue-router hash）</text>
+  <g>
+    <rect x="92"  y="670" width="232" height="72" rx="6" class="box-sub"/>
+    <text x="208" y="696" text-anchor="middle" class="name name-ren">/ → AddView</text>
+    <text x="208" y="718" text-anchor="middle" class="desc">首页：示例图库 + 新建空白卡</text>
+
+    <rect x="344" y="670" width="232" height="72" rx="6" class="box-sub"/>
+    <text x="460" y="696" text-anchor="middle" class="name name-ren">/world → WorldView</text>
+    <text x="460" y="718" text-anchor="middle" class="desc">世界树：跨图库聚合浏览</text>
+
+    <rect x="596" y="670" width="232" height="72" rx="6" class="box-sub"/>
+    <text x="712" y="696" text-anchor="middle" class="name name-ren">/chart → ChartView</text>
+    <text x="712" y="718" text-anchor="middle" class="desc">图表编辑页（核心）</text>
+  </g>
+  <g>
+    <rect x="92" y="790" width="736" height="52" rx="6" class="box-sub"/>
+    <text x="460" y="812" text-anchor="middle" class="name name-ren">ChartView 编排：XkMenu 下拉菜单 · 工具栏按钮 · 全局快捷键</text>
+    <text x="460" y="832" text-anchor="middle" class="desc">两条触发路径汇入 useShortcuts 的 dispatch(action) 统一分发</text>
+
+    <rect x="92" y="860" width="452" height="100" rx="6" class="box-sub"/>
+    <text x="318" y="890" text-anchor="middle" class="name name-ren">XkGraph3D</text>
+    <text x="318" y="914" text-anchor="middle" class="desc">3D 力导向图：渲染 / 图例 / 高亮 / 导出 /</text>
+    <text x="318" y="934" text-anchor="middle" class="desc">双击建点 / 拖拽连边 / 框选批量删</text>
+
+    <rect x="564" y="860" width="264" height="100" rx="6" class="box-sub"/>
+    <text x="696" y="890" text-anchor="middle" class="name name-ren">侧边栏表单</text>
+    <text x="696" y="914" text-anchor="middle" class="desc">XkCurrentNode / XkCurrentEdge</text>
+    <text x="696" y="934" text-anchor="middle" class="desc">属性面板交替出现</text>
+  </g>
+
+  <!-- shared 通道名单 -->
+  <rect x="70" y="1036" width="780" height="64" rx="8" class="box-shared"/>
+  <text x="460" y="1062" text-anchor="middle" class="name">src/shared/ipc-channels.js</text>
+  <text x="460" y="1084" text-anchor="middle" class="desc">IPC 通道名单（唯一出处，禁止裸字符串）——主进程与 preload 共同引用</text>
+</svg>

@@ -4,7 +4,7 @@
 
 ## 1. 项目概览
 
-XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导向图展示和编辑知识图谱，支持节点/连接的增删改、类目管理、撤销重做、自动保存与 PNG 导出，图谱以自有的 `.xk` 格式（JSON）落盘。
+XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导向图展示和编辑知识图谱，支持节点/连接的增删改、类目管理、撤销重做、自动保存、大纲导入与跨文件复制粘贴，导出 PNG / 交互式 HTML / 视频，并提供跨图库聚合浏览的世界树（§6.11），图谱以自有的 `.xk` 格式（JSON）落盘。
 
 ### 技术栈
 
@@ -17,35 +17,14 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 | UI 组件库 | Ant Design Vue 4 | 布局、表单、菜单、提示 |
 | 国际化 | vue-i18n 11（渲染层）+ 主进程查表 `t()` | 双端共用一份字典（`src/shared/locales/`） |
 | 图可视化 | 3d-force-graph（Three.js）+ three-spritetext | 3D 力导向图与节点文字标签 |
-| 测试 | Vitest 5 | 513 个单元测试（`yarn test`） |
+| 测试 | Vitest 5 | 784 个单元测试（`yarn test`） |
 | 质量 | ESLint 10（flat config）、Prettier 3、TypeScript 5.9 + vue-tsc | `yarn typecheck` |
 
 代码语言为 JS 为主、TS 为辅：主进程与 preload 全部为 JS，渲染层入口与工具函数为 TS。
 
 ## 2. 总体架构
 
-```
-┌─────────────────────────────── Electron 主进程 (src/main) ───────────────────────────────┐
-│  index.js          应用入口：单实例锁、创建窗口、注册 IPC                                  │
-│  windowManager.js  窗口工厂、图表模式（解锁尺寸 + 关闭确认）、pendingCharts 暂存             │
-│  ipc.js            IPC 注册中心、openedFiles（文件-窗口登记簿，同文件去重聚焦）              │
-│  titleService.js   窗口标题计算（basename 分组 + 同名最短可区分目录链，纯函数）             │
-│  fileService.js    .xk 读写、结构校验、对话框、原子写入                                     │
-│  fileGuard.js      路径授权 + mtime 冲突检测（防任意路径写盘 / 丢失更新）                    │
-└──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
-               │ ipcMain.handle / webContents.send                │
-┌──────────────▼───────────── src/preload (contextBridge) ────────▼───────────────────────┐
-│  window.electronAPI：openFile / saveFile / saveFileAs / newChartWindow / ... 共 15 个方法 │
-└──────────────┬───────────────────────────────────────────────────┬───────────────────────┘
-               │ invoke（请求-响应） / onRequestClose、onTitleChanged（推送）│
-┌──────────────▼──────────────── 渲染进程 (src/renderer) ──────────▼───────────────────────┐
-│  vue-router:  / → AddView（首页示例图库）           /chart → ChartView（图表编辑页）        │
-│  ChartView ── XkMenu（下拉菜单）/ 工具栏按钮 / 全局快捷键                                   │
-│      ├── XkGraph3D        3D 力导向图（渲染、图例、高亮、导出、双击建点/拖拽连边/框选批量删） │
-│      └── 侧边栏表单        XkCurrentNode / XkCurrentEdge                                    │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-        src/shared/ipc-channels.js：IPC 通道名单，主进程与 preload 共同引用
-```
+![总体架构：主进程、preload、渲染进程三层与 IPC](./assets/architecture.svg)
 
 三条设计主线贯穿全码：
 
@@ -54,6 +33,7 @@ XKnowledge 是一款基于 Electron 的桌面知识图谱软件：以 3D 力导�
 3. **纯数据格式**——`.xk` v2 只存图数据（nodes/links），不存渲染配置；类目颜色由稳定哈希派生，视图设置（排斥力、标签开关等）为会话级，重开即恢复默认。
 
 ## 3. 目录结构
+
 
 ```
 XKnowledge/
@@ -66,6 +46,7 @@ XKnowledge/
 │  │  ├─ exampleService.js      # 示例图库对外门面：定位 examples/ 目录并转发
 │  │  ├─ exampleManifest.mjs    # 示例元数据清单：快慢两层（§5.6），零 electron 依赖
 │  │  ├─ exportHtml.js          # 交互式 HTML 导出：读 viewer 模板拼装 + 保存框落盘（§6.10）
+│  │  ├─ worldIndex.js          # 世界树索引：双源扫描聚合、mtime 缓存、读图路径白名单（§6.11）
 │  │  └─ fileGuard.js           # createPathGuard：路径授权与 mtime 冲突检测
 │  ├─ preload/
 │  │  └─ index.js               # contextBridge 暴露 window.electronAPI
@@ -76,18 +57,19 @@ XKnowledge/
 │  ├─ viewer/                   # 交互式 HTML 导出的查看器源码（§6.10，纯 JS 无框架，
 │  │                            #   构建为单 IIFE 内嵌进 resources/viewer/index.html）
 │  └─ renderer/
-│  └─ renderer/
 │     ├─ index.html
 │     └─ src/
 │        ├─ main.ts             # Vue 应用入口（注册 Antd、router）
 │        ├─ App.vue             # chart 路由独立渲染，其余套 BasicLayout
-│        ├─ router.ts           # 2 条路由（hash 模式）
-│        ├─ layouts/BasicLayout.vue   # 首页框架：侧边栏 +「打开本地文件」
+│        ├─ router.ts           # 3 条路由（hash 模式）
+│        ├─ layouts/BasicLayout.vue   # 首页框架：侧边栏 +「打开本地文件」/「世界树」入口
 │        ├─ page/
 │        │  ├─ AddView.vue      # 首页：示例图库 + 新建空白文件
+│        │  ├─ WorldView.vue    # 世界树页：跨图库聚合只读浏览（§6.11）
 │        │  └─ ChartView.vue    # 图表编辑页（核心编排层；文档域/选中/聚焦/文件生命周期等状态机在 composables/）
 │        ├─ components/
 │        │  ├─ XkGraph3D.vue        # 3D 力导向图封装（详见 §8）
+│        │  ├─ XkWorldGraph.vue     # 世界树 3D 图（只读预览：超节点/域展开/聚焦，§6.11）
 │        │  ├─ XkMenu.vue           # 图表页左上角下拉菜单
 │        │  ├─ XkCurrentNode.vue    # 侧边栏：修改节点表单
 │        │  └─ XkCurrentEdge.vue    # 侧边栏：修改连接表单
@@ -96,10 +78,8 @@ XKnowledge/
 │        ├─ utils/
 │        │  ├─ historyOps.ts        # 历史操作对象工厂（undo/redo 正反变换同厂成对）
 │        │  └─ categoryColor.js     # 类目彩虹 20 色调色板，集合顺延分配
-├─ tests/
-│  ├─ main/                     # fileGuard / fileService / ipc 单元测试
-│  └─ renderer/categoryColor.test.js
-├─ examples/金融.xk              # 金融学习示例图谱
+├─ tests/                      # vitest 单元测试（main / preload / renderer / shared / viewer 五目录，§11）
+├─ examples/                   # 示例图谱 300 余张 + examples.manifest.json 元数据清单（§5.6）
 ├─ data/                        # 早期 v1 格式测试数据（应用不使用）
 ├─ resources/                   # 应用图标；viewer/ 为导出 HTML 的单文件模板（构建产物入库，§6.10）
 ├─ release/                     # electron-builder 打包输出
@@ -115,6 +95,7 @@ XKnowledge/
 
 - 主窗口 `900×670`，默认**锁定尺寸**（不可缩放/最大化/最小化），隐藏标题栏 +`titleBarOverlay`，`autoHideMenuBar` 且应用菜单置空。
 - 窗口进入图表页时调用 `app:enter-chart-mode`：解锁尺寸限制（最小 900×670）并注册「关闭前确认」拦截；离开图表页对称调用 `app:exit-chart-mode` 恢复锁定。
+- 世界树页（`/world`）对称调用 `app:enter-world-mode` / `app:exit-world-mode`：同样解锁尺寸，但**不改窗口标题、不注册关闭确认**——只读派生视图，无未保存态（§6.11）。
 - 窗口标题由主进程统一管理：默认「XKnowledge」；进图表页设「未命名 — XKnowledge」；装载/保存上报路径后按 `titleService` 计算「文件名[ — 目录链] — XKnowledge」（同名自动补目录消歧）；图表页卸载恢复默认。`titleBarOverlay` 只画控制按钮不画标题文字，故标题经 `setWindowTitle` 同时 `setTitle`（任务栏/Alt-Tab）并推送 `app:title-changed`，由 BasicLayout 的 30px 自绘标题条纯展示（渲染端不自算）。未保存修改时标题带圆点且两处位置不同：标题条在文件名后（`金融 • — XKnowledge`）、任务栏在标题前（`• 金融 — XKnowledge`），由渲染端 `file:dirty` 上报驱动。
 - **单实例锁**：`requestSingleInstanceLock` 失败即退出。
 - **禁止刷新**（F5 / Ctrl+R / Ctrl+F5 / ⌘+R）：pending 图表数据取后即清，刷新会直接丢失图表内容，因此经 `before-input-event` 统一拦截。
@@ -123,7 +104,7 @@ XKnowledge/
 
 ### 4.2 IPC 通道契约
 
-通道名单集中在 `src/shared/ipc-channels.js`，命名约定 `<域>:<动作>`。preload 将其包装为 `window.electronAPI` 上的方法；除 `onRequestClose`（主进程推送，返回解绑函数）外均为 `invoke` 请求-响应，主进程 throw 时渲染端收到 reject。
+通道名单集中在 `src/shared/ipc-channels.js`，命名约定 `<域>:<动作>`。preload 将其包装为 `window.electronAPI` 上的方法；主进程**推送订阅**有三个——`onRequestClose`（用户点击窗口关闭）、`onTitleChanged`（窗口标题变化）、`onMaximizeChanged`（最大化状态变化，自绘控制按钮图标切换），均返回解绑函数、组件卸载时必须调用；其余全部为 `invoke` 请求-响应，主进程 throw 时渲染端收到 reject。
 
 | 通道 | 方向 | 参数 | 返回 / 失败 |
 | --- | --- | --- | --- |
@@ -132,22 +113,38 @@ XKnowledge/
 | `file:save` | 渲染 → 主 | `{ path, content }` | path 为空时弹另存为；成功 `{ path }`，失败 reject（`WRITE_FAILED` / `PATH_NOT_AUTHORIZED` / `FILE_CONFLICT`） |
 | `file:save-as` | 渲染 → 主 | `{ content }` | `{ canceled }` \| `{ path }` |
 | `file:dirty` | 渲染 → 主 | `{ dirty: boolean }` | `{ ok }`；登记/清除窗口未保存态并重算标题（未命名窗口直接设未命名标题） |
+| `video:save` | 渲染 → 主 | `{ bytes, defaultName, ext }` | 保存框写二进制（`{ path }` \| `{ canceled }`）；一次性导出产物，不进 guard/mtime 体系（§6.8） |
+| `export:html-save` | 渲染 → 主 | `{ data, defaultName }` | 读 viewer 模板拼装 + 保存框落盘（`{ path }` \| `{ canceled }`；§6.10） |
+| `clipboard:write-graph` | 渲染 → 主 | `{ text }` | 写系统剪贴板（§6.9） |
+| `clipboard:read-graph` | 渲染 → 主 | — | `{ text }`；读系统剪贴板（§6.9） |
+| `example:list` | 渲染 → 主 | — | `{ examples }`；首页图库元数据，快慢两层见 §5.6 |
+| `example:open` | 渲染 → 主 | `{ fileName }` | `{ content }`（副本语义，图库名由渲染端随行携带）；非法文件名/损坏 reject |
 | `app:new-chart-window` | 渲染 → 主 | `{ content, path }` | `{ ok }`；新窗口加载 `#/chart` 并暂存数据 |
 | `app:take-pending-chart` | 渲染 → 主 | — | `{ content, path }` \| `null`；**取后即清** |
 | `app:enter-chart-mode` | 渲染 → 主 | — | `{ ok }`；幂等 |
 | `app:exit-chart-mode` | 渲染 → 主 | — | `{ ok }`；未在图表模式时为空操作 |
+| `app:enter-world-mode` / `app:exit-world-mode` | 渲染 → 主 | — | `{ ok }`；世界树页窗口模式（解锁尺寸，不设标题/关闭确认，§6.11） |
 | `app:close-window` | 渲染 → 主 | — | `{ ok }`；`destroy()` 直接关窗（绕过 close 拦截） |
 | `app:confirm-unsaved` | 渲染 → 主 | — | `'save'` \| `'discard'` \| `'cancel'`（模态于触发窗口） |
 | `app:request-close` | 主 → 渲染 | — | 用户点击窗口关闭按钮时推送，由图表页决定后续 |
 | `app:title-changed` | 主 → 渲染 | `title: string`（display 变体） | 窗口标题变化时推送（未命名/文件名/默认），BasicLayout 标题条纯展示；任务栏 `setTitle` 用 taskbar 变体（未保存圆点两处位置不同） |
 | `app:theme-applied` | 渲染 → 主 | `{ mode, effective }` | `{ ok }`；渲染层主题变化时上报，主进程统一联动（见 §5.2 `applyTheme`） |
+| `app:locale-applied` | 渲染 → 主 | `{ locale }` | `{ ok }`；主进程 `setCurrentLocale` + `refreshTitles`（§6.7） |
+| `app:window-minimize` | 渲染 → 主 | — | `{ ok }`；自绘窗口控制按钮（XkWindowControls）用 |
+| `app:window-maximize-toggle` | 渲染 → 主 | — | `{ ok }`；`isResizable()=false`（录制/首页冻结）时防御拒绝 |
+| `app:recording-lock` | 渲染 → 主 | `{ lock }` | `{ ok }`；冻结 resizable/maximizable/minimizable（§6.3） |
+| `app:close-window-request` | 渲染 → 主 | — | `{ ok }`；自绘关闭按钮走原生 `close()`（经 close 拦截，与点 X 同语义；区别于 `app:close-window` 的 destroy 绕过） |
+| `app:maximize-changed` | 主 → 渲染 | `maximized: boolean` | 最大化状态变化推送 |
+| `world:load-index` | 渲染 → 主 | — | 世界树索引（双源扫描聚合 + 缓存，§6.11） |
+| `world:read-graph` | 渲染 → 主 | `{ id }` | 按绝对路径白名单读单图；越界 reject（`[WORLD_PATH_REJECTED]`） |
+| `world:set-user-dir` | 渲染 → 主 | `{ dir }`（`'pick'` 弹框 / `null` 清除） | `{ ok, userDir }`；持久化用户图库目录（§6.11） |
 
 ### 4.3 错误跨 IPC 的约定
 
 `invoke` 的错误边界只保留 `Error.message`（自定义属性会丢失），因此：
 
 - 主进程所有失败都 throw **Error 实例**（不是普通对象），message 为可直接示人的中文文案；
-- 需要渲染端分支处理的场景，在 message 里放**稳定 token**：文件冲突为 `[FILE_CONFLICT]`，渲染端按 `String(err.message).includes('[FILE_CONFLICT]')` 分支；
+- 需要渲染端分支处理的场景，在 message 里放**稳定 token**：文件冲突为 `[FILE_CONFLICT]`（渲染端按 `String(err.message).includes('[FILE_CONFLICT]')` 分支）、世界树路径拒绝为 `[WORLD_PATH_REJECTED]` / `[WORLD_DIR_REJECTED]`（§6.11）；
 - 渲染端多数 catch 不解析 message，直接用固定中文提示，避免边界文案不可靠。
 
 ## 5. 主进程模块
@@ -166,6 +163,7 @@ XKnowledge/
 | `setWindowTitle(win, display, taskbar = display)` | `setTitle(taskbar)`（任务栏/Alt-Tab）+ 推送 `app:title-changed(display)`（自绘标题栏），判销毁；enter/exit 图表模式与登记簿重算统一走它。双参拆分仅服务未保存圆点的两处位置差异，单参调用两值一致 |
 | `applyTheme({ mode, effective })` | 渲染层经 `app:theme-applied` 上报后的统一联动：设 `nativeTheme.themeSource`（auto→system、强制模式直译，使渲染层 `prefers-color-scheme` 与原生部件一致）、遍历全部窗口 `setTitleBarOverlay` 换原生标题栏配色（Linux 无此 API 静默跳过）、缓存生效主题供新窗口 `backgroundColor` 预铺深底防闪白（重启后主进程未知偏好，首窗口白底一帧为已接受取舍） |
 | `enterChartMode(window)` / `exitChartMode(window)` | 图表模式的进入/退出，见 §4.1 与 §7.4 |
+| `enterWorldMode(window)` / `exitWorldMode(window)` | 世界树页的窗口模式：解锁尺寸但**不设标题、不注册关闭确认**（只读派生视图无未保存态，§6.11） |
 
 模块内两个按 `webContents.id` 键控的 Map：`pendingCharts`（待装载图表，取后即清）与 `chartModeWindows`（图表模式事件处理器引用，保证解绑幂等）。
 
@@ -217,11 +215,12 @@ XKnowledge/
 
 ### 6.1 路由与布局
 
-`App.vue` 按路由二分：`#/chart` 独占整窗（无侧边布局），其余路由套 `BasicLayout`（左侧「打开本地文件」按钮 + 顶部拖拽区）。
+`App.vue` 按路由二分：`#/chart` 独占整窗（无侧边布局），其余路由套 `BasicLayout`（左侧「打开本地文件」/「世界树」按钮 + 顶部拖拽区）。
 
 | 路由 | 页面 | 状态 |
 | --- | --- | --- |
 | `/` | AddView：示例图库 + 新建空白文件卡片 | 可用 |
+| `/world` | WorldView：世界树跨图库聚合只读浏览 | 可用（§6.11） |
 | `/chart` | ChartView：图表编辑页 | 可用（核心） |
 
 ### 6.2 ChartView 状态模型
@@ -263,7 +262,7 @@ XKnowledge/
 
 ### 6.6 快捷键自定义
 
-5 个键盘键位（save/undo/redo/delete/search）可用户自定义，判定纯函数在 `utils/keybindings.js`、状态在 `store/keybindingStore.js`（themeStore 同构：localStorage `xk-keybindings` 只存改过键位、生效视图 = 默认 ⊕ 覆盖、`storage` 事件跨窗口同步，`initKeybindingSync()` 由 `main.ts` mount 前调用）。要点：
+7 个键盘键位（save/undo/redo/delete/copy/paste/search）可用户自定义，判定纯函数在 `utils/keybindings.js`、状态在 `store/keybindingStore.js`（themeStore 同构：localStorage `xk-keybindings` 只存改过键位、生效视图 = 默认 ⊕ 覆盖、`storage` 事件跨窗口同步，`initKeybindingSync()` 由 `main.ts` mount 前调用）。要点：
 
 - 绑定模型 `{ modifiers: ['primary'|'shift'|'alt'], key }`：`primary` 为 Ctrl/⌘ 归一抽象（保持键盘快捷键双收惯例），判定 `matchEvent` 精确匹配（未列修饰键按下不触发）。
 - ChartView shortcutMap / XkSettings 录制（window keydown capture 独占，Esc 只取消录制不关弹窗）/ XkMenu 菜单标注三方共用同一生效视图；录制经 `validateRecording` 拒绝黑名单（Esc/Tab/F5/Ctrl(⌘)+R）与冲突（`findConflict`），search 必须带修饰键（无输入框守卫，裸键会打断打字）。
@@ -285,10 +284,7 @@ XKnowledge/
 
 两种模式共用一条录制管线（`src/renderer/src/utils/videoExport.js`）：
 
-```
-three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
-  --captureStream(30)--> MediaRecorder --Blob--> video:save IPC --> 主进程保存框落盘
-```
+![视频录制管线](./assets/video-pipeline.svg)
 
 - **水印单源**：合成 canvas 的水印样式出自 `computeWatermarkStyle` 纯函数，`exportPng` 也走同一 `createRecordingCanvas`——PNG 与视频水印同源，画布上不显示、只进导出产物。
 - **1080p 录制**：`applyRecordingScale` 录制期间把渲染缓冲按目标高度 1080 放大（`setPixelRatio` 后 WebGL 按新缓冲真实重渲染，原生细节而非事后上采样；CSS 尺寸不动屏幕显示无感），录完恢复——否则画布缓冲跟随窗口×DPR（小窗只有 ~1100×770），视频帧上限被窗口大小绑架。
@@ -324,24 +320,33 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 
 **测试**：`graphViewerData`（白名单剥离/端点归一/空图 null）、`exportHtml`（占位符全替换/`<` 转义后 JSON 仍可解析/title XSS 实体转义/坏数据拒绝/`XK_SMOKE_HTML_DIR` 冒烟后门）、ipc/preload 桥接面用例；`scripts/smoke-export-html.mjs` 冒烟——真实路径导出落盘后经主进程开新 BrowserWindow 以 `file://` 加载产物，在真实浏览器环境断言 canvas 渲染/搜索步进/点击详情/聚焦灰化（邻域外材质色计数）与隐藏/图例显隐/主题切换/水印，双窗口零渲染错误。
 
+### 6.11 世界树（WorldView 跨图库聚合浏览）
+
+把整个图库聚合成一张「世界」做只读总览：每个 `.xk` 收缩为一个**超节点**，跨图谱的同名节点之间自动产生「缝合」连线——图多了以后看全局、找跨图关联的世界层入口。**世界层永不写任何 `.xk`**：全部数据从文件实时派生，页面上没有任何编辑操作。
+
+**主进程索引层**（`src/main/worldIndex.js`）：
+
+- **双源扫描**：内置示例目录（只扫一层）+ 用户自选图库目录（递归含子目录，经 `world:set-user-dir` 的 `'pick'` 目录选择框设定、`userData/world-settings.json` 持久化）；两源按绝对路径去重，用户目录覆盖示例目录时自动跳过示例文件。损坏文件跳过并计数上报（页面顶部 warning「N 个损坏文件已跳过」）。
+- **mtime 缓存**：索引缓存于 `world-index.json`，文件未改（mtime 一致）不重读；缓存损坏自动重建。
+- **读图白名单**：`readWorldGraph(id)` 要求绝对路径且落在示例目录或用户图库目录之内，否则 throw `[WORLD_PATH_REJECTED]`——与 fileGuard 的路径授权同一防御哲学，防渲染端伪造任意路径读盘。
+
+**渲染层**（`page/WorldView.vue` 编排 + `components/XkWorldGraph.vue` 只读渲染 + `utils/worldGraph.ts` 纯函数）：
+
+- **超节点与缝合边**：球大小按节点数立方缩放（`superNodeVal`，对齐 §8 的体积语义）；超节点统一蓝色不分社区着色（分色会把同名误缝合的噪声放大）。缝合边三态随两端收拢/展开切换：双收拢＝超节点间一条聚合线（权重=共享名数）、单端展开＝「脐带」连线（对端超节点连到本域各同名节点）、双展开＝两边同名节点直接连线。
+- **域展开**：展开的图谱（域）内部换真实节点/边渲染，按各自图谱的类目**分域独立着色**；域被锚定力（`ANCHOR_STRENGTH`）拉在原超节点位置附近不漂走。展开是**按需单图加载**（`world:read-graph`），首屏只装索引不装全部图数据。右上浮条列出已展开域（可逐个收拢或「全部收拢」），浮条自身可收成「已展开 N」小按钮。
+- **全库搜索**（`XkWorldSearch`）：匹配全库所有图谱的节点名+描述；跳转的目标图未展开会**自动展开**（唯一自动展开入口）后相机飞达，坐标未就绪 3 秒兜底飞超节点锚点。`Ctrl/⌘+F` 打开（复用快捷键自定义的 search 键位）。
+- **聚焦模式**：三态同图表页（灰化/隐藏，命中豁免），但**默认 1 跳**——世界是小世界网络，2 跳即覆盖大半张图（示例集实测最大枢纽 2 跳 44%、3 跳 72%），1 跳才有聚光效果；图表页默认 2 跳的缺省不适用于此。聚焦开启时点击节点只移焦点不弹信息卡；焦点因收拢/刷新消失时自动回退默认焦点。
+- **信息卡与打开编辑**：点击超节点右侧滑出停靠式信息卡（图名/节点数/来源）；「打开完整编辑」内置示例在当前窗口进副本（保存另存，不污染示例），用户图**新开图表窗口**直存回原路径——世界树会话（展开态/视角）不被打断。「展开此图」走按需加载。
+- **窗口模式**：`enterWorldMode` 解锁尺寸但不设标题、不注册关闭确认（只读无未保存态）；无水印、无录制（两者只发生在图表页）。主题/语言全程跟随（超节点色、域类目色、底部导航文案 watch 重设）。
+- **只读渲染组件**：`XkWorldGraph` 不迁 §8 的稳定引用增量管道——无编辑交互即无增量需求，注释在案；聚焦灰化的增量重着色（`applyDim`）对齐编辑器 `planHighlightRepaint` 的语义。
+
+**测试**：`worldIndex`（双源扫描/缓存/白名单拒绝/目录设定）、`worldGraph`（超图构建/缝合三态/搜索/聚焦邻域纯函数）单测；`scripts/smoke-world.mjs` + `scripts/smoke-world-focus.mjs` 冒烟——首页入口进入全景、菜单项、全库搜索两级命中、回车自动展开+相机飞达、聚焦场景九宫格。
+
 ## 7. 核心数据流
 
 ### 7.1 图表数据的两条装载路径
 
-```
-路径 A（同窗口，首页发起）：
-  AddView/BasicLayout 打开文件、双击示例或单击新建空白卡
-    → 主进程 readChartFile 校验
-    → setPendingChart({ value, path })   # 渲染层 store/chartStore.js
-    → router.push('chart')
-    → ChartView.onMounted → takePendingChart() 装载
-
-路径 B（跨窗口，图表页发起）：
-  ChartView 新建文件 / 打开文件
-    → invoke app:new-chart-window({ content, path })
-    → 主进程 createChartWindow：新窗口加载 #/chart，pendingCharts 暂存
-    → 新窗口 ChartView.onMounted → invoke app:take-pending-chart 取走（取后即清）
-```
+![图表数据的两条装载路径](./assets/chart-loading.svg)
 
 两条路径都做防御：渲染端装载时再校验一次 v2 结构与悬空边——直接 import 主进程读盘用的同一份 `shared/chartValidation.mjs`（校验单源，格式演进只改一处），损坏内容在主进程已被拦截，这里是兜底。
 
@@ -357,15 +362,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 
 ### 7.4 关闭确认流程
 
-```
-用户点窗口 X（图表模式已拦截 close）
-  → 主进程推送 app:request-close
-  → ChartView：无未保存修改 → invoke app:close-window（destroy，绕过拦截）
-  │  有未保存修改 → invoke app:confirm-unsaved（模态三按钮：保存/放弃/取消）
-  │      cancel  → 什么都不做
-  │      discard → app:close-window
-  │      save    → saveFile() 成功才 close-window，失败留在当前页
-```
+![关闭确认流程](./assets/close-confirm.svg)
 
 ### 7.5 撤销 / 重做
 
@@ -420,6 +417,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 | `sandbox: true` + contextBridge 白名单 | windowManager / preload | 渲染层无 Node API，IPC 面最小 |
 | 主进程结构校验拦截损坏文件 | fileService | 坏文件不发渲染进程，避免白屏 |
 | 路径授权（PATH_NOT_AUTHORIZED） | fileGuard | 防伪造任意路径写盘 |
+| 世界树读图路径白名单（WORLD_PATH_REJECTED） | worldIndex | 防伪造任意路径读盘（§6.11） |
 | mtime 冲突检测（FILE_CONFLICT） | fileGuard | 多窗口/外部程序编辑不静默互相覆盖 |
 | 原子写入 + Windows 占用回退 | fileService.writeFileAtomic | 崩溃/断电不留半个 JSON；同步盘/杀软场景仍可写 |
 | 关闭确认 + 崩溃/假死自动解除拦截 | windowManager / ChartView | 防误关丢数据；进程异常时窗口永远关得掉 |
@@ -432,7 +430,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 
 ## 11. 测试
 
-`yarn test`（vitest run）共 **513 个用例、36 个文件**，全部不依赖真实 Electron 窗口（mock `electron` 模块）：
+`yarn test`（vitest run）共 **784 个用例、50 个文件**，全部不依赖真实 Electron 窗口（mock `electron` 模块）：
 
 | 文件 | 覆盖 |
 | --- | --- |
@@ -447,8 +445,8 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 | `tests/main/examplePaths.test.js` | `isExamplePath` 示例目录判定 |
 | `tests/main/exportHtml.test.js` / `worldIndex.test.js` / `i18nMain.test.js` | HTML 导出拼装与转义、世界树索引、主进程 i18n 查表 |
 | `tests/preload/index.test.js` | contextBridge 桥接面（通道名单 ↔ electronAPI 方法） |
-| `tests/shared/*` | locales 字典 key 树与占位符一致性、graphClipboard 序列化白名单、graphViewerData 白名单 |
-| `tests/viewer/i18n.test.js` | viewer 内嵌双语 |
+| `tests/shared/*` | locales 字典 key 树与占位符一致性、graphClipboard 序列化白名单、graphViewerData 白名单、ipc-channels 通道名单结构（唯一性/命名约定） |
+| `tests/viewer/*.test.js` | 导出查看器全套：i18n 双语、boot 装配顺序、样式锚点与幂等注入、DOM UI、3D 核心状态机（含点击 toggle 语义） |
 | `tests/renderer/useDocument.test.js` | 文档域特征测试：建点建边校验、表单提交（改名同步邻边/撞名拒绝）、删除三路、合并批次、撤销栈不变量（截断 redo 分支）、onChange dirty 语义 |
 | `tests/renderer/historyOps.test.js` | 操作对象补偿语义：多重边安全（三元组定位、整批按名/按引用）、常规序列回归 |
 | `tests/renderer/useChartFile.test.js` | persistFile/saveAs 全分支（取消/冲突/示例保护/兜底）、保存触发面板重置、自动保存门控（fake timers）、关闭确认 |
@@ -456,6 +454,9 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 | `tests/renderer/graphData.test.js` | 节点合并、连接归一化、标签阈值、增量重着色计划、deepClone 脱钩、表单空模板 |
 | `tests/renderer/graphMerge.test.js` / `canvasEdit.test.js` / `outlineParser.test.js` | 复制三路分发与合并语义、框选几何、大纲解析 |
 | `tests/renderer/*Store.test.js` / `keybindings.test.js` / `platformModifier.test.js` | 各 store 状态机（chart/locale/theme/keybinding）、键位判定、平台修饰键 |
+| `tests/renderer/useEditActions.test.js` / `useShortcuts.test.js` | 编辑动作编排（三路删除/复制分发/粘贴链）、dispatch 录制黑名单与键位判定 |
+| `tests/renderer/useFocusMode.test.js` / `useRecording.test.js` / `useSelection.test.js` / `useTour.test.js` | composables 状态机：焦点三级回退与邻域派生、视频互斥复位、单击/框选两套选中语义、教程「看过」标记 |
+| `tests/renderer/i18n.test.js` / `navInfo.test.js` / `tourSteps.test.js` | 渲染层 i18n 装配、底部导航条 key 选择（切语言不清连线提示）、教程步骤表 |
 | `tests/renderer/categoryColor.test.js` | 调色板稳定性（同名同色、循环取模） |
 | `tests/renderer/filterExamples.test.js` / `sortExamples.test.js` / `worldGraph.test.js` / `videoExport.test.js` | 图库过滤/排序、世界树聚合、录制管线纯函数 |
 

@@ -54,7 +54,7 @@ yarn dev         # 开发模式启动（electron-vite dev --watch，DevTools 自
 
 ### 4.1 单元测试（`yarn test`）
 
-vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒跑完。截至 v2.5.0 为 609 用例 / 40 文件（数量随版本增长，以 `yarn test` 输出为准），按被测层分目录：
+vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒跑完。截至 v2.6.0 为 784 用例 / 50 文件（数量随版本增长，以 `yarn test` 输出为准），按被测层分目录：
 
 | 目录              | 覆盖                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------- |
@@ -62,7 +62,7 @@ vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒�
 | `tests/preload/`  | contextBridge 桥接面：API → IPC 通道映射、推送回调剥 event                               |
 | `tests/renderer/` | 渲染层 utils / store：画布编辑、历史栈、图数据、快捷键、主题、语言、大纲解析、视频导出等 |
 | `tests/shared/`   | 纯函数：剪贴板序列化、viewer 数据白名单、双语字典一致性                                  |
-| `tests/viewer/`   | 导出 HTML 查看器的语言选择等                                                             |
+| `tests/viewer/`   | 导出 HTML 查看器全套：boot 装配、样式锚点、DOM UI、3D 核心（含点击语义）、双语           |
 
 项目测试约定（重要）：
 

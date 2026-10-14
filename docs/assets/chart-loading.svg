@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 660" width="100%" font-family="-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">图表数据的两条装载路径</title>
+  <desc id="d">路径 A 同窗口：首页打开文件或双击示例，主进程校验后经 chartStore 暂存，路由跳转 chart 由 ChartView 取走装载。路径 B 跨窗口：图表页新建或打开文件，经 app:new-chart-window 由主进程开新窗口并暂存，新窗口 ChartView 取走（取后即清）。</desc>
+  <style>
+    text { fill: var(--fg); }
+    .lane-title { font-size: 14.5px; font-weight: 600; }
+    .lane-a { fill: var(--fg); } .lane-b { fill: var(--fg); }
+    .name { font-size: 13.5px; font-weight: 600; fill: var(--ren); }
+    .name-main { fill: var(--main); }
+    .desc { font-size: 11.5px; fill: var(--fg2); }
+    .ln { fill: none; stroke: var(--line2); stroke-width: 1.4; marker-end: url(#ah); }
+    .box-ren { fill: var(--ren-bg); stroke: var(--ren); stroke-width: 1.4; }
+    .box-main { fill: var(--main-bg); stroke: var(--main); stroke-width: 1.4; }
+    .lane { fill: var(--lane-bg); stroke: var(--line); stroke-width: 1; stroke-dasharray: 5 4; }
+    .mk { fill: var(--line2); }
+    svg { --fg: #1f2328; --fg2: #59636e; --line: #d0d7de; --line2: #8c959f; --lane-bg: #afb8c10d;
+      --ren: #1a7f37; --ren-bg: #1a7f3712; --main: #0969da; --main-bg: #0969da14; }
+    @media (prefers-color-scheme: dark) {
+      svg { --fg: #e6edf3; --fg2: #9198a1; --line: #30363d; --line2: #6e7681; --lane-bg: #6e76810a;
+        --ren: #3fb950; --ren-bg: #3fb9501a; --main: #4493f8; --main-bg: #4493f81f; }
+    }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" class="mk"/>
+    </marker>
+  </defs>
+
+  <rect x="30" y="30" width="410" height="596" rx="10" class="lane"/>
+  <rect x="480" y="30" width="410" height="596" rx="10" class="lane"/>
+  <text x="235" y="62" text-anchor="middle" class="lane-title lane-a">路径 A · 同窗口（首页发起）</text>
+  <text x="685" y="62" text-anchor="middle" class="lane-title lane-b">路径 B · 跨窗口（图表页发起）</text>
+
+  <!-- 路径 A -->
+  <rect x="55" y="88" width="360" height="92" rx="8" class="box-ren"/>
+  <text x="235" y="122" text-anchor="middle" class="name">AddView / BasicLayout</text>
+  <text x="235" y="148" text-anchor="middle" class="desc">打开文件、双击示例、单击新建空白卡</text>
+  <path d="M 235 180 L 235 212" class="ln"/>
+
+  <rect x="55" y="216" width="360" height="92" rx="8" class="box-main"/>
+  <text x="235" y="250" text-anchor="middle" class="name name-main">主进程 readChartFile 校验</text>
+  <text x="235" y="276" text-anchor="middle" class="desc">损坏文件在此拦截，不发渲染进程</text>
+  <path d="M 235 308 L 235 340" class="ln"/>
+
+  <rect x="55" y="344" width="360" height="92" rx="8" class="box-ren"/>
+  <text x="235" y="378" text-anchor="middle" class="name">setPendingChart + router.push('chart')</text>
+  <text x="235" y="404" text-anchor="middle" class="desc">store/chartStore.js 同窗口传递</text>
+  <path d="M 235 436 L 235 468" class="ln"/>
+
+  <rect x="55" y="472" width="360" height="92" rx="8" class="box-ren"/>
+  <text x="235" y="506" text-anchor="middle" class="name">ChartView.onMounted</text>
+  <text x="235" y="532" text-anchor="middle" class="desc">takePendingChart() 装载</text>
+
+  <!-- 路径 B -->
+  <rect x="505" y="88" width="360" height="92" rx="8" class="box-ren"/>
+  <text x="685" y="122" text-anchor="middle" class="name">ChartView：新建文件 / 打开文件</text>
+  <text x="685" y="148" text-anchor="middle" class="desc">图表页内发起</text>
+  <path d="M 685 180 L 685 212" class="ln"/>
+
+  <rect x="505" y="216" width="360" height="92" rx="8" class="box-ren"/>
+  <text x="685" y="250" text-anchor="middle" class="name">invoke app:new-chart-window</text>
+  <text x="685" y="276" text-anchor="middle" class="desc">载荷 { content, path }</text>
+  <path d="M 685 308 L 685 340" class="ln"/>
+
+  <rect x="505" y="344" width="360" height="92" rx="8" class="box-main"/>
+  <text x="685" y="378" text-anchor="middle" class="name name-main">主进程 createChartWindow</text>
+  <text x="685" y="404" text-anchor="middle" class="desc">新窗口加载 #/chart，pendingCharts 暂存</text>
+  <path d="M 685 436 L 685 468" class="ln"/>
+
+  <rect x="505" y="472" width="360" height="92" rx="8" class="box-ren"/>
+  <text x="685" y="506" text-anchor="middle" class="name">新窗口 ChartView.onMounted</text>
+  <text x="685" y="532" text-anchor="middle" class="desc">app:take-pending-chart 取走（取后即清）</text>
+</svg>
