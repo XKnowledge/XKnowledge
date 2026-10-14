@@ -107,7 +107,9 @@ import {
   pickMimeType
 } from '../utils/videoExport.js'
 import {
-  mergeGraphNodes,
+  syncPlacedNodes,
+  syncPlacedLinks,
+  planLabelSync,
   planHighlightRepaint,
   linkEnd,
   linkKey,
@@ -236,7 +238,7 @@ let pendingWorldPos = null // 双击落点（世界坐标）：提交时随事�
 let pendingLinkEnds = null // 拖拽连线的两端点名：输名提交时随事件带出
 
 /** 待落点节点：name → 世界坐标。新节点（无旧坐标）首次重灌时作初始位置，
- *  用后即删——力模拟接手后同名合并走旧坐标通道（mergeGraphNodes） */
+ *  用后即删——力模拟接手后同名同步走旧对象引用（syncPlacedNodes） */
 const pendingDropPos = new Map()
 
 /** 节点可见性谓词（按名）：applyVisibility 的 accessor 与画布手势拾取共用同一
@@ -502,12 +504,85 @@ const onCanvasPointerCancel = () => {
   linkDrag.value = null
 }
 
-/** 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写 props；
- *  同名节点保留旧坐标（编辑刷新后已布局的图不跳），按 name 建 Map 索引 O(n) 合并 */
-const toGraphNodes = () => {
-  const merged = mergeGraphNodes(props.nodes, graph?.graphData().nodes)
+// ---- 稳定引用管道（issue #22）----
+// 库 digest 按对象身份做 enter/update/exit：保留 datum 对象引用即走 update 复用
+// mesh，编辑不再全量重建场景（大图冻结的根因即此前每次产出全新对象）。
+// datum 是图实例私有的长命实体，chartData → datum 单向同步、永不回写。
+
+/** 「应有标签」的节点名集合：稳定闭包（enter 节点建标签）与手动 diff（update
+ *  节点跨阈值补/摘）共用的唯一事实；由 labelThreshold + 预算封顶规则算出 */
+let labelMembers = new Set()
+
+/** 标签 sprite 的颜色：聚焦灰化时灰球配灰字（标签重建/手动补建共用） */
+const labelColorOf = (n) => {
+  const dim = props.focusNodeNames.length ? props.focusNodeNames : null
+  return dim && !dim.includes(n.name) ? sceneColors.value.dim : sceneColors.value.label
+}
+
+/** 标签 sprite 构造单源：稳定闭包与手动 add 共用，样式只此一处 */
+const makeLabelSprite = (n) => {
+  const sprite = new SpriteText(n.name)
+  sprite.textHeight = 5
+  sprite.color = labelColorOf(n)
+  sprite.position.set(0, 7, 0)
+  return sprite
+}
+
+/** nodeThreeObject 的稳定引用：库以函数引用判定是否 clear() 全量重建，引用一换
+ *  即全量 flush——闭包内读 labelMembers/场景色等可变状态，挂载后永不再换 */
+const stableNodeThreeObject = (n) =>
+  n.name && labelMembers.has(n.name) ? makeLabelSprite(n) : null
+
+/** 重算「应有标签」集合（labelThreshold 内含大图预算封顶：>2000 节点按
+ *  symbolSize 头部预算，开关打开只放宽不解除） */
+const computeLabelSet = () => {
+  const threshold = labelThreshold(props.nodes, props.showSmallLabels)
+  const set = new Set()
+  if (threshold === undefined) return set
+  for (const n of props.nodes) {
+    if (n.name && (n.symbolSize ?? 0) >= threshold) set.add(n.name)
+  }
+  return set
+}
+
+const nodeHasLabel = (n) => (n.__threeObj?.children ?? []).some((c) => c.isSprite)
+
+/** 摘除节点标签：__threeObj 缺失（库升级破坏/隐藏 exit 态）静默跳过 */
+const removeLabelSprite = (n) => {
+  const obj = n.__threeObj
+  if (!obj) return
+  for (const child of [...obj.children]) {
+    if (!child.isSprite) continue
+    obj.remove(child)
+    child.material?.dispose?.()
+    child.material?.map?.dispose?.()
+  }
+}
+
+/** 补建节点标签（幂等：enter 节点的标签已由稳定闭包建，查重跳过） */
+const addLabelSprite = (n) => {
+  if (!n.__threeObj || nodeHasLabel(n)) return
+  n.__threeObj.add(makeLabelSprite(n))
+}
+
+/** 按前集合 → 当前集合 diff 手动补/摘标签（update 保留节点跨阈值不会重调
+ *  稳定闭包，这是库设计；enter/exit 节点不在此列——前者闭包已建、后者
+ *  digest onRemoveObj 连带 dispose children） */
+const diffLabels = (prevSet) => {
+  const { adds, removes } = planLabelSync(graph.graphData().nodes, prevSet, labelMembers)
+  for (const n of removes) removeLabelSprite(n)
+  for (const n of adds) addLabelSprite(n)
+}
+
+/** 稳定引用数据同步：新旧按 name/linkKey 匹配——保留项复用旧 datum 就地同步
+ *  业务字段（mesh 复用），新增 enter、删除 exit；容器与数组每次新建（Kapsule
+ *  prop 浅比较需要「变了」才触发 update） */
+const syncGraphData = () => {
+  const prev = graph.graphData()
+  const prevLabelSet = labelMembers
+  const nodes = syncPlacedNodes(props.nodes, prev?.nodes)
   // 画布建点落点：只对无旧坐标的新节点生效（d3 以 datum 上的 x/y/z 为初始位置）
-  for (const n of merged) {
+  for (const n of nodes) {
     const drop = pendingDropPos.get(n.name)
     if (drop && n.x === undefined) {
       n.x = drop.x
@@ -516,9 +591,12 @@ const toGraphNodes = () => {
       pendingDropPos.delete(n.name)
     }
   }
-  return merged
+  const links = syncPlacedLinks(props.links, prev?.links)
+  // 集合先于装载更新：本轮 enter 的节点建标签时稳定闭包读到新集合
+  labelMembers = computeLabelSet()
+  graph.graphData({ nodes, links })
+  diffLabels(prevLabelSet)
 }
-const toGraphLinks = () => props.links.map((l, i) => ({ ...l, __idx: i }))
 
 /** 剥离内部字段的纯数据，发给父组件 */
 const pureNode = (n) => ({
@@ -647,23 +725,13 @@ const applyHighlight = () => {
   prevHlSearchActive = active
 }
 
-/** 标签显隐：最小的 60% 节点算小节点，按 showSmallLabels 开关决定其名称显隐；
- *  阈值规则（分位值落在最小尺寸层时上提一档，避免开关失效）见 utils/graphData */
+/** 标签显隐（showSmallLabels 开关路径）：重算集合走 diff 补/摘，不碰库
+ *  accessor——稳定闭包已挂载，换引用即触发库全量 clear()（issue #22） */
 const applyLabels = () => {
   if (!graph) return
-  const threshold = labelThreshold(props.nodes, props.showSmallLabels)
-  // 标签重建（开关/数据重灌）时遵守聚焦灰化：灰球不配黑字
-  const dim = props.focusNodeNames.length ? new Set(props.focusNodeNames) : null
-  graph
-    .nodeThreeObjectExtend(true) // 库默认 false，不开会整个替换球体
-    .nodeThreeObject((n) => {
-      if ((n.symbolSize ?? 0) < threshold || !n.name) return null
-      const sprite = new SpriteText(n.name)
-      sprite.textHeight = 5
-      sprite.color = dim && !dim.has(n.name) ? sceneColors.value.dim : sceneColors.value.label
-      sprite.position.set(0, 7, 0)
-      return sprite
-    })
+  const prevSet = labelMembers
+  labelMembers = computeLabelSet()
+  diffLabels(prevSet)
 }
 
 const applyInteraction = () => {
@@ -727,12 +795,20 @@ onMounted(() => {
 
   applySimulationScale()
 
+  // 初始标签集合先算、稳定闭包先挂：装载时 enter 的节点经闭包建标签，
+  // 闭包读到的就是初始集合（闭包引用此后不再更换，换即全量 clear()）
+  labelMembers = computeLabelSet()
   graph
     .nodeId('name')
     // 场景背景随主题：浅色白底对齐旧版 2D 图表，深色 antd 基准底；
     // 深浅两套的元素色（SCENE_COLORS）都保证与各自背景拉开距离
     .backgroundColor(sceneColors.value.bg)
-    .graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
+    .nodeThreeObjectExtend(true) // 库默认 false，不开会整个替换球体
+    .nodeThreeObject(stableNodeThreeObject)
+    .graphData({
+      nodes: syncPlacedNodes(props.nodes, null),
+      links: syncPlacedLinks(props.links, null)
+    })
     // three-forcegraph 半径 = ∛val × nodeRelSize（val 映射体积）：直接传 symbolSize
     // 时 40/50/70 的半径仅 3.4/3.7/4.1，大小几乎不可辨；立方再缩放让半径与
     // symbolSize 线性成正比（40/50/70 → 2.9/3.7/5.2），与 2D 图 symbolSize 语义一致
@@ -751,7 +827,7 @@ onMounted(() => {
     .onLinkClick((l) => emit('link-click', pureLink(l), l.__idx))
     .onBackgroundClick(() => emit('background-click'))
     // 普通拖动=移动节点（库 DragControls；坐标不落盘仅会话内整理，编辑刷新
-    // 经 mergeGraphNodes 保留同名旧坐标）；⌘/Ctrl+拖=连线（onCanvasPointerDown）
+    // 经 syncPlacedNodes 保留同名旧对象——坐标随引用天然保留）；⌘/Ctrl+拖=连线（onCanvasPointerDown）
     .enableNodeDrag(true)
     // 不做引擎停止后的自动取景：库的 cooldownTime 默认 15s，届时自动
     // zoomToFit 会把用户已拖动过的视角抢回去。取景/复位只由「复位视图」
@@ -775,7 +851,7 @@ onMounted(() => {
 
   applyVisibility()
   applyHighlight()
-  applyLabels()
+  // 初始标签已由装载 enter 的稳定闭包建，无需 applyLabels
   applyInteraction()
   setRepulsion(100)
 
@@ -820,18 +896,18 @@ onUnmounted(() => {
   }
 })
 
-// 数据增量刷新：保留坐标重灌（toGraphNodes 已处理），不重启 didInitialFit
+// 数据增量刷新：稳定引用管道（syncGraphData 内已含标签集合 diff），
+// 不重启 didInitialFit
 watch(
   () => [props.nodes, props.links],
   () => {
     if (!graph) return
     applySimulationScale()
-    graph.graphData({ nodes: toGraphNodes(), links: toGraphLinks() })
+    syncGraphData()
     // 节点类目可能随编辑变化：可见性 accessor 闭包的是 buildNodeVisible
     // 调用时的 name→category 快照，不重装就会出现「照旧渲染 vs 手势层
     // 拾取判不可见」的互相矛盾（审计 #9）
     applyVisibility()
-    applyLabels()
     // 编辑/重灌后命中重算（当前项名保持或重置第 1 个，不飞相机；
     // 换图的显式关闭由 ChartView 调 closeSearch）
     if (searchOpen.value) recomputeSearch(searchActiveName.value)
@@ -861,13 +937,12 @@ watch(() => props.showLinkName, applyInteraction)
 watch(() => props.showSmallLabels, applyLabels)
 // 主题切换：先重设各 accessor 为新色套并换背景，再强制一次全量 refresh。
 // 增量管道按"语义状态"diff，主题切换语义未变会算出零变化，必须走 refresh
-// 让库按新 accessor 重建全部材质（含 SpriteText 标签）。低频显式动作，
-// 大图一次性重建标签可接受
+// 让库按新 accessor 重建全部材质（含 SpriteText 标签——稳定闭包内 makeLabelSprite
+// 读新场景色）。低频显式动作，大图一次性重建标签可接受
 watch(effective, () => {
   if (!graph) return
   graph.backgroundColor(sceneColors.value.bg)
   applyHighlight() // 重设 nodeColor/linkColor 为新色套
-  applyLabels() // 标签色换新
   graph.refresh()
 })
 

@@ -377,7 +377,7 @@ three 画布 --每帧 rAF--> 离屏合成 canvas（画布帧 + 水印）
 
 对 `3d-force-graph` 的完整封装，props 进 / events 出，不回写父组件数据：
 
-- **数据拷贝**：图实例吃的是 `chartData` 的拷贝（附加内部 `__idx` 与 d3 坐标字段），增量刷新时按 name 匹配旧节点**保留坐标与拖拽锚点**，编辑后已布局的图不跳；发给父组件的点击数据经 `pureNode/pureLink` 剥离内部字段。
+- **数据同步（稳定引用管道）**：图实例的 datum 是跨编辑长命的有状态实体（`chartData` 节点/边的浅拷贝 + 内部 `__idx` 与 d3 坐标字段），编辑刷新时按 name / 边三元组键匹配**复用旧对象本身**、就地同步业务字段（`syncPlacedNodes/syncPlacedLinks`）——three-forcegraph 的 digest 按对象身份判定 update，mesh 复用、新增 enter、删除 exit，大图（16k 节点）编辑不再全量销毁重建场景；坐标/速度/拖拽锚随对象引用天然保留，编辑后已布局的图不跳；chartData → datum 单向同步永不回写，发给父组件的点击数据经 `pureNode/pureLink` 剥离内部字段。`nodeThreeObject` 挂 setup 级稳定闭包（换函数引用即触发库全量 `clear()`），enter 节点由闭包按「应有标签」集合建 SpriteText，update 保留节点跨阈值由 `planLabelSync` diff 手动补/摘——标签生命周期完全自管，编辑路径零全量重建。
 - **画布手势层**：dblclick/pointer 事件直接挂 canvas DOM。双击空白建点、⌘/Ctrl+拖连线之外，**Shift+拖为框选**（`marquee`）：矩形以 SVG 覆盖层随拖拽绘制，松手按屏幕投影拾取——框内节点 + 投影线段与框相交的边（隐形/无坐标对象不参与），emit `marquee-select` 给 ChartView 落选中集（`selectionNodes/selectionLinks` props 回流高亮，Delete 批量删）。框选与连线共用 capture 阶段 pointerdown 截断传播独占手势（DragControls/OrbitControls 收不到 pointerdown 不抢拖）；矩形归一/点入框/线段相交的纯几何在 `utils/canvasEdit.js` 可单测。底部导航条（`.scene-nav-info`，querySelector 覆盖库内硬编码英文）在装载/语言切换/选中变更时经 `utils/navInfo.js` 的 `navInfoKey` 重设——无选中＝默认导航文案，点选/框选了节点＝连线手势触点提示（`{modifier}` 随平台渲染），切语言不清掉触点提示（单测锁 key 选择语义）。
 - **节点大小语义**：three-forcegraph 半径 = ∛val × nodeRelSize，直接传 symbolSize 时 40/50/70 几乎不可辨；`nodeVal = symbolSize³ / 2500` 让半径与 symbolSize 线性成正比，对齐旧 2D 图语义。
 - **标签**：大节点（symbolSize 前 30 名）常显名称（three-spritetext），小节点由「显示小节点名称」开关决定；悬浮提示为 `名称：描述`，边悬浮名由开关控制。

@@ -85,7 +85,8 @@ const linkColorOf = (l) => {
   return l.__kind === 'stitch' ? sceneColors.value.dim : sceneColors.value.link
 }
 
-/** 重灌时按 id 保留旧坐标（展开/收拢不重聚类）；语义同 graphData.mergeGraphNodes */
+/** 重灌时按 id 保留旧坐标（展开/收拢不重聚类）；语义同 graphData.syncPlacedNodes
+ *  的坐标保留半边（本组件只读预览，未迁稳定引用管道——无编辑交互无增量需求） */
 const mergeCoords = (next) => {
   const old = new Map((graph?.graphData().nodes ?? []).map((n) => [n.id, n]))
   return next.map((n, i) => {

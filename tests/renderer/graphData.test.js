@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
-  mergeGraphNodes,
+  syncPlacedNodes,
+  syncPlacedLinks,
+  planLabelSync,
   linkEnd,
   linkKey,
   planHighlightRepaint,
@@ -21,57 +23,172 @@ import {
   SEARCH_ACTIVE_COLOR
 } from '../../src/renderer/src/utils/graphData'
 
-describe('mergeGraphNodes：编辑刷新时合并旧坐标', () => {
+describe('syncPlacedNodes：编辑刷新时按名同步到图实例旧对象（稳定引用）', () => {
   const newNodes = [
-    { name: 'A', des: 'a', symbolSize: 50, category: 'x' },
-    { name: 'B', des: 'b', symbolSize: 40, category: 'y' },
-    { name: 'C', des: 'c', symbolSize: 30, category: 'x' }
+    { name: 'A', des: 'a2', symbolSize: 70, category: 'x' },
+    { name: 'C', des: 'c', symbolSize: 30, category: 'x' },
+    { name: 'B', des: 'b', symbolSize: 40, category: 'z' }
   ]
 
-  it('同名节点保留旧图坐标，新节点不带坐标', () => {
-    const oldNodes = [
-      { name: 'A', x: 1, y: 2, z: 3 },
-      { name: 'B', x: 4, y: 5, z: 6 }
-    ]
-    const merged = mergeGraphNodes(newNodes, oldNodes)
-    expect(merged[0]).toMatchObject({ name: 'A', __idx: 0, x: 1, y: 2, z: 3 })
-    expect(merged[1]).toMatchObject({ name: 'B', __idx: 1, x: 4, y: 5, z: 6 })
-    // C 是新节点：不应有 d3 坐标字段，交给库初始化布局
-    expect(merged[2]).toEqual({ name: 'C', des: 'c', symbolSize: 30, category: 'x', __idx: 2 })
+  it('同名节点复用旧图对象引用——坐标/拖拽锚天然在同一对象上', () => {
+    const oldA = { name: 'A', des: 'a', symbolSize: 50, category: 'x', __idx: 0, x: 1, y: 2, z: 3 }
+    const oldB = {
+      name: 'B',
+      des: 'b',
+      symbolSize: 40,
+      category: 'y',
+      __idx: 1,
+      x: 4,
+      y: 5,
+      z: 6,
+      fx: 9,
+      fy: 8,
+      fz: 7
+    }
+    const merged = syncPlacedNodes(newNodes, [oldA, oldB])
+    // 引用相等是本函数的全部意义：库 digest 按对象身份判 update，mesh 复用
+    expect(merged[0]).toBe(oldA)
+    expect(merged[2]).toBe(oldB)
+    expect(merged[0]).toMatchObject({ x: 1, y: 2, z: 3 })
+    expect(merged[2]).toMatchObject({ x: 4, y: 5, z: 6, fx: 9, fy: 8, fz: 7 })
   })
 
-  it('旧节点带固定坐标（fx/fy/fz，拖拽钉住）时一并保留', () => {
-    const merged = mergeGraphNodes(newNodes, [{ name: 'A', x: 1, y: 2, z: 3, fx: 9, fy: 8, fz: 7 }])
-    expect(merged[0]).toMatchObject({ fx: 9, fy: 8, fz: 7 })
-    // 未钉住的节点不应被添上 fx/fy/fz（会把节点错误地钉死在原点）
-    expect(merged[0].fx).toBe(9)
-    expect('fx' in merged[1]).toBe(false)
+  it('业务字段就地同步为 chartData 新值，__idx 按新数组序重算', () => {
+    const oldA = { name: 'A', des: 'a', symbolSize: 50, category: 'w', __idx: 5, x: 1 }
+    const oldB = { name: 'B', des: 'b', symbolSize: 40, category: 'y', __idx: 0, x: 4 }
+    const merged = syncPlacedNodes(newNodes, [oldA, oldB])
+    expect(merged[0]).toMatchObject({ des: 'a2', symbolSize: 70, category: 'x', __idx: 0 })
+    expect(merged[2]).toMatchObject({ des: 'b', category: 'z', __idx: 2 })
   })
 
-  it('旧节点集合为空/未初始化时全部按新节点处理', () => {
-    const merged = mergeGraphNodes(newNodes, [])
-    expect(merged.map((n) => n.__idx)).toEqual([0, 1, 2])
-    expect(merged.every((n) => !('x' in n))).toBe(true)
-    expect(mergeGraphNodes(newNodes, null)).toHaveLength(3)
+  it('新节点新建对象：浅拷贝业务字段 + __idx，无 d3 坐标字段', () => {
+    const merged = syncPlacedNodes(newNodes, [{ name: 'A', des: 'a', x: 1 }])
+    expect(merged[1]).toEqual({ name: 'C', des: 'c', symbolSize: 30, category: 'x', __idx: 1 })
+    expect('x' in merged[1]).toBe(false)
+  })
+
+  it('悬空旧对象（对应节点已删）不进结果数组', () => {
+    const merged = syncPlacedNodes(newNodes, [
+      { name: 'A', x: 1 },
+      { name: 'D', x: 9, y: 9, z: 9 }
+    ])
+    expect(merged).toHaveLength(3)
+    expect(merged.some((n) => n.name === 'D')).toBe(false)
+  })
+
+  it('不修改 chartData 源入参（旧集合是图实例私有数据，允许就地更新）', () => {
+    const newIn = [{ name: 'A', des: 'a2', symbolSize: 70, category: 'x' }]
+    const snapshot = JSON.parse(JSON.stringify(newIn))
+    syncPlacedNodes(newIn, [{ name: 'A', des: 'a', symbolSize: 50, category: 'x', __idx: 0, x: 1 }])
+    expect(newIn).toEqual(snapshot)
   })
 
   it('旧集合有重名节点时与 find 语义一致：取第一个匹配', () => {
-    const merged = mergeGraphNodes(
-      [{ name: 'A' }],
-      [
-        { name: 'A', x: 1, y: 1, z: 1 },
-        { name: 'A', x: 9, y: 9, z: 9 }
-      ]
-    )
-    expect(merged[0]).toMatchObject({ x: 1, y: 1, z: 1 })
+    const first = { name: 'A', x: 1, y: 1, z: 1 }
+    const merged = syncPlacedNodes([{ name: 'A' }], [first, { name: 'A', x: 9, y: 9, z: 9 }])
+    expect(merged[0]).toBe(first)
   })
 
-  it('不修改入参（新数组与旧数组都保持原样）', () => {
-    const newIn = [{ name: 'A' }]
-    const oldIn = [{ name: 'A', x: 1, y: 2, z: 3 }]
-    mergeGraphNodes(newIn, oldIn)
-    expect(newIn[0]).toEqual({ name: 'A' })
-    expect(oldIn[0]).toEqual({ name: 'A', x: 1, y: 2, z: 3 })
+  it('旧集合为空/null 时全部按新节点处理', () => {
+    const merged = syncPlacedNodes(newNodes, [])
+    expect(merged.map((n) => n.__idx)).toEqual([0, 1, 2])
+    expect(merged.every((n) => !('x' in n))).toBe(true)
+    expect(syncPlacedNodes(newNodes, null)).toHaveLength(3)
+  })
+})
+
+describe('syncPlacedLinks：编辑刷新时按三元组键同步到图实例旧边对象（稳定引用）', () => {
+  it('同键边复用旧对象引用，source/target 保持已反解的节点对象形态，业务字段就地同步', () => {
+    const srcA = { name: 'A', x: 1 }
+    const tgtB = { name: 'B', x: 2 }
+    const old1 = { source: srcA, target: tgtB, name: 'n1', des: 'd1', __idx: 3 }
+    const merged = syncPlacedLinks([{ source: 'A', target: 'B', name: 'n1', des: 'd1x' }], [old1])
+    // 引用相等：digest 身份命中 update，边 mesh 复用
+    expect(merged[0]).toBe(old1)
+    // source/target 不重赋——已反解的节点对象引用保持有效
+    expect(merged[0].source).toBe(srcA)
+    expect(merged[0].target).toBe(tgtB)
+    expect(merged[0].des).toBe('d1x')
+    expect(merged[0].__idx).toBe(0)
+  })
+
+  it('新边新建对象：字符串端点透传 + __idx（交库反解）', () => {
+    const merged = syncPlacedLinks([{ source: 'A', target: 'B', name: 'n2', des: 'd2' }], [])
+    expect(merged[0]).toEqual({ source: 'A', target: 'B', name: 'n2', des: 'd2', __idx: 0 })
+  })
+
+  it('键变（改端点顺序/改边名）＝ 删旧增新，旧对象不进结果', () => {
+    const old1 = { source: { name: 'A' }, target: { name: 'B' }, name: 'n1', __idx: 0 }
+    const merged = syncPlacedLinks([{ source: 'B', target: 'A', name: 'n1' }], [old1])
+    expect(merged[0]).not.toBe(old1)
+    expect(merged[0].source).toBe('B')
+  })
+
+  it('悬空旧边（对应数据已删）不进结果', () => {
+    const oldGone = { source: { name: 'A' }, target: { name: 'D' }, name: 'nd', __idx: 0 }
+    const merged = syncPlacedLinks([{ source: 'A', target: 'B', name: 'n1' }], [oldGone])
+    expect(merged).toHaveLength(1)
+    expect(merged[0].name).toBe('n1')
+  })
+
+  it('旧集合重键时取第一个匹配（与 linkKey 同键竞争语义一致）', () => {
+    const first = { source: 'A', target: 'B', name: 'n1', __idx: 0 }
+    const merged = syncPlacedLinks(
+      [{ source: 'A', target: 'B', name: 'n1' }],
+      [first, { source: { name: 'A' }, target: { name: 'B' }, name: 'n1', __idx: 1 }]
+    )
+    expect(merged[0]).toBe(first)
+  })
+
+  it('不修改 chartData 源入参', () => {
+    const newIn = [{ source: 'A', target: 'B', name: 'n1', des: 'x' }]
+    const snapshot = JSON.parse(JSON.stringify(newIn))
+    syncPlacedLinks(newIn, [{ source: { name: 'A' }, target: { name: 'B' }, name: 'n1', __idx: 0 }])
+    expect(newIn).toEqual(snapshot)
+  })
+
+  it('旧集合为空/null 时全部新建', () => {
+    expect(syncPlacedLinks(null, null)).toEqual([])
+    expect(syncPlacedLinks([], null)).toEqual([])
+  })
+})
+
+describe('planLabelSync：标签集合变化的手动增删决策（按节点序稳定返回引用）', () => {
+  const nodes = [
+    { name: 'A', symbolSize: 70, __idx: 0 },
+    { name: 'B', symbolSize: 40, __idx: 1 },
+    { name: 'C', symbolSize: 30, __idx: 2 }
+  ]
+
+  it('进集合的返回 adds（成员是节点引用，非名字）', () => {
+    const { adds, removes } = planLabelSync(nodes, new Set(['B']), new Set(['B', 'A']))
+    expect(adds).toEqual([nodes[0]])
+    expect(removes).toEqual([])
+  })
+
+  it('跌出集合的返回 removes', () => {
+    const { adds, removes } = planLabelSync(nodes, new Set(['A', 'C']), new Set(['A']))
+    expect(adds).toEqual([])
+    expect(removes).toEqual([nodes[2]])
+  })
+
+  it('名字不在图实例节点里的不产生操作——已删节点由 digest exit 连带摘除，新 enter 节点的标签由稳定闭包建', () => {
+    const { adds, removes } = planLabelSync(nodes, new Set(['A', 'GONE']), new Set(['A', 'NEW']))
+    expect(adds).toEqual([])
+    expect(removes).toEqual([])
+  })
+
+  it('前后集合一致（含插入序不同）或双空时零操作', () => {
+    expect(planLabelSync(nodes, new Set(['A']), new Set(['A']))).toEqual({ adds: [], removes: [] })
+    expect(planLabelSync(nodes, new Set(['A', 'B']), new Set(['B', 'A']))).toEqual({
+      adds: [],
+      removes: []
+    })
+    expect(planLabelSync(nodes, new Set(), new Set())).toEqual({ adds: [], removes: [] })
+  })
+
+  it('空节点数组返回零操作', () => {
+    expect(planLabelSync([], new Set(['A']), new Set(['B']))).toEqual({ adds: [], removes: [] })
   })
 })
 

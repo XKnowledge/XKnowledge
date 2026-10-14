@@ -89,7 +89,7 @@ export const emptyEdge = (): GraphLink => ({ source: '', target: '', name: '', d
  *  引用统一用这个。 */
 export const deepClone = <T>(x: T): T => JSON.parse(JSON.stringify(x))
 
-/** 图实例节点：chartData 节点 + 内部索引与 d3 布局坐标（mergeGraphNodes 产物） */
+/** 图实例节点：chartData 节点 + 内部索引与 d3 布局坐标（syncPlacedNodes 产物） */
 export interface PlacedNode extends GraphNode {
   __idx: number
   x?: number
@@ -101,14 +101,17 @@ export interface PlacedNode extends GraphNode {
 }
 
 /**
- * 编辑刷新时用旧图节点坐标合并新节点数据（已布局的图不跳）。
- * 旧节点按 name 建 Map 索引做 O(n) 查找，替代在 map 内逐个 find 的 O(n²)；
- * 重名时与 Array.find 语义一致（取第一个匹配）。
- * 图实例吃的节点是 chartData 的拷贝（带内部 __idx 与 d3 坐标字段），不回写源数据。
+ * 编辑刷新时把 chartData 节点同步进图实例旧节点集合（稳定引用管道）。
+ * 同名（重名取第一个，与 Array.find 语义一致）复用旧对象本身并就地同步业务字段
+ * （des/symbolSize/category/__idx；name 即匹配键必然相同不重赋）——d3 坐标、速度、
+ * 拖拽锚、__threeObj 都在同一对象上原样保留，库 digest 按对象身份判 update，
+ * mesh 不重建（大图编辑增量的全部要点，issue #22）；
+ * 新建节点浅拷贝业务字段（绝不 mutate chartData 源），悬空旧对象不进结果自然淘汰。
+ * chartData → 图实例单向同步，永不回写。
  * @param newNodes chartData 的节点（纯数据）
  * @param oldNodes 图实例当前 graphData().nodes（带 d3 坐标），可为空
  */
-export const mergeGraphNodes = (
+export const syncPlacedNodes = (
   newNodes: GraphNode[],
   oldNodes: PlacedNode[] | null
 ): PlacedNode[] => {
@@ -118,22 +121,56 @@ export const mergeGraphNodes = (
   }
   return newNodes.map((n, i) => {
     const old = oldByName.get(n.name)
+    if (!old) return { ...n, __idx: i }
+    old.des = n.des
+    old.symbolSize = n.symbolSize
+    old.category = n.category
+    old.__idx = i
     return old
-      ? {
-          ...n,
-          __idx: i,
-          x: old.x,
-          y: old.y,
-          z: old.z,
-          ...(old.fx !== undefined && { fx: old.fx, fy: old.fy, fz: old.fz })
-        }
-      : { ...n, __idx: i }
   })
 }
 
 /** d3 布局会把 link 的 source/target 反解为节点对象；归一化回名字符串再比较 */
 export const linkEnd = (v: LinkEnd): string =>
   typeof v === 'object' && v !== null ? v.name : (v as string)
+
+/** 图实例边：chartData 边 + 内部索引；装载后 source/target 被 d3 反解为节点对象
+ *  引用（LinkEnd 两态），稳定引用管道据此保持反解形态不回退 */
+export interface PlacedLink {
+  source: LinkEnd
+  target: LinkEnd
+  name?: string
+  des?: string
+  __idx: number
+}
+
+/**
+ * 编辑刷新时把 chartData 边同步进图实例旧边集合（稳定引用管道，与 syncPlacedNodes
+ * 同构）。按三元组键（linkKey 归一，端点顺序敏感）匹配：命中复用旧对象并就地同步
+ * name/des/__idx——source/target 不重赋，已反解的节点对象引用保持有效；键变
+ * （改端点/改边名）＝ 删旧增新（边身份变更的正确语义）；新边浅拷贝（字符串端点
+ * 交库反解）。绝不 mutate chartData 源。
+ * @param newLinks chartData 的边（纯数据），可为空
+ * @param oldLinks 图实例当前 graphData().links，可为空
+ */
+export const syncPlacedLinks = (
+  newLinks: GraphLink[] | null,
+  oldLinks: PlacedLink[] | null
+): PlacedLink[] => {
+  const oldByKey = new Map<string, PlacedLink>()
+  for (const o of oldLinks ?? []) {
+    const k = linkKey(o)
+    if (!oldByKey.has(k)) oldByKey.set(k, o)
+  }
+  return (newLinks ?? []).map((l, i) => {
+    const old = oldByKey.get(linkKey(l))
+    if (!old) return { ...l, __idx: i }
+    old.name = l.name
+    old.des = l.des
+    old.__idx = i
+    return old
+  })
+}
 
 /** 边的三元组键：两端名 + 边名（顺序敏感），与 historyOps.sameEdge 同语义。
  *  框选批量边的选中集用它做成员判定——多重边（同端点对不同边名）天然区分 */
@@ -390,6 +427,25 @@ export const planHighlightRepaint = ({
   }
   return { nodeRepaints, linkRepaints }
 }
+
+/**
+ * 标签集合变化的手动增删决策（稳定引用管道的标签半边）。
+ * nodeThreeObject 挂稳定闭包后库只对 digest enter 的新节点调它——update 的
+ * 保留节点跨阈值不会重调，须按本计划手动补/摘 sprite。名字不在 nodes 里的
+ * 不产生操作：已删节点由 digest exit 连带摘除，新 enter 节点的标签由稳定
+ * 闭包按最新集合建（add 执行层再查重幂等）。返回按 nodes 序稳定的节点引用。
+ * @param nodes 图实例当前节点（graphData().nodes）
+ * @param prevSet 上一次应用的「应有标签」名字集合
+ * @param nextSet 本次「应有标签」名字集合
+ */
+export const planLabelSync = (
+  nodes: readonly PlacedNode[],
+  prevSet: ReadonlySet<string>,
+  nextSet: ReadonlySet<string>
+): { adds: PlacedNode[]; removes: PlacedNode[] } => ({
+  adds: nodes.filter((n) => nextSet.has(n.name) && !prevSet.has(n.name)),
+  removes: nodes.filter((n) => prevSet.has(n.name) && !nextSet.has(n.name))
+})
 
 /**
  * 结构性变更后校准节点选中高亮名：
