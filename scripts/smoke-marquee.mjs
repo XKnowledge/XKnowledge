@@ -105,7 +105,10 @@ await shot('01-example-loaded')
 
 // 2. 开侧栏（编辑栏按钮）→ 复位视图 zoomToFit（80px 边距）：几何从此稳定，
 //    全画布框（内缩 15px）必罩住全部节点；后续 box 全部按开侧栏后重量化
-await page.locator('.no-move-button').nth(2).click() // 删除节点/删除连接/编辑栏
+// 编辑栏按钮按 data-toolbar-action 稳定锚点定位：buttonList 后加入的
+// 「创建节点」按钮曾把 nth(2) 挤成删除连接（disabled 点击无效，侧栏
+// 不开、复位视图不可见），索引定位随按钮扩容过期
+await page.locator('[data-toolbar-action="toggle_sider"]').click()
 await page.waitForTimeout(800) // ResizeObserver + 画布自适应稳定
 await page.locator('button', { hasText: '复位视图' }).click()
 await page.waitForTimeout(1_200) // zoomToFit 600ms 补间完成

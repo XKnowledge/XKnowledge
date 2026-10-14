@@ -82,15 +82,14 @@ export const createViewer = (
     .nodeLabel((n) => (n.des ? `${n.name}${nodeLabelSep}${n.des}` : `${n.name}`))
     .linkLabel((l) => l.name || '')
     .onNodeClick((n) => {
-      // 聚焦开启时点击移焦点（编辑器「探照」语义），选中恒更新详情面板
-      setState(
-        state.focusMode !== 'off' ? { selected: n.name, focusName: n.name } : { selected: n.name }
-      )
+      // toggle：再点同一节点取消图面高亮（编辑器同款），详情面板恒显示
+      const patch = { selected: state.selected === n.name ? null : n.name }
+      // 聚焦开启时点击移焦点（编辑器「探照」语义）：focusName 恒随点击、不 toggle
+      if (state.focusMode !== 'off') patch.focusName = n.name
+      setState(patch)
       onNodeClick(n)
     })
-    .onBackgroundClick(() => {
-      if (state.selected) setState({ selected: null })
-    })
+  // 点空白不清选中（编辑器同款新语义）：不注册 onBackgroundClick
 
   const onResize = () => graph.width(container.clientWidth).height(container.clientHeight)
   const resizeObserver = new ResizeObserver(onResize)

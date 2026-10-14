@@ -144,7 +144,8 @@ expectTrue('首节点建成后引导退场', (await page.locator('[data-empty-hi
 await shot('03-first-node-created')
 
 // 4. 连线触点提示：点选 Alpha（单节点投影在画布中心）→ 导航条切连接提示；
-//    点空白回落默认。断言用「已选中节点」前缀（默认文案也含「连线」二字）
+//    点空白保留（单击选中不清，取消＝再点同一节点 toggle）。断言用「已选中
+//    节点」前缀（默认文案也含「连线」二字）
 const box = await page.locator('.graph3d-container').boundingBox()
 const C = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 const E1 = { x: box.x + box.width * 0.2, y: box.y + box.height * 0.75 } // 远离中心的空白点
@@ -167,9 +168,26 @@ expectTrue(
 await shot('04-connect-hint')
 await settleMouse(E1.x, E1.y)
 await page.mouse.click(E1.x, E1.y)
-// 库的 background-click 经悬停轮询异步派发 + watch 改文案：轮询等回落
+// 点空白保留单击选中：连线提示不回落。background-click 经悬停轮询异步
+// 派发，等一拍再取文案，避免读到派发前的旧值
+await page.waitForTimeout(600)
+const keptHint = await page.evaluate(
+  () => document.querySelector('.scene-nav-info')?.textContent ?? ''
+)
 expectTrue(
-  '点空白后回落默认导航',
+  '点空白后连线提示保留（单击选中不清）',
+  keptHint.includes('已选中节点') && keptHint.includes('Ctrl')
+)
+await shot('04b-blank-keeps-hint')
+// 取消单击选中＝再点同一节点 toggle：导航条回落默认文案。首次点选已
+// 唤起侧栏（点节点开关侧栏是编辑器语义），画布变窄、节点投影随相机
+// target 移到新画布中心——须重量化包围盒再取中心，旧中心已落在空白上
+const box2 = await page.locator('.graph3d-container').boundingBox()
+const C2 = { x: box2.x + box2.width / 2, y: box2.y + box2.height / 2 }
+await settleMouse(C2.x, C2.y)
+await page.mouse.click(C2.x, C2.y)
+expectTrue(
+  '再点同一节点取消后回落默认导航',
   await page
     .waitForFunction(
       () => {

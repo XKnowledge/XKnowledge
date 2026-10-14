@@ -265,28 +265,42 @@ describe('createViewer 构图', () => {
 })
 
 describe('点击语义（编辑器同款）', () => {
-  it('节点点击：选中恒更新，回调透传 datum', () => {
-    const onNodeClick = vi.fn()
-    const { graph, getState } = createViewer(container(), makeData(), { onNodeClick })
-    const datum = { name: 'A' }
-    graph.handlers.onNodeClick(datum)
+  it('节点点击 toggle：首次选中、再点同一节点取消、换点直接换亮', () => {
+    const { graph, getState } = createViewer(container(), makeData())
+    graph.handlers.onNodeClick({ name: 'A' })
     expect(getState().selected).toBe('A')
-    expect(onNodeClick).toHaveBeenCalledWith(datum)
+    graph.handlers.onNodeClick({ name: 'A' })
+    expect(getState().selected).toBe(null)
+    graph.handlers.onNodeClick({ name: 'B' })
+    expect(getState().selected).toBe('B')
   })
 
-  it('聚焦开启时点击移焦点（探照语义）：selected 与 focusName 同步', () => {
+  it('toggle 取消时回调仍透传 datum（详情面板恒显示，取消的只是图面高亮）', () => {
+    const onNodeClick = vi.fn()
+    const { graph } = createViewer(container(), makeData(), { onNodeClick })
+    const datum = { name: 'A' }
+    graph.handlers.onNodeClick(datum)
+    graph.handlers.onNodeClick(datum)
+    expect(onNodeClick).toHaveBeenCalledTimes(2)
+    expect(onNodeClick).toHaveBeenLastCalledWith(datum)
+  })
+
+  it('聚焦开启时点击移焦点（探照语义）：focusName 恒随点击，selected 仍 toggle', () => {
     const { graph, setState, getState } = createViewer(container(), makeData())
     setState({ focusMode: 'focus', focusName: 'A' })
     graph.handlers.onNodeClick({ name: 'D' })
     expect(getState().selected).toBe('D')
     expect(getState().focusName).toBe('D')
+    graph.handlers.onNodeClick({ name: 'D' })
+    expect(getState().selected).toBe(null)
+    expect(getState().focusName).toBe('D')
   })
 
-  it('背景点击：清选中（有选中才清，无选中不触发重着色链）', () => {
+  it('背景点击不注册：点空白不清选中（编辑器同款新语义）', () => {
     const { graph, setState, getState } = createViewer(container(), makeData())
     setState({ selected: 'A' })
-    graph.handlers.onBackgroundClick()
-    expect(getState().selected).toBe(null)
+    expect(graph.handlers.onBackgroundClick).toBeUndefined()
+    expect(getState().selected).toBe('A')
   })
 })
 

@@ -519,20 +519,24 @@ const onChangeEdgeSubmit = (edge) => {
 }
 
 /** Shift+拖框选提交（XkGraph3D 松手拾取后 emit）：集体高亮、Delete 批量删。
- *  与单击选中互斥——先清单击态再落框选集；空框（Shift+单击未拖）等同点空白
- *  完整取消选中。侧栏回属性页，不弹表单 */
+ *  非空框选与单击选中互斥——先清单击态再落框选集，侧栏回属性页不弹表单；
+ *  空框（Shift+单击未拖）等同点空白：只清批量集，单击选中保留 */
 const onGraphMarqueeSelect = (nodes, links) => {
-  resetSider()
-  resetRefData()
-  selectionNodeNames.value = nodes
-  selectionLinkIndexes.value = links
+  if (nodes.length || links.length) {
+    resetSider()
+    resetRefData()
+    selectionNodeNames.value = nodes
+    selectionLinkIndexes.value = links
+    return
+  }
+  clearSelection()
 }
 
-/** 点空白＝完整取消选中：清高亮与 Delete 对象、面板回默认属性页；侧栏
- *  本身不强制收起（收起动静大，留给出侧栏按钮） */
+/** 点空白＝只清框选批量集：单击选中（图面高亮/侧栏面板/Delete 对象）保留
+ *  ——取消单击选中靠「再点同一节点」或出侧栏。批量框选仍以点空白为轻量
+ *  取消手段（误框选后不删而清） */
 const onGraphBackgroundClick = () => {
-  resetSider()
-  resetRefData()
+  clearSelection()
 }
 
 const switchSider = () => {
