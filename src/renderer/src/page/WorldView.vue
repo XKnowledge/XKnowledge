@@ -545,6 +545,10 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
+  /* 滚动条配色随主题（同 AddView .inner-div 模式）：无样式滚动容器在
+     Electron 44（Chromium 152）滚动条统一化后回退系统浅色原生滚动条，
+     深色主题下呈亮色。轨道与侧栏底同色 */
+  scrollbar-color: var(--xk-card-border) var(--xk-bg-layout);
 }
 .world-card-title {
   overflow: hidden;

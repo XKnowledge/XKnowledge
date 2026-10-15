@@ -190,6 +190,11 @@ defineExpose({ open: () => (open.value = true) })
 .xk-settings-scroll {
   max-height: 60vh;
   overflow-y: auto;
+  /* 滚动条配色随主题（同 AddView .inner-div 模式）：Electron 44
+     （Chromium 152）滚动条统一化后，无样式滚动容器回退为系统浅色原生
+     滚动条，深色主题下呈亮色。标准属性 scrollbar-color 跟随主题变量，
+     轨道与弹窗内容底同色 */
+  scrollbar-color: var(--xk-card-border) var(--xk-bg);
 }
 
 .xk-settings-divider {
