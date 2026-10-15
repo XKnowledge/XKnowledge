@@ -163,3 +163,61 @@ FunctionEnd
     StrCpy $launchLink "$appExe"
   ${EndIf}
 !macroend
+
+; ── 卸载确认页「保留用户设置」勾选框（2026-10-15）──
+; 需求（作者两轮澄清后定稿）：卸载时在「是否要卸载」的确认环节以勾选框
+; （Windows 卸载器惯例）问「是否保留用户设置」——非弹窗、非卸载后尾页。
+; assisted 卸载器无确认 MessageBox（uninstaller.nsh:22 那个是 ONE_CLICK
+; 分支），确认动作由第一个页面承担；electron-builder 官方钩子
+; customUnWelcomePage（assistedInstaller.nsh:66-68）探测到即整页替换
+; MUI_UNPAGE_WELCOME——自绘确认页：卸载说明 + 「保留用户设置」勾选框，
+; 勾选状态由点击时刻写入 Var，向导「卸载」按钮离开本页后 INSTFILES 的
+; 卸载 Section 读取执行（customUnInstall 宏，展开点 uninstaller.nsh:156，
+; Section 顶部、checkAppRunning 之后——应用已退出，leveldb LOCK 不挡删除）。
+; 两宏均仅卸载器编译 pass（BUILD_UNINSTALLER）展开；Var 声明在宏内、被
+; un. 函数引用——无安装器 pass 死变量（NSIS 6001）问题。OnClick 实时写
+; 状态、nsDialogs::Show 返回后不读控件（Show 后句柄失效，同上方
+; XKShortcutPageCreate 教训）。
+; 默认勾选=保留（破坏性操作保守缺省）；静默卸载（/S）与升级（--updated
+; 调用均静默）不显示页面 → Var 为空 ≠ "0" → 不删。文案只说「用户设置」，
+; 不列目录内容细节（作者 2026-10-15 要求）。
+; ${APP_FILENAME} = productName 的 NSIS 安全形式（XKnowledge），与 Electron
+; userData 目录一致（实测 %APPDATA%\XKnowledge）；SetShellVarContext current
+; 防御 per-machine（all）安装时 shell context 停在 all——Electron userData
+; 恒为当前用户目录（模板 uninstaller.nsh:232-235 同款切换）。
+!macro customUnWelcomePage
+  Var /GLOBAL xkKeepSettingsState
+  Var /GLOBAL xkKeepSettingsCheckbox
+
+  Function un.XKUnwelcomePageCreate
+    !insertmacro MUI_HEADER_TEXT "卸载 ${APP_FILENAME}" "确认卸载选项"
+    nsDialogs::Create 1018
+    Pop $0
+    ${NSD_CreateLabel} 0u 0u 300u 20u "即将从您的计算机卸载 ${APP_FILENAME}。"
+    Pop $0
+    ${NSD_CreateCheckbox} 10u 40u 280u 20u "保留用户设置"
+    Pop $xkKeepSettingsCheckbox
+    ${NSD_Check} $xkKeepSettingsCheckbox
+    StrCpy $xkKeepSettingsState "1"
+    ${NSD_OnClick} $xkKeepSettingsCheckbox un.XKKeepSettingsClick
+    nsDialogs::Show
+  FunctionEnd
+
+  Function un.XKKeepSettingsClick
+    Pop $1   ; 回调参数：控件 HWND（点击来源已知，弃用；pop 以平衡栈）
+    ${NSD_GetState} $xkKeepSettingsCheckbox $xkKeepSettingsState
+  FunctionEnd
+
+  UninstPage custom un.XKUnwelcomePageCreate
+!macroend
+
+; 卸载 Section 顶部执行（程序文件删除前）：按确认页勾选结果删/留用户设置。
+; 页面未显示（静默/升级）时 Var 为空 ≠ "0" → 保留，与页面默认勾选一致。
+!macro customUnInstall
+  ${If} $xkKeepSettingsState == "0"
+    ${if} $installMode == "all"
+      SetShellVarContext current
+    ${endif}
+    RMDir /r "$APPDATA\${APP_FILENAME}"
+  ${EndIf}
+!macroend
