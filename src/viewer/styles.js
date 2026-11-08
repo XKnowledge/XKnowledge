@@ -8,13 +8,19 @@ body {
   font: 13px/1.5 system-ui, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   --xk-bg: #ffffff; --xk-fg: #333333; --xk-label: #333333;
   --xk-watermark: #000000; --xk-panel: rgba(255,255,255,.92); --xk-border: #d9d9d9;
-  --xk-chip-off: #c4c9cc;
+  --xk-chip-off: #c4c9cc; --xk-scroll-thumb: #8a8a8a;
+  color-scheme: light;
   background: var(--xk-bg); color: var(--xk-fg);
+  /* 滚动条随主题：scrollbar-color 可继承，声明在 body 即覆盖图例/详情面板。
+     Chromium 121+ 标准属性（::-webkit-scrollbar 在统一化后已失效），
+     不设则深色主题下会露出系统浅色滚动条 */
+  scrollbar-color: var(--xk-scroll-thumb) transparent;
 }
 body[data-theme='dark'] {
   --xk-bg: #141414; --xk-fg: #e0e0e0; --xk-label: #e0e0e0;
   --xk-watermark: #ffffff; --xk-panel: rgba(20,20,20,.92); --xk-border: #4a4f53;
-  --xk-chip-off: #4a4f53;
+  --xk-chip-off: #4a4f53; --xk-scroll-thumb: #6e6e6e;
+  color-scheme: dark;
 }
 #graph3d { position: absolute; inset: 0; }
 .xk-head {

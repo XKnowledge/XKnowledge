@@ -16,18 +16,19 @@ yarn dev         # 开发模式启动（electron-vite dev --watch，DevTools 自
 
 ## 2. 常用脚本
 
-| 命令                                           | 说明                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------ |
-| `yarn dev`                                     | 开发模式（electron-vite dev --watch + DevTools）             |
-| `yarn test`                                    | 单元测试（vitest run，约 2 秒，见 §4.1）                     |
-| `yarn typecheck`                               | 类型检查（vue-tsc --noEmit）                                 |
-| `npx eslint .`                                 | Lint（ESLint 10 flat config，无独立 script）                 |
-| `npx prettier --write .`                       | 格式化（Prettier 3，printWidth 100）                         |
-| `yarn build`                                   | 构建（electron-vite build → `out/`）                         |
-| `yarn generate:examples`                       | 重新生成示例图库清单 `examples/examples.manifest.json`       |
-| `yarn build:viewer`                            | 重新生成导出 HTML 的单文件模板 `resources/viewer/index.html` |
-| `yarn build:unpack`                            | 构建并只出免安装目录（不出安装包）                           |
-| `yarn build:win` / `build:mac` / `build:linux` | 三平台安装包 → `release/`                                    |
+| 命令                                           | 说明                                                                                                  |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `yarn dev`                                     | 开发模式（electron-vite dev --watch + DevTools）                                                      |
+| `yarn test`                                    | 单元测试（vitest run，约 2 秒，见 §4.1）                                                              |
+| `yarn typecheck`                               | 类型检查（vue-tsc --noEmit）                                                                          |
+| `npx eslint .`                                 | Lint（ESLint 10 flat config，无独立 script）                                                          |
+| `npx prettier --write .`                       | 格式化（Prettier 3，printWidth 100）                                                                  |
+| `yarn build`                                   | 构建（electron-vite build → `out/`）                                                                  |
+| `yarn generate:examples`                       | 重新生成示例图库清单 `examples/examples.manifest.json`                                                |
+| `yarn build:viewer`                            | 重新生成导出 HTML 的单文件模板 `resources/viewer/index.html`                                          |
+| `yarn build:file-icon`                         | 重新生成 `.xk` 文件图标 `build/xk-file.ico` / `.icns`（**手动**，不在 `prebuild` 里；需 ImageMagick） |
+| `yarn build:unpack`                            | 构建并只出免安装目录（不出安装包）                                                                    |
+| `yarn build:win` / `build:mac` / `build:linux` | 三平台安装包 → `release/`                                                                             |
 
 `prebuild` 在每次 `yarn build` 前自动重跑示例清单与 viewer 模板两个生成器（内容相同不重写），通常无需手动执行。
 
@@ -48,21 +49,22 @@ yarn dev         # 开发模式启动（electron-vite dev --watch，DevTools 自
 - **双语字典单源**：`src/shared/locales/`（纯数据模块，禁止 import vue/electron），渲染层与主进程共用；改文案两个语言都要改，`tests/shared/locales.test.js` 会锁 key 树与占位符一致性。
 - **改 `examples/` 内 `.xk` 后必须 `yarn generate:examples`**——同步守护测试对清单与目录现扫结果逐字节对比，忘了跑测试必红。
 - **改 `src/viewer/` 后必须 `yarn build:viewer`**——`resources/viewer/index.html` 是构建产物入库，导出 HTML 功能读的是它。
+- **改 `scripts/build-file-icon.mjs` 后必须 `yarn build:file-icon`**——`.xk` 文件图标 `build/xk-file.ico` / `.icns` 是构建产物入库（`.gitignore` 对 `build/*` 开了白名单），安装器按此路径写入注册表；产物不重跑，图标改动不会进安装包。
 - 代码语言：主进程与 preload 全部为 JS；渲染层入口与工具函数为 TS（vue-tsc 只查 TS 侧）。
 
 ## 4. 测试体系
 
 ### 4.1 单元测试（`yarn test`）
 
-vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒跑完。截至 v2.6.0 为 784 用例 / 50 文件（数量随版本增长，以 `yarn test` 输出为准），按被测层分目录：
+vitest run，全量 mock `electron` 模块、不依赖真实窗口，约 2 秒跑完。截至 v2.6.1 为 792 用例 / 51 文件（数量随版本增长，以 `yarn test` 输出为准），按被测层分目录：
 
-| 目录              | 覆盖                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| `tests/main/`     | 主进程：文件读写与校验、路径守卫、IPC 登记、窗口管理、标题计算、示例清单、HTML 导出拼装  |
-| `tests/preload/`  | contextBridge 桥接面：API → IPC 通道映射、推送回调剥 event                               |
-| `tests/renderer/` | 渲染层 utils / store：画布编辑、历史栈、图数据、快捷键、主题、语言、大纲解析、视频导出等 |
-| `tests/shared/`   | 纯函数：剪贴板序列化、viewer 数据白名单、双语字典一致性                                  |
-| `tests/viewer/`   | 导出 HTML 查看器全套：boot 装配、样式锚点、DOM UI、3D 核心（含点击语义）、双语           |
+| 目录              | 覆盖                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `tests/main/`     | 主进程：文件读写与校验、路径守卫、IPC 登记、窗口管理、标题计算、示例清单、HTML 导出拼装、入库二进制（`.xk` 图标）结构 |
+| `tests/preload/`  | contextBridge 桥接面：API → IPC 通道映射、推送回调剥 event                                                            |
+| `tests/renderer/` | 渲染层 utils / store：画布编辑、历史栈、图数据、快捷键、主题、语言、大纲解析、视频导出等                              |
+| `tests/shared/`   | 纯函数：剪贴板序列化、viewer 数据白名单、双语字典一致性                                                               |
+| `tests/viewer/`   | 导出 HTML 查看器全套：boot 装配、样式锚点、DOM UI、3D 核心（含点击语义）、双语                                        |
 
 项目测试约定（重要）：
 
@@ -103,6 +105,8 @@ yarn dev       # 开发模式启动
 - `electron-builder` 出包到 `release/`：Windows NSIS 安装器、macOS dmg、Linux AppImage；`yarn build:unpack` 只出免安装目录；
 - `prebuild` 自动重新生成示例清单与 viewer 模板（§2）；
 - electron-builder 配置在 `package.json` 的 `build` 段（asar、files 白名单、NSIS 向导细节等），逐项说明见 [软件结构文档 §12](./architecture.md)。
+- `.xk` 文件关联由 `build.fileAssociations` 声明：Windows 注册 `.xk` 扩展名、ProgID `XKnowledge.Document`、`DefaultIcon`（指向安装目录下的 `xk-file.ico`）与 `open` 命令 `XKnowledge.exe "%1"`，macOS 写 `CFBundleDocumentTypes`；图标由 `yarn build:file-icon` 生成，**不随 `prebuild` 自动跑**（依赖外部 ImageMagick，避免给 CI 增加环境要求）。卸载时模板撤 ProgID 键，`.xk` 扩展名默认值由 `build/installer.nsh` 的 `customUnInstall` 补删（模板只删 ProgID，会留下指向已删除 ProgID 的悬空关联）。
+- **图标按用途分两处放**：`build/`（electron-builder 的 buildResources）只供打包期使用、**不会进 app.asar**，放 `.xk` 关联图标与 NSIS 脚本；`resources/` 随 `files: resources/**/*` 打进 `app.asar`，只放运行期要读的东西（`viewer/index.html` 是导出 HTML 的模板）。应用图标源图 `resources/XKnowledge.png` 属例外——它只在打包期被 `build.icon` 用，能生效是因为 electron-builder 找不到时会回退到项目根解析（`getResource`），并非 `resources/` 有特殊含义。
 
 ## 7. CI 与发版
 

@@ -162,6 +162,39 @@ FunctionEnd
   ${IfNot} ${FileExists} "$launchLink"
     StrCpy $launchLink "$appExe"
   ${EndIf}
+
+  ; ===== .xk 文件关联收尾 =====
+  ; 关联键由模板 registerFileAssociations 宏（installSection.nsh:77-78，展开在
+  ; 本宏之前）按 package.json → build.fileAssociations 写入，此处只做两件
+  ; 模板做不到的事：
+  ; 1) 动词文案中文化：APP_ASSOCIATE 的 COMMANDTEXT 被 electron-builder 硬编码
+  ;    为 "Open with ${productName}"，会原样显示在右键菜单与「打开方式」里。
+  ;    改写的键与宏完全一致；SHELL_CONTEXT 已由 multiUser.nsh 按安装范围设为
+  ;    HKLM\Software\Classes（所有用户）或 HKCU（当前用户），故不写死根键。
+  ;    ProgID 必须与 package.json fileAssociations[0].name 保持一致。
+  WriteRegStr SHELL_CONTEXT "Software\Classes\XKnowledge.Document\shell\open" "" "使用 XKnowledge 打开"
+  ; 2) 通知外壳刷新关联：APP_ASSOCIATE 只写注册表，不调用文件关联变更通知，
+  ;    安装结束后资源管理器可能仍按旧图标/旧关联显示（双击 .xk 提示「选择
+  ;    打开方式」），直到注销或手动刷新。UPDATEFILEASSOC 来自模板已 include
+  ;    的 FileAssociation.nsh，内部走 shell32::SHChangeNotify(SHCNE_ASSOCCHANGED)
+  !insertmacro UPDATEFILEASSOC
+!macroend
+
+; 卸载收尾：模板的 unregisterFileAssociations（uninstaller.nsh:212 →
+; APP_UNASSOCIATE）只删 ProgID 键 `Software\Classes\XKnowledge.Document` 与
+; `.xk\OpenWithProgids` 里的登记值，**不删**安装时写入的 `.xk` 默认值——
+; 卸载后会留下指向已删除 ProgID 的悬空关联（双击 .xk 弹「选择打开方式」
+; 而打不开任何东西）。实测本机卸载后 `.xk` 默认值仍为 XKnowledge.Document。
+; 只在默认值仍指向本应用时才清：用户卸载前若已把 .xk 改绑到别的程序，
+; 那是用户的选择，不能覆盖。只删默认值、不删整个 `.xk` 键，保留
+; OpenWithList 等其他程序写入的内容。
+!macro customUnInstall
+  ReadRegStr $0 SHELL_CONTEXT "Software\Classes\.xk" ""
+  ${If} $0 == "XKnowledge.Document"
+    DeleteRegValue SHELL_CONTEXT "Software\Classes\.xk" ""
+  ${EndIf}
+  ; 卸载同样要通知外壳，否则资源管理器缓存里仍是旧图标/关联
+  !insertmacro UPDATEFILEASSOC
 !macroend
 
 ; ── 卸载确认页「保留用户设置」勾选框（2026-10-15）──

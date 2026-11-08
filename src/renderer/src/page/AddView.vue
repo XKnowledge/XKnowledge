@@ -199,8 +199,8 @@ const openExampleChart = async (ex) => {
   /* 滚动条配色（滑块 轨道）随主题变量切换。Electron 44（Chromium 152）
      起滚动条统一化，::-webkit-scrollbar 伪元素样式不再生效（回退为跟随
      操作系统浅色的原生滚动条，深色主题下呈亮色），须改用标准属性
-     scrollbar-color（Chromium 121+ 支持，且跟随 CSS 变量）。滑块沿用
-     原设计的 --xk-card-border，轨道与内容底同色 */
-  scrollbar-color: var(--xk-card-border) var(--xk-bg);
+     scrollbar-color（Chromium 121+ 支持，且跟随 CSS 变量）。取值与
+     theme.css 的全局规则一致，避免与其他滚动容器色差 */
+  scrollbar-color: var(--xk-scrollbar-thumb) var(--xk-scrollbar-track);
 }
 </style>

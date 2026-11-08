@@ -22,10 +22,12 @@ export const enUS = {
     actionFailed: 'Action failed',
     collapse: 'Collapse',
     name: 'Name',
-    description: 'Description'
+    description: 'Description',
+    ok: 'OK'
   },
   dialog: {
     confirmExit: 'Confirm Exit',
+    openFailed: 'Cannot open file',
     unsavedExit: 'The file has unsaved changes. Exit anyway?',
     saveTo: 'Save file to...',
     saveAsTo: 'Save file as...',

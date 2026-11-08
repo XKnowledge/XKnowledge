@@ -2,6 +2,7 @@
    深色值对齐 antd darkAlgorithm 默认 token（底 #141414 / 布局 #1f1f1f），
    自定义区域与 antd 组件视觉一体；3D 场景深色背景同用 #141414 */
 :root {
+  color-scheme: light; /* 原生部件（滚动条、文本域右下角缩放柄等）跟随主题 */
   --xk-bg: #ffffff; /* 内容区/图表区底 */
   --xk-bg-layout: #f5f5f5; /* 侧边栏/标题栏布局底 */
   --xk-border: rgba(5, 5, 5, 0.06); /* 分隔细线 */
@@ -11,7 +12,8 @@
   --xk-text-secondary: #8c8c8c; /* 次要文字/图标 */
   --xk-float-bg: rgba(255, 255, 255, 0.85); /* 图例/搜索浮层底 */
   --xk-hover: rgba(0, 0, 0, 0.05); /* 悬停底色 */
-  --xk-scrollbar-thumb: #888888; /* ChartView 侧栏滚动条 */
+  --xk-scrollbar-thumb: #888888; /* 全局滚动条滑块 */
+  --xk-scrollbar-track: transparent; /* 滚动条轨道：透出容器自身底色 */
   --xk-accent: #2e64d6; /* 品牌强调/选中 */
   --xk-search-active-bg: #fff7e6; /* 搜索当前项底（命中色同系） */
   --xk-search-mark: #fa541c; /* 搜索命中文字（SEARCH_ACTIVE 同系） */
@@ -21,6 +23,7 @@
 }
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --xk-bg: #141414;
   --xk-bg-layout: #1f1f1f;
   --xk-border: rgba(255, 255, 255, 0.09);
@@ -31,12 +34,23 @@
   --xk-float-bg: rgba(20, 20, 20, 0.85);
   --xk-hover: rgba(255, 255, 255, 0.08);
   --xk-scrollbar-thumb: #6e6e6e;
+  --xk-scrollbar-track: transparent;
   --xk-accent: #5b8def;
   --xk-search-active-bg: rgba(250, 197, 61, 0.15);
   --xk-search-mark: #ff7a45;
   --xk-fallback-bg: #2a1215;
   --xk-fallback-border: #59232c;
   --xk-fallback-text: #ff7875;
+}
+
+/* 全局滚动条配色：一次声明覆盖所有滚动容器（设置面板、搜索面板结果列表、
+   图/节点描述的可变大小文本域、侧边栏等）。scrollbar-color 是可继承属性，
+   声明在根节点即可，无需逐组件重复；色值走 CSS 变量因此随主题自动切换。
+   注：Electron 44（Chromium 152）滚动条统一化后 ::-webkit-scrollbar 伪元素
+   失效，且标准属性与旧伪元素同时存在时旧样式被整体忽略，故全项目统一改用
+   标准属性，勿再新增 ::-webkit-scrollbar 规则 */
+html {
+  scrollbar-color: var(--xk-scrollbar-thumb) var(--xk-scrollbar-track);
 }
 
 /* 深色模式黑色 PNG 图标反白：全项目仅 ChartView 工具栏（.no-move-button img）

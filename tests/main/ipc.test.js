@@ -183,6 +183,23 @@ describe('FILE_OPEN：同文件聚焦', () => {
     expect(holder.restore).toHaveBeenCalled()
     expect(holder.focus).toHaveBeenCalled()
   })
+
+  // 双击 .xk 由系统把路径塞进命令行，与打开对话框返回的路径可能只差大小写
+  // （资源管理器按文件名原样传出）；直接字符串比对会漏判 → 同一文件开两个窗
+  it.skipIf(process.platform !== 'win32')('Windows 下路径大小写不同仍判为同一文件', async () => {
+    const holder = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(holder)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:/Users/me/A.xk' })
+    webContents.fromId.mockReturnValue(holder)
+
+    fileService.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/users/me/a.xk']
+    })
+    const res = await handlerOf(IPC.FILE_OPEN)(senderOf(1))
+    expect(res).toEqual({ alreadyOpen: true })
+    expect(fileService.readChartFile).not.toHaveBeenCalled()
+  })
 })
 
 describe('FILE_OPENED：文件-窗口登记', () => {
@@ -460,6 +477,40 @@ describe('FILE_OPENED：窗口标题联动', () => {
     webContents.fromId.mockReturnValue(win)
     await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\t1.xk' })
     expect(setWindowTitle).toHaveBeenCalledWith(win, 't1 — XKnowledge', 't1 — XKnowledge')
+  })
+
+  // 实际装载顺序：ChartView 先 loadChartData（file:opened 登记身份）
+  // 后 mountFileLifecycle（app:enter-chart-mode 置「未命名」）。不在此重算，
+  // 文件名会被后到的「未命名」覆盖——双击 .xk 打开的窗口标题就此丢失文件名
+  it('进入图表模式时按登记簿重算标题，不被「未命名」覆盖', async () => {
+    const win = fakeWindow()
+    BrowserWindow.fromWebContents.mockReturnValue(win)
+    BrowserWindow.fromId.mockReturnValue(win)
+    await handlerOf(IPC.FILE_OPENED)(senderOf(2), { path: 'C:\\资料\\enterMode.xk' })
+    setWindowTitle.mockClear()
+
+    await handlerOf(IPC.APP_ENTER_CHART_MODE)(senderOf(2))
+
+    expect(setWindowTitle).toHaveBeenCalledWith(
+      win,
+      'enterMode — XKnowledge',
+      'enterMode — XKnowledge'
+    )
+  })
+
+  it('未登记文件的窗口进入图表模式仍保持「未命名」', async () => {
+    const win = fakeWindow()
+    const other = fakeWindow()
+    // 登记簿是模块级状态、会残留其他用例的窗口：必须把 id → 窗口 解析链
+    // 绑成一对一，否则残留登记会经由钉死的 fromWebContents 假返回解析成本
+    // 用例的 win，断言「本窗口不被改写」就永远为假
+    mockIdResolution({ 2: other, 9: win })
+    setWindowTitle.mockClear()
+
+    await handlerOf(IPC.APP_ENTER_CHART_MODE)(senderOf(9)) // 9 号窗口没登记过文件
+
+    // 只断言本窗口没被改写
+    expect(setWindowTitle.mock.calls.filter(([w]) => w === win)).toEqual([])
   })
 
   it('第二个窗口打开同名文件时，两个窗口都带目录链', async () => {

@@ -885,19 +885,14 @@ const buttonList = computed(() => [
   text-align: center;
 }
 
-/* 针对Webkit内核浏览器的滚动条样式 */
-.sider-style::-webkit-scrollbar {
-  width: 5px; /* 设置滚动条的宽度为2px */
-}
-
-/* 滚动条轨道的样式 */
-.sider-style::-webkit-scrollbar-track {
-  background-color: transparent; /* 轨道颜色，可以设置为透明或你想要的颜色 */
-}
-
-/* 滚动条滑块的样式 */
-.sider-style::-webkit-scrollbar-thumb {
-  background-color: var(--xk-scrollbar-thumb); /* 滑块颜色，可以设置为你想要的颜色 */
+/* 侧栏滚动条：Electron 44（Chromium 152）起 ::-webkit-scrollbar 失效，
+   改用标准属性。滑块颜色随主题变量，轨道透明透出侧栏底色；宽度用 thin
+   保持原 5px 细窄观感（标准属性最小档，不能精确到 5px）。
+   注：同一元素一旦写了 ::-webkit-scrollbar，标准属性会被整体忽略，
+   故这里不再保留旧伪元素规则 */
+.sider-style {
+  scrollbar-width: thin;
+  scrollbar-color: var(--xk-scrollbar-thumb) transparent;
 }
 
 .sider-menu-style {

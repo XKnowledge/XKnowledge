@@ -1,4 +1,5 @@
 import { BrowserWindow, clipboard, dialog, ipcMain, webContents } from 'electron'
+import { resolve } from 'node:path'
 import * as fileService from './fileService'
 import { listExamples, openExample } from './exampleService'
 import * as worldIndex from './worldIndex'
@@ -74,6 +75,41 @@ const refreshTitles = () => {
   }
 }
 
+/**
+ * 路径比对键：绝对化 + Windows 下忽略大小写。
+ * 资源管理器经命令行传来的路径（双击 .xk）与打开对话框返回的路径可能只差
+ * 盘符大小写或分隔符，直接字符串比对会漏判，导致同一文件被重复开窗。
+ */
+const pathKey = (p) => {
+  const abs = resolve(p)
+  return process.platform === 'win32' ? abs.toLowerCase() : abs
+}
+
+/**
+ * 若该文件已在某窗口装载，把该窗口提到最上层并返回 true。
+ * 供 file:open 对话框与「双击 .xk」（src/main/fileOpen.js）共用：
+ * 两条入口的「同一文件不重复开窗」语义必须一致，否则双击已打开的文件
+ * 会凭空多出一个窗口。指向已销毁窗口的陈旧登记顺手清掉。
+ */
+export const focusOpenedWindow = (filePath) => {
+  const key = pathKey(filePath)
+  for (const [recorded, holderId] of openedFiles) {
+    if (pathKey(recorded) !== key) continue
+    // 持有者按 webContents id 登记，解析必须同空间——混用 BrowserWindow.fromId
+    // 会聚焦到无关窗口并返回 true，用户选的文件永远打不开
+    const holder = windowByWebContentsId(holderId)
+    if (holder && !holder.isDestroyed()) {
+      // show + focus 组合对付 Windows 前台锁定（单独 focus 可能只闪任务栏）
+      if (holder.isMinimized()) holder.restore()
+      holder.show()
+      holder.focus()
+      return true
+    }
+    openedFiles.delete(recorded)
+  }
+  return false
+}
+
 export const registerIpc = () => {
   ipcMain.handle(IPC.FILE_SAVE, async (event, { path, content }) => {
     // 示例文件永不写回：path 指向 examples 内时视同无路径，弹另存让用户存副本
@@ -113,21 +149,9 @@ export const registerIpc = () => {
     if (res.canceled) return { canceled: true }
     const path = res.filePaths[0]
 
-    // 同一文件已在某窗口打开：把该窗口提到最上层，不再重复装载。
-    // show + focus 组合对付 Windows 前台锁定（单独 focus 可能只闪任务栏）。
-    // 持有者按 webContents id 登记，解析必须同空间——混用会聚焦到无关
-    // 窗口并返回 alreadyOpen，用户选的文件永远打不开
-    const holderId = openedFiles.get(path)
-    if (holderId !== undefined) {
-      const holder = windowByWebContentsId(holderId)
-      if (holder && !holder.isDestroyed()) {
-        if (holder.isMinimized()) holder.restore()
-        holder.show()
-        holder.focus()
-        return { alreadyOpen: true }
-      }
-      openedFiles.delete(path) // 记录指向已销毁窗口，清掉
-    }
+    // 同一文件已在某窗口打开：把该窗口提到最上层，不再重复装载
+    // （判定与双击 .xk 入口共用 focusOpenedWindow，语义必须一致）
+    if (focusOpenedWindow(path)) return { alreadyOpen: true }
 
     // readChartFile 失败时 throw，经 invoke 自动变为渲染端 reject
     const read = await fileService.readChartFile(path)
@@ -235,6 +259,12 @@ export const registerIpc = () => {
 
   ipcMain.handle(IPC.APP_ENTER_CHART_MODE, (event) => {
     enterChartMode(BrowserWindow.fromWebContents(event.sender))
+    // enterChartMode 无条件置「未命名」（注释见 windowManager），但图表窗口
+    // 装载文件时 file:opened 往往先于本调用到达（ChartView 先 loadChartData
+    // 登记身份、后 mountFileLifecycle 进图表模式）——不在此重算，标题会被
+    // 「未命名」覆盖，双击 .xk 打开的窗口标题就永远不带文件名。未登记文件
+    // 的窗口不受影响：refreshTitles 只覆盖登记簿里的窗口，仍是「未命名」
+    refreshTitles()
     return { ok: true }
   })
 

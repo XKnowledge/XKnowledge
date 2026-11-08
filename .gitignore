@@ -1,9 +1,17 @@
 dist
 out
+# design/ 是图标/配色的设计中间稿（探索变体、尺寸导出、取色结果），
+# 入库的是成品（resources/XKnowledge.*、build/xk-file.*）与生成脚本
+# （scripts/build-file-icon.mjs、scripts/build-viewer.mjs）——中间稿可随时重出
+design/
 build/*
 # build/ 是 electron-builder 构建资源目录，installer.nsh 是安装器源码、必须入库
 # （package.json → nsis.include 指向它；缺失时 electron-builder 静默跳过、出包悄悄退化）
 !build/installer.nsh
+# .xk 文件关联图标（fileAssociations 按 build 资源目录查找，缺失时关联退化
+# 为应用图标——资源管理器里 .xk 会和应用快捷方式长得一模一样），同样必须入库
+!build/xk-file.ico
+!build/xk-file.icns
 release
 xk_main
 
@@ -22,6 +30,7 @@ data
 .superpowers
 opencode.json
 docs/superpowers/
+.workbuddy
 
 # 冒烟产物统一目录（截图/视频/导出 HTML，各脚本默认落 .artifacts/ 下，
 # 可经 SMOKESHOT_DIR / XK_SMOKE_VIDEO_DIR / XK_SMOKE_HTML_DIR 覆盖）

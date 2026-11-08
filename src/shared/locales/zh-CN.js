@@ -23,10 +23,12 @@ export const zhCN = {
     actionFailed: '操作失败',
     collapse: '收起',
     name: '名称',
-    description: '描述'
+    description: '描述',
+    ok: '确定'
   },
   dialog: {
     confirmExit: '确认退出',
+    openFailed: '无法打开文件',
     unsavedExit: '文件未保存，是否退出？',
     saveTo: '将文件保存到…',
     saveAsTo: '将文件另存为…',
