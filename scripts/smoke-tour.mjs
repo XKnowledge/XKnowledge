@@ -58,7 +58,10 @@ const expectTrue = (label, cond, detail = '') => {
 }
 const tourVisible = async () => page.locator('.ant-tour').isVisible({ timeout: 3_000 })
 const tourTitle = async () =>
-  page.locator('.ant-tour-title').innerText().catch(() => '')
+  page
+    .locator('.ant-tour-title')
+    .innerText()
+    .catch(() => '')
 const tourGone = async () =>
   page
     .locator('.ant-tour')
@@ -105,11 +108,7 @@ for (let i = 0; i < 8; i++) {
   await page.waitForTimeout(150)
 }
 expectEq('尾步标题', await tourTitle(), '开始建图吧')
-expectEq(
-  '尾步按钮文案',
-  (await page.locator('.ant-tour-next-btn').innerText()).trim(),
-  '结束导览'
-)
+expectEq('尾步按钮文案', (await page.locator('.ant-tour-next-btn').innerText()).trim(), '结束导览')
 await shot('04-finish')
 await page.locator('.ant-tour-next-btn').click()
 expectTrue('结束导览后气泡消失', await tourGone())

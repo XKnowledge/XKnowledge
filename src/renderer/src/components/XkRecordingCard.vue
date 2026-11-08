@@ -10,9 +10,7 @@
     data-recording-card
     :data-paused="paused ? 'true' : 'false'"
     :style="
-      pos
-        ? { left: `${pos.x}px`, top: `${pos.y}px`, right: 'auto', bottom: 'auto' }
-        : undefined
+      pos ? { left: `${pos.x}px`, top: `${pos.y}px`, right: 'auto', bottom: 'auto' } : undefined
     "
   >
     <a-button

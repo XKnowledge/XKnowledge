@@ -114,10 +114,7 @@ const chargeStrength = await vp.evaluate(() => {
 })
 check('viewer-charge-from-export', chargeStrength === -10, String(chargeStrength))
 // 底部导航提示跟随导出语言（导出环境为中文）：不再是库内置英文
-check(
-  'viewer-nav-lang',
-  (await vp.locator('.scene-nav-info').textContent()).includes('旋转')
-)
+check('viewer-nav-lang', (await vp.locator('.scene-nav-info').textContent()).includes('旋转'))
 await vp.screenshot({ path: path.join(SHOT_DIR, 'viewer-01-open.png') })
 
 // 6. 搜索：命中计数 + Enter 步进（active 变化经 viewer 状态断言）

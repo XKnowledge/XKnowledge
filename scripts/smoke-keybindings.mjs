@@ -137,11 +137,7 @@ expectEq('delete 改绑后文案', await rowBtn('delete').innerText(), 'X')
 expectEq('录制态退出', await rowBtn('delete').getAttribute('data-recording'), 'off')
 expectTrue('恢复默认按钮出现', (await rowReset('delete').count()) === 1)
 const stored1 = await page.evaluate(() => JSON.parse(localStorage.getItem('xk-keybindings')))
-expectEq(
-  'delete 落库',
-  JSON.stringify(stored1.delete),
-  JSON.stringify({ modifiers: [], key: 'x' })
-)
+expectEq('delete 落库', JSON.stringify(stored1.delete), JSON.stringify({ modifiers: [], key: 'x' }))
 await shot('02-delete-rebound')
 await closeSettings()
 

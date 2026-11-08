@@ -307,7 +307,10 @@ await page.keyboard.press('f')
 await page.keyboard.up('Meta')
 expectTrue('Meta+F 打开图内搜索（双收）', await page.locator('.graph-search-input').isVisible())
 await page.locator('.graph-search-close').click()
-expectTrue('搜索浮层已收起（不挡后续画布手势）', !(await page.locator('.graph-search-input').isVisible()))
+expectTrue(
+  '搜索浮层已收起（不挡后续画布手势）',
+  !(await page.locator('.graph-search-input').isVisible())
+)
 
 // 4. Esc 取消路径：再双击空白 → 编辑器出现 → Esc 关闭，不建点
 await settleMouse(E1.x, E1.y)
@@ -406,9 +409,7 @@ expectTrue(
   await page
     .waitForFunction(
       () => {
-        const d = document.querySelector(
-          '.ant-select-dropdown:not(.ant-select-dropdown-hidden)'
-        )
+        const d = document.querySelector('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
         return !d || getComputedStyle(d).display === 'none'
       },
       null,

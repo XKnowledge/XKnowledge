@@ -53,7 +53,8 @@ const nativeTitle = (index = 0) =>
 const chartNativeTitle = () =>
   app.evaluate(({ BrowserWindow }) => {
     const wins = BrowserWindow.getAllWindows()
-    const chart = wins.find((w) => w.webContents.getURL().includes('/chart')) ?? wins[wins.length - 1]
+    const chart =
+      wins.find((w) => w.webContents.getURL().includes('/chart')) ?? wins[wins.length - 1]
     return chart.getTitle()
   })
 const expectEq = (label, actual, expected) => {

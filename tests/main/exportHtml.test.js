@@ -79,7 +79,11 @@ describe('saveHtmlFile', () => {
 
   it('用户取消返回 { canceled: true } 不写盘', async () => {
     dialog.showSaveDialog.mockResolvedValue({ filePath: '' })
-    const res = await saveHtmlFile(undefined, { data: DATA, defaultName: 'a.html' }, { readTemplate })
+    const res = await saveHtmlFile(
+      undefined,
+      { data: DATA, defaultName: 'a.html' },
+      { readTemplate }
+    )
     expect(res).toEqual({ canceled: true })
     expect(dialog.showSaveDialog).toHaveBeenCalledTimes(1)
   })
@@ -87,7 +91,11 @@ describe('saveHtmlFile', () => {
   it('选中路径写入拼装产物（含 JSON 数据）', async () => {
     const target = join(dir, 'out.html')
     dialog.showSaveDialog.mockResolvedValue({ filePath: target })
-    const res = await saveHtmlFile(undefined, { data: DATA, defaultName: 'a.html' }, { readTemplate })
+    const res = await saveHtmlFile(
+      undefined,
+      { data: DATA, defaultName: 'a.html' },
+      { readTemplate }
+    )
     expect(res).toEqual({ path: target })
     const written = fs.readFileSync(target, 'utf-8')
     expect(written).toContain('"title":"我的图谱"')
@@ -96,7 +104,11 @@ describe('saveHtmlFile', () => {
   it('XK_SMOKE_HTML_DIR 后门：跳过保存框直写该目录（冒烟专用）', async () => {
     vi.stubEnv('XK_SMOKE_HTML_DIR', dir)
     dialog.showSaveDialog.mockRejectedValue(new Error('不应弹框'))
-    const res = await saveHtmlFile(undefined, { data: DATA, defaultName: 'b.html' }, { readTemplate })
+    const res = await saveHtmlFile(
+      undefined,
+      { data: DATA, defaultName: 'b.html' },
+      { readTemplate }
+    )
     expect(res.path).toBe(join(dir, 'b.html'))
     expect(fs.statSync(res.path).size).toBeGreaterThan(0)
   })

@@ -93,11 +93,16 @@ const assertRecBufferMatches = async (label) => {
     const canvases = [...document.querySelectorAll('.graph3d-wrap canvas')]
     return {
       buf,
-      canvases: canvases.map((c) => `${c.width}x${c.height}(css ${c.clientWidth}x${c.clientHeight})`)
+      canvases: canvases.map(
+        (c) => `${c.width}x${c.height}(css ${c.clientWidth}x${c.clientHeight})`
+      )
     }
   })
   const c0 = info.canvases[0] ?? ''
-  const ok = !!info.buf && info.canvases.length > 0 && parseInt(info.buf.split('x')[0], 10) === parseInt(c0.split('x')[0], 10)
+  const ok =
+    !!info.buf &&
+    info.canvases.length > 0 &&
+    parseInt(info.buf.split('x')[0], 10) === parseInt(c0.split('x')[0], 10)
   check(label, ok, `buf=${info.buf} canvases=[${info.canvases.join(', ')}]`)
 }
 // 导出入口已收进左上角菜单「导出」子菜单：data 锚点随按钮迁到菜单项（li）上，
@@ -146,9 +151,9 @@ const assertToolbarDisabled = async (phase) => {
 // 窗口 resizable 主进程侧断言（录制冻结 = false）。evaluate 沙箱无 require/
 // 动态 import，但主进程是 CJS：process.mainModule.require 是可用旁路
 const windowResizable = async () =>
-  (await app.evaluate(() =>
+  await app.evaluate(() =>
     process.mainModule.require('electron').BrowserWindow.getAllWindows()[0].isResizable()
-  ))
+  )
 
 /** hover 开左上角菜单并展开「导出」子菜单（Windows 平台 trigger=hover，防
  *  隐藏实例同 smoke-outline-import）：点菜单项后整个下拉关闭，录制态断言
@@ -299,10 +304,7 @@ check('card-paused-off', (await card.getAttribute('data-paused')) === 'false')
 // （双击点在画布上半部空白区——该图节点经 zoomToFit 居中，上半部空白概率高）
 await page.dblclick('.echarts-style', { position: { x: 640, y: 150 } })
 await page.waitForTimeout(600)
-check(
-  'readonly-dblclick-no-editor',
-  (await page.locator('[data-canvas-edit-mode]').count()) === 0
-)
+check('readonly-dblclick-no-editor', (await page.locator('[data-canvas-edit-mode]').count()) === 0)
 await assertToolbarDisabled('screen')
 check('screen-window-frozen', (await windowResizable()) === false)
 
@@ -398,9 +400,7 @@ await page2.locator('[data-screen-record]').click()
 await page2.waitForTimeout(500)
 check(
   'form-recording-state',
-  (await page2
-    .locator('.graph3d-wrap')
-    .getAttribute('data-video-recording')) === 'screen'
+  (await page2.locator('.graph3d-wrap').getAttribute('data-video-recording')) === 'screen'
 )
 check('form-sider-forced-collapse', !(await page2.locator('.sider-style').isVisible()))
 // 录制全程侧栏锁定收起：录屏进行中点中心单节点（onGraphNodeClick 的

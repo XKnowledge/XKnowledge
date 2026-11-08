@@ -76,7 +76,7 @@ const scrollbarColors = async (sel, shotName) => {
   await page.screenshot({ path: shotPath, clip })
   const b64 = fs.readFileSync(shotPath).toString('base64')
   return page.evaluate(
-    async ({ b64, dpr, sel }) => {
+    async ({ b64, dpr }) => {
       const img = new Image()
       img.src = 'data:image/png;base64,' + b64
       await img.decode()
@@ -130,7 +130,7 @@ const scrollbarColors = async (sel, shotName) => {
       const rgb = (s) => s.split(',').map(Number)
       return { track: rgb(track), thumb: thumb ? rgb(thumb) : null }
     },
-    { b64, dpr, sel }
+    { b64, dpr }
   )
 }
 

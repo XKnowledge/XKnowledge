@@ -174,6 +174,7 @@ await shot('05-after-blank-click')
 console.log('renderer-errors:', errors.length === 0 ? 'none (ok)' : JSON.stringify(errors, null, 2))
 await app.close()
 
-const ok = fallbackCount === 0 && pageScrollbar === 0 && hit && failures === 0 && errors.length === 0
+const ok =
+  fallbackCount === 0 && pageScrollbar === 0 && hit && failures === 0 && errors.length === 0
 console.log(ok ? 'SMOKE: PASS' : 'SMOKE: FAIL')
 process.exit(ok ? 0 : 1)
