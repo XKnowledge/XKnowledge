@@ -189,11 +189,22 @@ FunctionEnd
 ; 那是用户的选择，不能覆盖。只删默认值、不删整个 `.xk` 键，保留
 ; OpenWithList 等其他程序写入的内容。
 !macro customUnInstall
+  ; ① 按确认页勾选结果删/留用户设置（customUnWelcomePage 写入 Var；
+  ;   页面未显示——静默卸载/升级——时 Var 为空 ≠ "0" → 保留，与页面
+  ;   默认勾选一致。2026-11-08 由独立的第二个 customUnInstall 合并而来：
+  ;   NSIS 不允许同名宏二次定义，否则 makensis 中止）
+  ${If} $xkKeepSettingsState == "0"
+    ${if} $installMode == "all"
+      SetShellVarContext current
+    ${endif}
+    RMDir /r "$APPDATA\${APP_FILENAME}"
+  ${EndIf}
+  ; ② 清理 .xk 悬空关联（仅当默认值仍指向本应用时才清）
   ReadRegStr $0 SHELL_CONTEXT "Software\Classes\.xk" ""
   ${If} $0 == "XKnowledge.Document"
     DeleteRegValue SHELL_CONTEXT "Software\Classes\.xk" ""
   ${EndIf}
-  ; 卸载同样要通知外壳，否则资源管理器缓存里仍是旧图标/关联
+  ; ③ 卸载同样要通知外壳，否则资源管理器缓存里仍是旧图标/关联
   !insertmacro UPDATEFILEASSOC
 !macroend
 
@@ -244,13 +255,6 @@ FunctionEnd
   UninstPage custom un.XKUnwelcomePageCreate
 !macroend
 
-; 卸载 Section 顶部执行（程序文件删除前）：按确认页勾选结果删/留用户设置。
+; 卸载 Section 顶部执行（程序文件删除前）：按确认页勾选删/留用户设置 + 清理
+; .xk 悬空关联——两段逻辑已合并进上方唯一的 customUnInstall 宏（2026-11-08）。
 ; 页面未显示（静默/升级）时 Var 为空 ≠ "0" → 保留，与页面默认勾选一致。
-!macro customUnInstall
-  ${If} $xkKeepSettingsState == "0"
-    ${if} $installMode == "all"
-      SetShellVarContext current
-    ${endif}
-    RMDir /r "$APPDATA\${APP_FILENAME}"
-  ${EndIf}
-!macroend
