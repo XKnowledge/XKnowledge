@@ -78,7 +78,11 @@ describe('命令行参数解析', () => {
   })
 
   it('非法 file:// URL 不抛异常，按空串处理（找不到对应文件就是没有文档）', () => {
+    // 裸 file://：Windows 抛 ERR_INVALID_FILE_URL_PATH、POSIX 归一为根 '/'，
+    // 语义统一在 resolveFilePath 内收口（返回 ''），本用例全平台可断言
     expect(resolveFilePath('file://')).toEqual('')
+    // 带端口的 file URL：new URL() 即抛 ERR_INVALID_URL（平台无关）
+    expect(resolveFilePath('file://remote:8080/a.xk')).toEqual('')
   })
 })
 

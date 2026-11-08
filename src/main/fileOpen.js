@@ -36,7 +36,11 @@ export const resolveFilePath = (raw) => {
   let p = raw
   if (p.startsWith('file://')) {
     try {
-      p = fileURLToPath(p)
+      // 裸 file://（无路径）在 Windows 抛 ERR_INVALID_FILE_URL_PATH、在
+      // POSIX 归一为文件系统根 '/'——两平台语义统一：没有路径就没有文档
+      const url = new URL(p)
+      if (url.pathname === '/') return ''
+      p = fileURLToPath(url)
     } catch {
       return ''
     }
