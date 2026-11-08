@@ -321,7 +321,8 @@ export const registerIpc = () => {
   // 世界域：主进程 throw（路径拒绝/读取损坏）经 invoke 自动变渲染端 reject
   ipcMain.handle(IPC.WORLD_LOAD_INDEX, () => worldIndex.loadWorldIndex())
   ipcMain.handle(IPC.WORLD_READ_GRAPH, (event, { id }) => worldIndex.readWorldGraph(id))
-  ipcMain.handle(IPC.WORLD_SET_USER_DIR, (event, { dir }) =>
-    worldIndex.setWorldUserDir(dir, senderWindow(event))
+  // 多目录语义：action = 'pick'（对话框追加）| { remove }（移除一项）| null（清空）
+  ipcMain.handle(IPC.WORLD_SET_USER_DIR, (event, { action }) =>
+    worldIndex.setWorldUserDirs(action, senderWindow(event))
   )
 }

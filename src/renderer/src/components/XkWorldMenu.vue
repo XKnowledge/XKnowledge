@@ -5,8 +5,8 @@
     </a>
     <template #overlay>
       <a-menu style="width: 200px">
-        <a-menu-item key="1" :disabled="picking" @click="emit('pickDir')">
-          {{ $t('menu.addDir') }}
+        <a-menu-item key="1" :disabled="picking" @click="emit('manageDirs')">
+          {{ $t('menu.manageDirs') }}
         </a-menu-item>
         <a-menu-item key="2" @click="emit('refresh')"> {{ $t('menu.refresh') }} </a-menu-item>
         <a-menu-divider />
@@ -26,7 +26,7 @@ defineProps({
   picking: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['close', 'refresh', 'pickDir'])
+const emit = defineEmits(['close', 'refresh', 'manageDirs'])
 </script>
 
 <style scoped>

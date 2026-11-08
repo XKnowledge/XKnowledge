@@ -6,16 +6,23 @@ import { readChartFile } from './fileService'
 import { t } from './i18nMain'
 
 /**
- * 世界树索引：双源（examples/ + 用户图目录）扫描 .xk，聚合跨图同名缝合线，
- * 产出只读世界层数据。.xk 文件是唯一权威，本模块产物（world-index.json）
- * 是纯缓存：mtime 未变的图不重读，损坏即弃、全量可重建。
- * 世界层永不写任何 .xk。
+ * 世界树索引：多源（examples/ + N 个用户图库目录）扫描 .xk，聚合跨图
+ * 同名缝合线，产出只读世界层数据。.xk 文件是唯一权威，本模块产物
+ * （world-index.json）是纯缓存：mtime 未变的图不重读，损坏即弃、
+ * 全量可重建。世界层永不写任何 .xk。
  */
 const INDEX_VERSION = 1
-const SETTINGS_VERSION = 1
+const SETTINGS_VERSION = 2
 
 const cacheFile = () => path.join(app.getPath('userData'), 'world-index.json')
 const settingsFile = () => path.join(app.getPath('userData'), 'world-settings.json')
+
+/**
+ * 世界树用户图库目录上限：多目录设计天然有膨胀面（每次「增加」都全量
+ * 递归扫描），设个宽松上限拦住失控配置（误选盘符根目录之类）并在
+ * 增加时提前告知，而不是让扫描变慢后用户自己排查。
+ */
+const MAX_USER_DIRS = 16
 
 /** 原子写：先写临时文件再 rename 覆盖。失败时清理临时文件（Windows 上
  *  目标被杀软/OneDrive/第二实例占用，rename 抛 EPERM/EBUSY 不清就堆积） */
@@ -87,29 +94,41 @@ const readCache = async () => {
   return new Map()
 }
 
-const readWorldUserDir = async () => {
+/**
+ * 读取用户图库目录列表（设置 v2）。读 v1 单目录写法自动迁移为
+ * 一项数组（不写回盘——下次 setWorldUserDirs 持久化时自然落 v2）；
+ * 缺失/损坏视为未配置。条目逐个校验绝对路径，非法项丢弃不阻塞。
+ */
+const readWorldUserDirs = async () => {
+  let parsed
   try {
-    const parsed = JSON.parse(await fs.promises.readFile(settingsFile(), 'utf-8'))
-    if (typeof parsed?.userDir === 'string' && parsed.userDir) return parsed.userDir
+    parsed = JSON.parse(await fs.promises.readFile(settingsFile(), 'utf-8'))
   } catch {
-    /* 缺失/损坏：视为未配置 */
+    return [] // 缺失/损坏：视为未配置
   }
-  return null
+  if (Array.isArray(parsed?.userDirs)) {
+    return parsed.userDirs.filter((d) => typeof d === 'string' && path.isAbsolute(d))
+  }
+  if (typeof parsed?.userDir === 'string' && parsed.userDir) {
+    return [parsed.userDir]
+  }
+  return []
 }
 
-const writeWorldUserDir = async (userDir) => {
-  await atomicWrite(settingsFile(), JSON.stringify({ version: SETTINGS_VERSION, userDir }))
+const writeWorldUserDirs = async (userDirs) => {
+  await atomicWrite(settingsFile(), JSON.stringify({ version: SETTINGS_VERSION, userDirs }))
 }
 
 /**
  * 单源扫描：命中缓存（id+mtime+source 三同）免读盘；损坏跳过计数。
- * skipInside：user 源扫描时跳过 examplesDir 内的文件——userDir 若覆盖
- * examples 的父目录，同一文件会被两源发现，缓存按 source 匹配将永续
- * 失效（每次全量重读）且 source 被改写为 user，跳过保住示例归属与缓存
+ * skipInside：目录前缀表（数组或单值）——命中的文件归先扫的源，用于
+ * 用户目录套住 examples（示例归属不被改写、缓存永续失效）与多个
+ * 用户目录互相嵌套（内层文件归外层，同一文件不读两次）两种场景
  */
 const scanSource = async (dir, { recursive, source, skipInside }, cached, entries, broken) => {
+  const skipList = Array.isArray(skipInside) ? skipInside : skipInside ? [skipInside] : []
   for (const { id, mtimeMs } of await listChartFiles(dir, recursive)) {
-    if (skipInside && insideDir(id, skipInside)) continue
+    if (skipList.some((d) => insideDir(id, d))) continue
     const hit = cached.get(id)
     if (hit && hit.graph.mtimeMs === mtimeMs && hit.graph.source === source) {
       entries.set(id, hit)
@@ -143,18 +162,25 @@ const scanSource = async (dir, { recursive, source, skipInside }, cached, entrie
 }
 
 export const loadWorldIndex = async () => {
-  const [cached, userDir] = [await readCache(), await readWorldUserDir()]
+  const [cached, userDirs] = [await readCache(), await readWorldUserDirs()]
   const entries = new Map()
   const broken = { count: 0 }
   await scanSource(examplesDir(), { recursive: false, source: 'example' }, cached, entries, broken)
-  if (userDir && path.resolve(userDir) !== path.resolve(examplesDir())) {
+  // 多用户目录扫描顺序：先按路径排序（浅的在前）——配合逐目录累积的
+  // skipInside 前缀表，嵌套目录（如 D:\ 与 D:\图谱 同时在列）的内层
+  // 文件只归最先扫到的外层目录，同一文件永不被读两次（同 examples
+  // 防重的推广；缓存条目随目录列表变化可能整体失效一次，属预期成本）
+  const scanned = [path.resolve(examplesDir()).toLowerCase()]
+  const sortedDirs = [...new Set(userDirs.map((d) => path.resolve(d)))].sort()
+  for (const dir of sortedDirs) {
     await scanSource(
-      userDir,
-      { recursive: true, source: 'user', skipInside: examplesDir() },
+      dir,
+      { recursive: true, source: 'user', skipInside: scanned },
       cached,
       entries,
       broken
     )
+    scanned.push(dir.toLowerCase())
   }
   const graphs = []
   const nodes = []
@@ -173,7 +199,7 @@ export const loadWorldIndex = async () => {
       builtAt: Date.now()
     })
   ).catch(() => {})
-  return { graphs, nodes, stitches: buildStitches(nodes), brokenCount: broken.count, userDir }
+  return { graphs, nodes, stitches: buildStitches(nodes), brokenCount: broken.count, userDirs }
 }
 
 /** 前缀判定：resolve 后以 dir + 分隔符开头（大小写不敏感，同 examplePaths 惯例） */
@@ -183,8 +209,8 @@ const insideDir = (filePath, dir) => {
 }
 
 /**
- * 读取世界树图库内单图：id 必须位于 examplesDir 或当前 userDir 前缀内，
- * 防止渲染端传任意路径读盘。合法路径走 readChartFile 复用损坏拦截。
+ * 读取世界树图库内单图：id 必须位于 examplesDir 或任一用户图库目录
+ * 前缀内，防止渲染端传任意路径读盘。合法路径走 readChartFile 复用损坏拦截。
  */
 export const readWorldGraph = async (id) => {
   if (typeof id !== 'string' || !id || !path.isAbsolute(id)) {
@@ -193,8 +219,8 @@ export const readWorldGraph = async (id) => {
       detail: String(id)
     })
   }
-  const userDir = await readWorldUserDir()
-  const allowed = insideDir(id, examplesDir()) || (userDir ? insideDir(id, userDir) : false)
+  const userDirs = await readWorldUserDirs()
+  const allowed = insideDir(id, examplesDir()) || userDirs.some((d) => insideDir(id, d))
   if (!allowed) {
     throw Object.assign(new Error(`[WORLD_PATH_REJECTED] ${t('error.worldPathOutside')}`), {
       code: 'WORLD_PATH_REJECTED',
@@ -205,26 +231,50 @@ export const readWorldGraph = async (id) => {
 }
 
 /**
- * 设置/清除/选择用户图目录。'pick' 走主进程目录对话框；null 清除；
- * 字符串须为绝对路径。变更持久化到 world-settings.json，
- * 下次 loadWorldIndex 按新目录增量重建（旧 user 源条目自然消失）。
+ * 增/删世界树用户图库目录（多目录列表语义）。action：
+ * - 'pick'：走主进程目录选择框，选中目录**追加**到列表（重复添加按
+ *   归一化路径去重，返回 ok:false + reason:'duplicate' 由渲染层提示）；
+ * - { remove: dir }：按归一化路径移除一项（不在列表返回 ok:false +
+ *   reason:'notfound'，不 throw——移除一个已被移除的目录是幂等操作）。
+ * 变更持久化到 world-settings.json（v2 userDirs 数组），下次
+ * loadWorldIndex 按新列表增量重建（消失目录的旧条目自然淘汰）。
  * window 为触发窗口：绑定为对话框 parent 使其模态，防止对话框
- * 打开期间窗口仍可点击「图库目录」连开多个选择框（可为 undefined）。
+ * 打开期间窗口仍可点击「增加目录」连开多个选择框（可为 undefined）。
  */
-export const setWorldUserDir = async (dir, window) => {
+export const setWorldUserDirs = async (action, window) => {
+  const normalize = (d) => path.resolve(d)
+  const sameDir = (a, b) => normalize(a).toLowerCase() === normalize(b).toLowerCase()
+
+  if (action?.remove !== undefined) {
+    if (typeof action.remove !== 'string' || !path.isAbsolute(action.remove)) {
+      throw Object.assign(new Error(`[WORLD_DIR_REJECTED] ${t('error.worldDirRejected')}`), {
+        code: 'WORLD_DIR_REJECTED',
+        detail: String(action.remove)
+      })
+    }
+    const dirs = await readWorldUserDirs()
+    const next = dirs.filter((d) => !sameDir(d, action.remove))
+    if (next.length === dirs.length) {
+      return { ok: false, reason: 'notfound', userDirs: dirs }
+    }
+    await writeWorldUserDirs(next)
+    return { ok: true, userDirs: next }
+  }
+
+  let dir = action
   if (dir === 'pick') {
     const res = await dialog.showOpenDialog(window, {
       title: t('dialog.pickWorldDir'),
       properties: ['openDirectory']
     })
     if (res.canceled || !res.filePaths?.length) {
-      return { ok: false, userDir: await readWorldUserDir() }
+      return { ok: false, reason: 'canceled', userDirs: await readWorldUserDirs() }
     }
     dir = res.filePaths[0]
   }
   if (dir === null) {
-    await writeWorldUserDir(null)
-    return { ok: true, userDir: null }
+    await writeWorldUserDirs([])
+    return { ok: true, userDirs: [] }
   }
   if (typeof dir !== 'string' || !path.isAbsolute(dir)) {
     throw Object.assign(new Error(`[WORLD_DIR_REJECTED] ${t('error.worldDirRejected')}`), {
@@ -232,7 +282,14 @@ export const setWorldUserDir = async (dir, window) => {
       detail: String(dir)
     })
   }
-  const resolved = path.resolve(dir)
-  await writeWorldUserDir(resolved)
-  return { ok: true, userDir: resolved }
+  const dirs = await readWorldUserDirs()
+  if (dirs.some((d) => sameDir(d, dir))) {
+    return { ok: false, reason: 'duplicate', userDirs: dirs }
+  }
+  if (dirs.length >= MAX_USER_DIRS) {
+    return { ok: false, reason: 'limit', userDirs: dirs }
+  }
+  const next = [...dirs, normalize(dir)]
+  await writeWorldUserDirs(next)
+  return { ok: true, userDirs: next }
 }

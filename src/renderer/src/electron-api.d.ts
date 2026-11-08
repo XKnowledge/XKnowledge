@@ -35,7 +35,7 @@ export interface WorldIndex {
   nodes: WorldIndexNode[]
   stitches: Stitch[]
   brokenCount: number
-  userDir: string | null
+  userDirs: string[]
 }
 
 /** 导出交互式 HTML 的 viewer 数据（serializeGraphForViewer 产物）。主进程
@@ -84,8 +84,11 @@ export interface ElectronApi {
   localeApplied(payload: { locale: string }): Promise<{ ok: true }>
   worldLoadIndex(): Promise<WorldIndex>
   worldReadGraph(id: string): Promise<{ content: string }>
-  /** 重设世界库目录（'pick' 弹目录选择框） */
-  worldSetUserDir(dir: string): Promise<{ ok: boolean; userDir?: string | null }>
+  /** 管理世界库目录列表：'pick' 弹框追加 / { remove } 移除一项 / null 清空。
+   *  ok:false 时 reason 说明原因（canceled / duplicate / notfound / limit） */
+  worldSetUserDirs(
+    action: 'pick' | { remove: string } | null
+  ): Promise<{ ok: boolean; reason?: string; userDirs: string[] }>
   /** process.platform（macOS 隐藏自绘关闭钮等平台分流用） */
   platform: string
   minimizeWindow(): Promise<{ ok: true }>

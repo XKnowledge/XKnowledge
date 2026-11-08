@@ -33,7 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   localeApplied: (payload) => ipcRenderer.invoke(IPC.APP_LOCALE_APPLIED, payload),
   worldLoadIndex: () => ipcRenderer.invoke(IPC.WORLD_LOAD_INDEX),
   worldReadGraph: (id) => ipcRenderer.invoke(IPC.WORLD_READ_GRAPH, { id }),
-  worldSetUserDir: (dir) => ipcRenderer.invoke(IPC.WORLD_SET_USER_DIR, { dir }),
+  worldSetUserDirs: (action) => ipcRenderer.invoke(IPC.WORLD_SET_USER_DIR, { action }),
   // 自绘窗口控制按钮（XkWindowControls）用：platform 供 macOS 隐藏
   // （那里保留原生红绿灯按钮，自绘关闭钮会重复）
   platform: process.platform,

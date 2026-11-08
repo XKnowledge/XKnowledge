@@ -74,12 +74,12 @@ expectTrue(
   `溢出帧 ${await page.evaluate(() => window.__ovfFrames)}`
 )
 // 头部操作已收进左上角菜单（同图表页 XkMenu 模式）：hover 触发器展开下拉，
-// 断言「图库目录」项存在（同 smoke-close-file 的 hover 展开模式）
+// 断言「图库目录…」项存在（同 smoke-close-file 的 hover 展开模式）
 await page.locator('.world-header a.no-move').hover()
 await page.waitForTimeout(500) // 等 dropdown 浮层展开
 expectTrue(
-  '世界页头部菜单含增加目录项',
-  (await page.getByText('增加目录', { exact: true }).count()) === 1
+  '世界页头部菜单含图库目录项',
+  (await page.getByText('图库目录…', { exact: true }).count()) === 1
 )
 await shot('world-menu')
 await page.keyboard.press('Escape') // 收起下拉，避免浮层拦截后续点击

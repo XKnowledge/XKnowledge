@@ -41,10 +41,10 @@ vi.mock('../../src/main/worldIndex', () => ({
     nodes: [],
     stitches: [],
     brokenCount: 0,
-    userDir: null
+    userDirs: []
   })),
   readWorldGraph: vi.fn(async (id) => ({ content: `{"id":"${id}"}`, path: id })),
-  setWorldUserDir: vi.fn(async (dir) => ({ ok: true, userDir: dir }))
+  setWorldUserDirs: vi.fn(async () => ({ ok: true, userDirs: [] }))
 }))
 
 vi.mock('../../src/main/exportHtml', () => ({
@@ -696,7 +696,7 @@ describe('世界域通道', () => {
     const handler = handlerOf(IPC.WORLD_LOAD_INDEX)
     expect(handler).toBeTypeOf('function')
     const res = await handler()
-    expect(res).toEqual({ graphs: [], nodes: [], stitches: [], brokenCount: 0, userDir: null })
+    expect(res).toEqual({ graphs: [], nodes: [], stitches: [], brokenCount: 0, userDirs: [] })
     expect(worldIndex.loadWorldIndex).toHaveBeenCalledTimes(1)
   })
 
@@ -706,12 +706,14 @@ describe('世界域通道', () => {
     expect(worldIndex.readWorldGraph).toHaveBeenCalledWith('C:/x.xk')
   })
 
-  it('world:set-user-dir 透传 { dir } 参数并绑定触发窗口（模态对话框）', async () => {
+  it('world:set-user-dir 透传 { action } 参数并绑定触发窗口（模态对话框）', async () => {
     const win = fakeWindow()
     BrowserWindow.fromWebContents.mockReturnValue(win)
     const handler = handlerOf(IPC.WORLD_SET_USER_DIR)
-    await handler(senderOf(1), { dir: 'pick' })
-    expect(worldIndex.setWorldUserDir).toHaveBeenCalledWith('pick', win)
+    await handler(senderOf(1), { action: 'pick' })
+    expect(worldIndex.setWorldUserDirs).toHaveBeenCalledWith('pick', win)
+    await handler(senderOf(1), { action: { remove: 'D:/graphs' } })
+    expect(worldIndex.setWorldUserDirs).toHaveBeenCalledWith({ remove: 'D:/graphs' }, win)
   })
 
   it('world 模式通道绑定触发窗口（解锁/锁定窗口尺寸）', async () => {

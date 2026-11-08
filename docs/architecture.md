@@ -46,7 +46,7 @@ XKnowledge/
 │  │  ├─ exampleService.js      # 示例图库对外门面：定位 examples/ 目录并转发
 │  │  ├─ exampleManifest.mjs    # 示例元数据清单：快慢两层（§5.6），零 electron 依赖
 │  │  ├─ exportHtml.js          # 交互式 HTML 导出：读 viewer 模板拼装 + 保存框落盘（§6.10）
-│  │  ├─ worldIndex.js          # 世界树索引：双源扫描聚合、mtime 缓存、读图路径白名单（§6.11）
+│  │  ├─ worldIndex.js          # 世界树索引：多源扫描聚合、mtime 缓存、读图路径白名单（§6.11）
 │  │  └─ fileGuard.js           # createPathGuard：路径授权与 mtime 冲突检测
 │  ├─ preload/
 │  │  └─ index.js               # contextBridge 暴露 window.electronAPI
@@ -135,9 +135,9 @@ XKnowledge/
 | `app:recording-lock` | 渲染 → 主 | `{ lock }` | `{ ok }`；冻结 resizable/maximizable/minimizable（§6.3） |
 | `app:close-window-request` | 渲染 → 主 | — | `{ ok }`；自绘关闭按钮走原生 `close()`（经 close 拦截，与点 X 同语义；区别于 `app:close-window` 的 destroy 绕过） |
 | `app:maximize-changed` | 主 → 渲染 | `maximized: boolean` | 最大化状态变化推送 |
-| `world:load-index` | 渲染 → 主 | — | 世界树索引（双源扫描聚合 + 缓存，§6.11） |
+| `world:load-index` | 渲染 → 主 | — | 世界树索引（多源扫描聚合 + 缓存，§6.11） |
 | `world:read-graph` | 渲染 → 主 | `{ id }` | 按绝对路径白名单读单图；越界 reject（`[WORLD_PATH_REJECTED]`） |
-| `world:set-user-dir` | 渲染 → 主 | `{ dir }`（`'pick'` 弹框 / `null` 清除） | `{ ok, userDir }`；持久化用户图库目录（§6.11） |
+| `world:set-user-dir` | 渲染 → 主 | `{ action }`（`'pick'` 弹框追加 / `{ remove }` 移除一项 / `null` 清空） | `{ ok, reason?, userDirs }`；持久化用户图库目录列表（§6.11） |
 
 ### 4.3 错误跨 IPC 的约定
 
@@ -326,9 +326,9 @@ XKnowledge/
 
 **主进程索引层**（`src/main/worldIndex.js`）：
 
-- **双源扫描**：内置示例目录（只扫一层）+ 用户自选图库目录（递归含子目录，经 `world:set-user-dir` 的 `'pick'` 目录选择框设定、`userData/world-settings.json` 持久化）；两源按绝对路径去重，用户目录覆盖示例目录时自动跳过示例文件。损坏文件跳过并计数上报（页面顶部 warning「N 个损坏文件已跳过」）。
+- **多源扫描**：内置示例目录（只扫一层）+ N 个用户图库目录（递归含子目录，经 `world:set-user-dir` 的 action 语义管理：`'pick'` 对话框追加 / `{ remove }` 移除一项 / `null` 清空，`userData/world-settings.json` v2 持久化 `userDirs` 数组，读 v1 单目录写法自动迁移）。全部目录按绝对路径去重：用户目录套住示例目录或互相嵌套时，内层文件归最先扫到的外层目录，同一文件只读一次；上限 16 个目录（超限 `reason: 'limit'`）。损坏文件跳过并计数上报（页面顶部 warning「N 个损坏文件已跳过」）。
 - **mtime 缓存**：索引缓存于 `world-index.json`，文件未改（mtime 一致）不重读；缓存损坏自动重建。
-- **读图白名单**：`readWorldGraph(id)` 要求绝对路径且落在示例目录或用户图库目录之内，否则 throw `[WORLD_PATH_REJECTED]`——与 fileGuard 的路径授权同一防御哲学，防渲染端伪造任意路径读盘。
+- **读图白名单**：`readWorldGraph(id)` 要求绝对路径且落在示例目录或任一用户图库目录之内，否则 throw `[WORLD_PATH_REJECTED]`——与 fileGuard 的路径授权同一防御哲学，防渲染端伪造任意路径读盘。
 
 **渲染层**（`page/WorldView.vue` 编排 + `components/XkWorldGraph.vue` 只读渲染 + `utils/worldGraph.ts` 纯函数）：
 
@@ -340,7 +340,7 @@ XKnowledge/
 - **窗口模式**：`enterWorldMode` 解锁尺寸但不设标题、不注册关闭确认（只读无未保存态）；无水印、无录制（两者只发生在图表页）。主题/语言全程跟随（超节点色、域类目色、底部导航文案 watch 重设）。
 - **只读渲染组件**：`XkWorldGraph` 不迁 §8 的稳定引用增量管道——无编辑交互即无增量需求，注释在案；聚焦灰化的增量重着色（`applyDim`）对齐编辑器 `planHighlightRepaint` 的语义。
 
-**测试**：`worldIndex`（双源扫描/缓存/白名单拒绝/目录设定）、`worldGraph`（超图构建/缝合三态/搜索/聚焦邻域纯函数）单测；`scripts/smoke-world.mjs` + `scripts/smoke-world-focus.mjs` 冒烟——首页入口进入全景、菜单项、全库搜索两级命中、回车自动展开+相机飞达、聚焦场景九宫格。
+**测试**：`worldIndex`（多源扫描/嵌套去重/缓存/白名单拒绝/v1 迁移/目录增删）、`worldGraph`（超图构建/缝合三态/搜索/聚焦邻域纯函数）单测；`scripts/smoke-world.mjs` + `scripts/smoke-world-focus.mjs` 冒烟——首页入口进入全景、菜单项、全库搜索两级命中、回车自动展开+相机飞达、聚焦场景九宫格。
 
 ## 7. 核心数据流
 

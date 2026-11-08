@@ -5,7 +5,7 @@
         :picking="picking"
         @close="router.push('/')"
         @refresh="loadIndex"
-        @pick-dir="pickUserDir"
+        @manage-dirs="openDirsPanel"
       />
       <!-- 世界树页经 enterWorldMode 解锁窗口尺寸：最小化/最大化/关闭齐备 -->
       <XkWindowControls sizable />
@@ -134,6 +134,8 @@
           @select="goToHit"
           @close="closeSearch"
         />
+        <!-- 图库目录管理：内置示例置顶 + 用户目录增删（多目录语义） -->
+        <XkWorldDirs ref="dirsRef" @changed="onDirsChanged" />
       </a-layout-content>
       <!-- 超节点信息卡：布局内嵌停靠侧栏（同图表页编辑栏 .sider-style）——
            参与页面布局，展开时挤压重排图区而非浮层覆盖，图区尺寸变化由
@@ -169,6 +171,7 @@ import { message } from 'ant-design-vue'
 import XkWorldGraph from '../components/XkWorldGraph.vue'
 import XkWorldMenu from '../components/XkWorldMenu.vue'
 import XkWorldSearch from '../components/XkWorldSearch.vue'
+import XkWorldDirs from '../components/XkWorldDirs.vue'
 import XkWindowControls from '../components/XkWindowControls.vue'
 import { setPendingChart } from '../store/chartStore'
 import { t } from '../i18n.js'
@@ -201,6 +204,7 @@ const expandedBarOpen = ref(true)
 
 const graphRef = ref(null)
 const searchRef = ref(null)
+const dirsRef = ref(null)
 const cardOpen = ref(false)
 const selected = ref(null)
 const expanding = ref(false)
@@ -281,11 +285,11 @@ const loadIndex = async () => {
       message.warning(t('world.corruptSkipped', { count: res.brokenCount }))
     }
     // spec §6：用户目录配置了却没扫到图（不存在/无权限/为空）须有界面提示，
-    // 否则选错目录的用户只看到无声的空操作
-    if (res.userDir && !res.graphs.some((g) => g.source === 'user')) {
-      message.warning(t('world.emptyDir', { dir: res.userDir }))
-    }
+    // 否则选错目录的用户只看到无声的空操作。多目录下逐个点名
     index.value = res
+    for (const dir of emptyDirs.value) {
+      message.warning(t('world.emptyDir', { dir }))
+    }
     worldState.value = createWorldState(res.graphs, res.stitches)
   } catch (err) {
     console.error('世界索引加载失败', err)
@@ -368,23 +372,45 @@ const goToHit = async (idx) => {
   graphRef.value?.focusCamera([hit.graphId]) // 3s 超时兜底：飞超节点锚点
 }
 
-const pickUserDir = async () => {
-  // 选目录期间禁用按钮：主进程对话框对同窗口模态，但渲染层仍须防
-  // 对话框弹出前的连点（每次 invoke 都会各开一个目录选择框）
-  if (picking.value) return
-  picking.value = true
-  try {
-    const res = await window.electronAPI.worldSetUserDir('pick')
-    if (res.ok) {
-      message.success(t('world.dirUpdated'))
-      await loadIndex()
-    }
-  } catch (err) {
-    console.error('设置图库目录失败', err)
-    message.error(t('world.setDirFailed'))
-  } finally {
-    picking.value = false
+/** 路径是否落在目录下（分隔符自适应，大小写不敏感，同主进程惯例） */
+const underDir = (filePath, dir) => {
+  const f = filePath.toLowerCase()
+  const d = dir.toLowerCase()
+  return f.startsWith(`${d}\\`) || f.startsWith(`${d}/`)
+}
+
+/** 图谱目录 → 收录图谱数（面板展示）。嵌套目录用最长前缀归属：文件的
+ *  计数落在最内层在列目录上，贴合「这个文件夹里有几张图」的直觉 */
+const dirGraphCounts = computed(() => {
+  const dirs = [...(index.value?.userDirs ?? [])].sort((a, b) => b.length - a.length)
+  const counts = new Map()
+  for (const g of index.value?.graphs ?? []) {
+    if (g.source !== 'user') continue
+    const owner = dirs.find((d) => underDir(g.id, d))
+    if (owner) counts.set(owner, (counts.get(owner) ?? 0) + 1)
   }
+  return counts
+})
+
+/** 空目录检测：配置了却一图未收（不存在/无权限/为空/全损坏）须有界面
+ *  提示（spec §6）。按「树下没有任何图谱」判定——嵌套目录的内层图
+ *  已被外层收录，不再对内层误报空目录 */
+const emptyDirs = computed(() => {
+  const userGraphs = (index.value?.graphs ?? []).filter((g) => g.source === 'user')
+  return (index.value?.userDirs ?? []).filter(
+    (d) => !(dirGraphCounts.value.get(d) > 0) && !userGraphs.some((g) => underDir(g.id, d))
+  )
+})
+
+/** 打开目录管理面板：灌入当前目录列表与计数 */
+const openDirsPanel = () => {
+  dirsRef.value?.open(index.value?.userDirs ?? [], dirGraphCounts.value)
+}
+
+/** 面板内增/删完成：刷新索引并同步面板数据（面板保持打开，可连续操作） */
+const onDirsChanged = async () => {
+  await loadIndex()
+  openDirsPanel()
 }
 
 const onKeydown = (event) => {

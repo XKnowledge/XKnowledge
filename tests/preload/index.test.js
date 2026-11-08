@@ -132,8 +132,13 @@ describe('preload：electronAPI 桥接面 → IPC 通道映射', () => {
     exposed.worldReadGraph('world-1')
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.WORLD_READ_GRAPH, { id: 'world-1' })
 
-    exposed.worldSetUserDir('D:/graphs')
-    expect(bridge.invoke).toHaveBeenCalledWith(IPC.WORLD_SET_USER_DIR, { dir: 'D:/graphs' })
+    exposed.worldSetUserDirs('pick')
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.WORLD_SET_USER_DIR, { action: 'pick' })
+
+    exposed.worldSetUserDirs({ remove: 'D:/graphs' })
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.WORLD_SET_USER_DIR, {
+      action: { remove: 'D:/graphs' }
+    })
 
     exposed.writeGraphClipboard('{"app":"xknowledge"}')
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.CLIPBOARD_WRITE_GRAPH, {

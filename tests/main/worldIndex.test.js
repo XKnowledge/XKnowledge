@@ -30,7 +30,7 @@ import {
   loadWorldIndex,
   buildStitches,
   readWorldGraph,
-  setWorldUserDir
+  setWorldUserDirs
 } from '../../src/main/worldIndex'
 
 const mkChart = (names, extra = {}) =>
@@ -74,7 +74,7 @@ describe('buildStitches', () => {
 })
 
 describe('loadWorldIndex', () => {
-  it('双源扫描：examples 平铺 + userDir 递归；损坏跳过计数；非 .xk 忽略', async () => {
+  it('双源扫描：examples 平铺 + 用户目录递归；损坏跳过计数；非 .xk 忽略', async () => {
     await fs.promises.writeFile(join(root, 'examples', '化学.xk'), mkChart(['化学', '卢梭']))
     await fs.promises.writeFile(join(root, 'examples', '损坏.xk'), 'BROKEN{')
     await fs.promises.writeFile(join(root, 'examples', 'readme.txt'), 'x')
@@ -84,14 +84,14 @@ describe('loadWorldIndex', () => {
     await fs.promises.writeFile(join(userDir, '子目录', '深层.xk'), mkChart(['卢梭', '乙']))
     await fs.promises.writeFile(
       join(userData, 'world-settings.json'),
-      JSON.stringify({ version: 1, userDir })
+      JSON.stringify({ version: 2, userDirs: [userDir] })
     )
 
     const idx = await loadWorldIndex()
     const titles = idx.graphs.map((g) => g.title)
     expect(titles.sort()).toEqual(['化学', '深层', '顶层'])
     expect(idx.brokenCount).toBe(1)
-    expect(idx.userDir).toBe(userDir)
+    expect(idx.userDirs).toEqual([userDir])
     // 递归发现子目录 + 缝合线：卢梭跨 examples 化学 与 user 深层
     const huaXueId = idx.graphs.find((g) => g.title === '化学').id
     const shenCengId = idx.graphs.find((g) => g.title === '深层').id
@@ -122,11 +122,11 @@ describe('loadWorldIndex', () => {
     expect(idx.graphs[0].nodeCount).toBe(2)
   })
 
-  it('目录缺失：examples 不存在时空源不 throw；userDir 无效同样安全', async () => {
+  it('目录缺失：examples 不存在时空源不 throw；用户目录无效同样安全', async () => {
     app.getAppPath.mockReturnValue(join(root, 'no-such-app'))
     await fs.promises.writeFile(
       join(userData, 'world-settings.json'),
-      JSON.stringify({ version: 1, userDir: join(root, 'no-such-dir') })
+      JSON.stringify({ version: 2, userDirs: [join(root, 'no-such-dir')] })
     )
     const idx = await loadWorldIndex()
     expect(idx.graphs).toEqual([])
@@ -143,12 +143,12 @@ describe('loadWorldIndex', () => {
     expect(fs.existsSync(join(userData, 'world-index.json.bak'))).toBe(true)
   })
 
-  it('userDir 包含 examplesDir：示例不重复收录、source 保持 example、缓存照常命中', async () => {
+  it('用户目录包含 examplesDir：示例不重复收录、source 保持 example、缓存照常命中', async () => {
     await fs.promises.writeFile(join(root, 'examples', '化学.xk'), mkChart(['化学']))
-    await fs.promises.writeFile(join(root, 'U.xk'), mkChart(['u'])) // userDir 根下的用户图
+    await fs.promises.writeFile(join(root, 'U.xk'), mkChart(['u'])) // 用户目录根下的用户图
     await fs.promises.writeFile(
       join(userData, 'world-settings.json'),
-      JSON.stringify({ version: 1, userDir: root }) // examples 的父目录
+      JSON.stringify({ version: 2, userDirs: [root] }) // examples 的父目录
     )
 
     const idx = await loadWorldIndex()
@@ -190,12 +190,67 @@ describe('loadWorldIndex', () => {
       return realRename(from, to)
     })
     try {
-      await expect(setWorldUserDir(null)).rejects.toThrow('EPERM')
+      await expect(setWorldUserDirs(null)).rejects.toThrow('EPERM')
       const leftovers = (await fs.promises.readdir(userData)).filter((f) => f.includes('.tmp-'))
       expect(leftovers).toEqual([])
     } finally {
       spy.mockRestore()
     }
+  })
+
+  it('v1 单目录设置自动迁移：读作一项数组，扫描行为与 v2 一致', async () => {
+    const userDir = join(root, 'legacy')
+    await fs.promises.mkdir(userDir, { recursive: true })
+    await fs.promises.writeFile(join(userDir, 'L.xk'), mkChart(['l']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 1, userDir })
+    )
+    const idx = await loadWorldIndex()
+    expect(idx.userDirs).toEqual([userDir])
+    expect(idx.graphs.some((g) => g.title === 'L')).toBe(true)
+  })
+
+  it('多目录聚合：两个用户目录的图合并进同一世界，缝合线跨目录生成', async () => {
+    const dirA = join(root, 'lib-a')
+    const dirB = join(root, 'lib-b')
+    await fs.promises.mkdir(dirA, { recursive: true })
+    await fs.promises.mkdir(dirB, { recursive: true })
+    await fs.promises.writeFile(join(dirA, '甲.xk'), mkChart(['共享', '独甲']))
+    await fs.promises.writeFile(join(dirB, '乙.xk'), mkChart(['共享', '独乙']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [dirA, dirB] })
+    )
+    const idx = await loadWorldIndex()
+    expect(idx.graphs.map((g) => g.title).sort()).toEqual(['乙', '甲']) // 码位序：乙 < 甲
+    const aId = idx.graphs.find((g) => g.title === '甲').id
+    const bId = idx.graphs.find((g) => g.title === '乙').id
+    expect(idx.stitches).toEqual([{ name: '共享', graphIds: [aId, bId].sort() }])
+  })
+
+  it('嵌套用户目录去重：外层与内层同时在列时，同一文件只读一次（缓存条目唯一）', async () => {
+    const outer = join(root, 'nest')
+    const inner = join(outer, 'inner')
+    await fs.promises.mkdir(inner, { recursive: true })
+    await fs.promises.writeFile(join(inner, 'N.xk'), mkChart(['n']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [outer, inner] })
+    )
+    const idx = await loadWorldIndex()
+    expect(idx.graphs.filter((g) => g.title === 'N')).toHaveLength(1)
+    expect(globalThis.__worldCalls).toHaveLength(1) // 只读一次
+    await loadWorldIndex()
+    expect(globalThis.__worldCalls).toHaveLength(1) // 二次全缓存命中
+  })
+
+  it('设置文件损坏：视为未配置，examples 源照常扫描', async () => {
+    await fs.promises.writeFile(join(root, 'examples', 'A.xk'), mkChart(['甲']))
+    await fs.promises.writeFile(join(userData, 'world-settings.json'), '{corrupt')
+    const idx = await loadWorldIndex()
+    expect(idx.userDirs).toEqual([])
+    expect(idx.graphs.map((g) => g.title)).toEqual(['A'])
   })
 })
 
@@ -222,72 +277,156 @@ describe('readWorldGraph', () => {
     await expect(readWorldGraph(bad)).rejects.toThrow('[WORLD_PATH_REJECTED]')
   })
 
-  it('userDir 内合法路径放行；设置 userDir 后 examples 路径仍合法', async () => {
+  it('用户目录内合法路径放行；设置用户目录后 examples 路径仍合法', async () => {
     const userDir = join(root, 'my-graphs')
     await fs.promises.mkdir(userDir, { recursive: true })
     const inside = join(userDir, 'U.xk')
     await fs.promises.writeFile(inside, mkChart(['u']))
     await fs.promises.writeFile(
       join(userData, 'world-settings.json'),
-      JSON.stringify({ version: 1, userDir })
+      JSON.stringify({ version: 2, userDirs: [userDir] })
     )
     const { content } = await readWorldGraph(inside)
     expect(JSON.parse(content).nodes[0].name).toBe('u')
-    // examples 前缀始终合法（与 userDir 设置无关）
+    // examples 前缀始终合法（与用户目录设置无关）
     await expect(readWorldGraph(join(root, 'examples', '化学.xk'))).resolves.toBeDefined()
+  })
+
+  it('多目录白名单：任一在列目录内的路径放行，全部移除后该路径被拒', async () => {
+    const dirA = join(root, 'lib-a')
+    const dirB = join(root, 'lib-b')
+    await fs.promises.mkdir(dirA, { recursive: true })
+    await fs.promises.mkdir(dirB, { recursive: true })
+    const bFile = join(dirB, 'B.xk')
+    await fs.promises.writeFile(bFile, mkChart(['b']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [dirA, dirB] })
+    )
+    await expect(readWorldGraph(bFile)).resolves.toBeDefined()
+    // 移除 dirB 后白名单收窄，dirB 内路径被拒
+    await setWorldUserDirs({ remove: dirB })
+    await expect(readWorldGraph(bFile)).rejects.toThrow('[WORLD_PATH_REJECTED]')
   })
 })
 
-describe('setWorldUserDir', () => {
-  it("'pick' 对话框取消：ok=false、目录不变", async () => {
+describe('setWorldUserDirs', () => {
+  it("'pick' 对话框取消：ok=false + reason='canceled'、目录列表不变", async () => {
     await fs.promises.writeFile(
       join(userData, 'world-settings.json'),
-      JSON.stringify({ version: 1, userDir: join(root, 'a') })
+      JSON.stringify({ version: 2, userDirs: [join(root, 'a')] })
     )
     dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
-    const res = await setWorldUserDir('pick')
+    const res = await setWorldUserDirs('pick')
     expect(res.ok).toBe(false)
-    expect(res.userDir).toBe(join(root, 'a'))
+    expect(res.reason).toBe('canceled')
+    expect(res.userDirs).toEqual([join(root, 'a')])
   })
 
   it("'pick' 对话框以触发窗口为 parent（模态，防连点开多个目录选择框）", async () => {
     const win = {}
     dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
-    await setWorldUserDir('pick', win)
+    await setWorldUserDirs('pick', win)
     expect(dialog.showOpenDialog).toHaveBeenCalledWith(win, {
       title: '选择图库目录',
       properties: ['openDirectory']
     })
   })
 
-  it("'pick' 选中目录：持久化且下次 loadWorldIndex 扫到新目录", async () => {
-    const userDir = join(root, 'picked')
-    await fs.promises.mkdir(userDir, { recursive: true })
-    await fs.promises.writeFile(join(userDir, 'P.xk'), mkChart(['p']))
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [userDir] })
-    const res = await setWorldUserDir('pick')
-    expect(res).toEqual({ ok: true, userDir })
-    const idx = await loadWorldIndex()
-    expect(idx.graphs.some((g) => g.title === 'P')).toBe(true)
-    expect(idx.userDir).toBe(userDir)
-  })
-
-  it('null 清除：user 源条目随下次重建消失', async () => {
-    const userDir = join(root, 'old')
-    await fs.promises.mkdir(userDir, { recursive: true })
-    await fs.promises.writeFile(join(userDir, 'O.xk'), mkChart(['o']))
+  it("'pick' 选中目录：追加到既有列表（不替换），下次 loadWorldIndex 两目录都扫到", async () => {
+    const dirA = join(root, 'lib-a')
+    const dirB = join(root, 'picked')
+    await fs.promises.mkdir(dirA, { recursive: true })
+    await fs.promises.mkdir(dirB, { recursive: true })
+    await fs.promises.writeFile(join(dirA, 'A.xk'), mkChart(['a']))
+    await fs.promises.writeFile(join(dirB, 'P.xk'), mkChart(['p']))
     await fs.promises.writeFile(
       join(userData, 'world-settings.json'),
-      JSON.stringify({ version: 1, userDir })
+      JSON.stringify({ version: 2, userDirs: [dirA] })
     )
-    await loadWorldIndex() // user 源进缓存
-    const res = await setWorldUserDir(null)
-    expect(res).toEqual({ ok: true, userDir: null })
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [dirB] })
+    const res = await setWorldUserDirs('pick')
+    expect(res.ok).toBe(true)
+    expect(res.userDirs).toHaveLength(2)
     const idx = await loadWorldIndex()
-    expect(idx.graphs.some((g) => g.source === 'user')).toBe(false)
+    expect(idx.graphs.some((g) => g.title === 'A')).toBe(true)
+    expect(idx.graphs.some((g) => g.title === 'P')).toBe(true)
   })
 
-  it('非绝对路径字符串：拒绝', async () => {
-    await expect(setWorldUserDir('relative/dir')).rejects.toThrow('[WORLD_DIR_REJECTED]')
+  it('重复添加（归一化路径相同，大小写不同）：ok=false + reason=duplicate，列表不变', async () => {
+    const userDir = join(root, 'Dup')
+    await fs.promises.mkdir(userDir, { recursive: true })
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [userDir] })
+    )
+    const res = await setWorldUserDirs(userDir)
+    expect(res.ok).toBe(false)
+    expect(res.reason).toBe('duplicate')
+    expect(res.userDirs).toEqual([userDir])
+  })
+
+  it('{ remove } 移除一项：持久化生效、user 源条目随下次重建消失；移除不存在的目录幂等', async () => {
+    const dirA = join(root, 'keep')
+    const dirB = join(root, 'old')
+    await fs.promises.mkdir(dirA, { recursive: true })
+    await fs.promises.mkdir(dirB, { recursive: true })
+    await fs.promises.writeFile(join(dirA, 'K.xk'), mkChart(['k']))
+    await fs.promises.writeFile(join(dirB, 'O.xk'), mkChart(['o']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [dirA, dirB] })
+    )
+    await loadWorldIndex() // 两目录进缓存
+
+    const res = await setWorldUserDirs({ remove: dirB })
+    expect(res.ok).toBe(true)
+    expect(res.userDirs).toEqual([dirA])
+    const idx = await loadWorldIndex()
+    expect(idx.graphs.some((g) => g.title === 'O')).toBe(false)
+    expect(idx.graphs.some((g) => g.title === 'K')).toBe(true)
+
+    // 幂等：再移除一次已不存在的目录
+    const again = await setWorldUserDirs({ remove: dirB })
+    expect(again.ok).toBe(false)
+    expect(again.reason).toBe('notfound')
+    expect(again.userDirs).toEqual([dirA])
+  })
+
+  it('null 清空全部用户目录', async () => {
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [join(root, 'a'), join(root, 'b')] })
+    )
+    const res = await setWorldUserDirs(null)
+    expect(res).toEqual({ ok: true, userDirs: [] })
+    const idx = await loadWorldIndex()
+    expect(idx.userDirs).toEqual([])
+  })
+
+  it('非绝对路径字符串：拒绝（throw WORLD_DIR_REJECTED）', async () => {
+    await expect(setWorldUserDirs('relative/dir')).rejects.toThrow('[WORLD_DIR_REJECTED]')
+  })
+
+  it('{ remove: 相对路径 } 同样拒绝', async () => {
+    await expect(setWorldUserDirs({ remove: 'relative/dir' })).rejects.toThrow(
+      '[WORLD_DIR_REJECTED]'
+    )
+  })
+
+  it('目录数量上限：达到 16 个后 reason=limit，不再追加', async () => {
+    const dirs = []
+    for (let i = 0; i < 16; i++) {
+      dirs.push(join(root, `d${i}`))
+    }
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: dirs })
+    )
+    const extra = join(root, 'overflow')
+    const res = await setWorldUserDirs(extra)
+    expect(res.ok).toBe(false)
+    expect(res.reason).toBe('limit')
+    expect(res.userDirs).toHaveLength(16)
   })
 })
