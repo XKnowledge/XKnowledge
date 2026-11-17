@@ -140,6 +140,11 @@ describe('preload：electronAPI 桥接面 → IPC 通道映射', () => {
       action: { remove: 'D:/graphs' }
     })
 
+    exposed.worldSetUserDirs({ hideBuiltIn: true })
+    expect(bridge.invoke).toHaveBeenCalledWith(IPC.WORLD_SET_USER_DIR, {
+      action: { hideBuiltIn: true }
+    })
+
     exposed.writeGraphClipboard('{"app":"xknowledge"}')
     expect(bridge.invoke).toHaveBeenCalledWith(IPC.CLIPBOARD_WRITE_GRAPH, {
       text: '{"app":"xknowledge"}'

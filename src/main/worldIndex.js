@@ -95,28 +95,36 @@ const readCache = async () => {
 }
 
 /**
- * 读取用户图库目录列表（设置 v2）。读 v1 单目录写法自动迁移为
- * 一项数组（不写回盘——下次 setWorldUserDirs 持久化时自然落 v2）；
- * 缺失/损坏视为未配置。条目逐个校验绝对路径，非法项丢弃不阻塞。
+ * 读取世界树设置（v2）。返回 { userDirs, hideBuiltIn }：读 v1 单目录写法
+ * 自动迁移为一项数组（不写回盘——下次 setWorldUserDirs 持久化时自然落
+ * v2）；缺失/损坏视为未配置。userDirs 逐个校验绝对路径，非法项丢弃不
+ * 阻塞；hideBuiltIn 仅认 === true（缺省/脏值一律显示，旧文件兼容）。
  */
-const readWorldUserDirs = async () => {
+const readWorldSettings = async () => {
   let parsed
   try {
     parsed = JSON.parse(await fs.promises.readFile(settingsFile(), 'utf-8'))
   } catch {
-    return [] // 缺失/损坏：视为未配置
+    return { userDirs: [], hideBuiltIn: false } // 缺失/损坏：视为未配置
   }
+  const hideBuiltIn = parsed?.hideBuiltIn === true
   if (Array.isArray(parsed?.userDirs)) {
-    return parsed.userDirs.filter((d) => typeof d === 'string' && path.isAbsolute(d))
+    return {
+      userDirs: parsed.userDirs.filter((d) => typeof d === 'string' && path.isAbsolute(d)),
+      hideBuiltIn
+    }
   }
   if (typeof parsed?.userDir === 'string' && parsed.userDir) {
-    return [parsed.userDir]
+    return { userDirs: [parsed.userDir], hideBuiltIn }
   }
-  return []
+  return { userDirs: [], hideBuiltIn }
 }
 
-const writeWorldUserDirs = async (userDirs) => {
-  await atomicWrite(settingsFile(), JSON.stringify({ version: SETTINGS_VERSION, userDirs }))
+const writeWorldSettings = async ({ userDirs, hideBuiltIn }) => {
+  await atomicWrite(
+    settingsFile(),
+    JSON.stringify({ version: SETTINGS_VERSION, userDirs, hideBuiltIn })
+  )
 }
 
 /**
@@ -162,15 +170,28 @@ const scanSource = async (dir, { recursive, source, skipInside }, cached, entrie
 }
 
 export const loadWorldIndex = async () => {
-  const [cached, userDirs] = [await readCache(), await readWorldUserDirs()]
+  const [cached, settings] = [await readCache(), await readWorldSettings()]
+  const { userDirs, hideBuiltIn } = settings
   const entries = new Map()
   const broken = { count: 0 }
-  await scanSource(examplesDir(), { recursive: false, source: 'example' }, cached, entries, broken)
+  // 内置示例源：隐藏时整体跳过（不收录 = 不可读，同移除用户目录语义）。
+  // scanned 不含 examplesDir——用户目录若真套住 examples 路径，其中文件
+  // 按用户目录语义收录（极罕见，spec 边界决策，不特殊处理）
+  const scanned = []
+  if (!hideBuiltIn) {
+    await scanSource(
+      examplesDir(),
+      { recursive: false, source: 'example' },
+      cached,
+      entries,
+      broken
+    )
+    scanned.push(path.resolve(examplesDir()).toLowerCase())
+  }
   // 多用户目录扫描顺序：先按路径排序（浅的在前）——配合逐目录累积的
   // skipInside 前缀表，嵌套目录（如 D:\ 与 D:\图谱 同时在列）的内层
   // 文件只归最先扫到的外层目录，同一文件永不被读两次（同 examples
   // 防重的推广；缓存条目随目录列表变化可能整体失效一次，属预期成本）
-  const scanned = [path.resolve(examplesDir()).toLowerCase()]
   const sortedDirs = [...new Set(userDirs.map((d) => path.resolve(d)))].sort()
   for (const dir of sortedDirs) {
     await scanSource(
@@ -199,7 +220,14 @@ export const loadWorldIndex = async () => {
       builtAt: Date.now()
     })
   ).catch(() => {})
-  return { graphs, nodes, stitches: buildStitches(nodes), brokenCount: broken.count, userDirs }
+  return {
+    graphs,
+    nodes,
+    stitches: buildStitches(nodes),
+    brokenCount: broken.count,
+    userDirs,
+    hideBuiltIn
+  }
 }
 
 /** 前缀判定：resolve 后以 dir + 分隔符开头（大小写不敏感，同 examplePaths 惯例） */
@@ -209,8 +237,9 @@ const insideDir = (filePath, dir) => {
 }
 
 /**
- * 读取世界树图库内单图：id 必须位于 examplesDir 或任一用户图库目录
- * 前缀内，防止渲染端传任意路径读盘。合法路径走 readChartFile 复用损坏拦截。
+ * 读取世界树图库内单图：id 必须位于（未隐藏的）examplesDir 或任一用户图库目录
+ * 前缀内——内置目录隐藏时白名单同步收窄（不在索引 = 不可读），
+ * 防止渲染端传任意路径读盘。合法路径走 readChartFile 复用损坏拦截。
  */
 export const readWorldGraph = async (id) => {
   if (typeof id !== 'string' || !id || !path.isAbsolute(id)) {
@@ -219,8 +248,9 @@ export const readWorldGraph = async (id) => {
       detail: String(id)
     })
   }
-  const userDirs = await readWorldUserDirs()
-  const allowed = insideDir(id, examplesDir()) || userDirs.some((d) => insideDir(id, d))
+  const { userDirs, hideBuiltIn } = await readWorldSettings()
+  const allowed =
+    (!hideBuiltIn && insideDir(id, examplesDir())) || userDirs.some((d) => insideDir(id, d))
   if (!allowed) {
     throw Object.assign(new Error(`[WORLD_PATH_REJECTED] ${t('error.worldPathOutside')}`), {
       code: 'WORLD_PATH_REJECTED',
@@ -235,7 +265,8 @@ export const readWorldGraph = async (id) => {
  * - 'pick'：走主进程目录选择框，选中目录**追加**到列表（重复添加按
  *   归一化路径去重，返回 ok:false + reason:'duplicate' 由渲染层提示）；
  * - { remove: dir }：按归一化路径移除一项（不在列表返回 ok:false +
- *   reason:'notfound'，不 throw——移除一个已被移除的目录是幂等操作）。
+ *   reason:'notfound'，不 throw——移除一个已被移除的目录是幂等操作）；
+ * - { hideBuiltIn: boolean }：切换内置示例目录显隐（不可移除，只隐藏；userDirs 不动）。
  * 变更持久化到 world-settings.json（v2 userDirs 数组），下次
  * loadWorldIndex 按新列表增量重建（消失目录的旧条目自然淘汰）。
  * window 为触发窗口：绑定为对话框 parent 使其模态，防止对话框
@@ -252,13 +283,28 @@ export const setWorldUserDirs = async (action, window) => {
         detail: String(action.remove)
       })
     }
-    const dirs = await readWorldUserDirs()
+    const { userDirs: dirs, hideBuiltIn } = await readWorldSettings()
     const next = dirs.filter((d) => !sameDir(d, action.remove))
     if (next.length === dirs.length) {
       return { ok: false, reason: 'notfound', userDirs: dirs }
     }
-    await writeWorldUserDirs(next)
+    await writeWorldSettings({ userDirs: next, hideBuiltIn })
     return { ok: true, userDirs: next }
+  }
+
+  if (action?.hideBuiltIn !== undefined) {
+    if (typeof action.hideBuiltIn !== 'boolean') {
+      throw Object.assign(new Error(`[WORLD_DIR_REJECTED] ${t('error.worldDirRejected')}`), {
+        code: 'WORLD_DIR_REJECTED',
+        detail: String(action.hideBuiltIn)
+      })
+    }
+    const { userDirs, hideBuiltIn: prev } = await readWorldSettings()
+    if (action.hideBuiltIn === prev) {
+      return { ok: true, userDirs, hideBuiltIn: prev } // 幂等：状态未变不写盘
+    }
+    await writeWorldSettings({ userDirs, hideBuiltIn: action.hideBuiltIn })
+    return { ok: true, userDirs, hideBuiltIn: action.hideBuiltIn }
   }
 
   let dir = action
@@ -268,12 +314,13 @@ export const setWorldUserDirs = async (action, window) => {
       properties: ['openDirectory']
     })
     if (res.canceled || !res.filePaths?.length) {
-      return { ok: false, reason: 'canceled', userDirs: await readWorldUserDirs() }
+      return { ok: false, reason: 'canceled', userDirs: (await readWorldSettings()).userDirs }
     }
     dir = res.filePaths[0]
   }
   if (dir === null) {
-    await writeWorldUserDirs([])
+    const { hideBuiltIn } = await readWorldSettings()
+    await writeWorldSettings({ userDirs: [], hideBuiltIn })
     return { ok: true, userDirs: [] }
   }
   if (typeof dir !== 'string' || !path.isAbsolute(dir)) {
@@ -282,7 +329,7 @@ export const setWorldUserDirs = async (action, window) => {
       detail: String(dir)
     })
   }
-  const dirs = await readWorldUserDirs()
+  const { userDirs: dirs, hideBuiltIn } = await readWorldSettings()
   if (dirs.some((d) => sameDir(d, dir))) {
     return { ok: false, reason: 'duplicate', userDirs: dirs }
   }
@@ -290,6 +337,6 @@ export const setWorldUserDirs = async (action, window) => {
     return { ok: false, reason: 'limit', userDirs: dirs }
   }
   const next = [...dirs, normalize(dir)]
-  await writeWorldUserDirs(next)
+  await writeWorldSettings({ userDirs: next, hideBuiltIn })
   return { ok: true, userDirs: next }
 }

@@ -41,7 +41,8 @@ vi.mock('../../src/main/worldIndex', () => ({
     nodes: [],
     stitches: [],
     brokenCount: 0,
-    userDirs: []
+    userDirs: [],
+    hideBuiltIn: false
   })),
   readWorldGraph: vi.fn(async (id) => ({ content: `{"id":"${id}"}`, path: id })),
   setWorldUserDirs: vi.fn(async () => ({ ok: true, userDirs: [] }))
@@ -696,7 +697,14 @@ describe('世界域通道', () => {
     const handler = handlerOf(IPC.WORLD_LOAD_INDEX)
     expect(handler).toBeTypeOf('function')
     const res = await handler()
-    expect(res).toEqual({ graphs: [], nodes: [], stitches: [], brokenCount: 0, userDirs: [] })
+    expect(res).toEqual({
+      graphs: [],
+      nodes: [],
+      stitches: [],
+      brokenCount: 0,
+      userDirs: [],
+      hideBuiltIn: false
+    })
     expect(worldIndex.loadWorldIndex).toHaveBeenCalledTimes(1)
   })
 
@@ -714,6 +722,8 @@ describe('世界域通道', () => {
     expect(worldIndex.setWorldUserDirs).toHaveBeenCalledWith('pick', win)
     await handler(senderOf(1), { action: { remove: 'D:/graphs' } })
     expect(worldIndex.setWorldUserDirs).toHaveBeenCalledWith({ remove: 'D:/graphs' }, win)
+    await handler(senderOf(1), { action: { hideBuiltIn: true } })
+    expect(worldIndex.setWorldUserDirs).toHaveBeenCalledWith({ hideBuiltIn: true }, win)
   })
 
   it('world 模式通道绑定触发窗口（解锁/锁定窗口尺寸）', async () => {

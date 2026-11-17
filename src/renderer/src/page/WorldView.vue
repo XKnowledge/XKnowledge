@@ -402,9 +402,9 @@ const emptyDirs = computed(() => {
   )
 })
 
-/** 打开目录管理面板：灌入当前目录列表与计数 */
+/** 打开目录管理面板：灌入当前目录列表、计数与内置目录显隐态 */
 const openDirsPanel = () => {
-  dirsRef.value?.open(index.value?.userDirs ?? [], dirGraphCounts.value)
+  dirsRef.value?.open(index.value?.userDirs ?? [], dirGraphCounts.value, index.value?.hideBuiltIn)
 }
 
 /** 面板内增/删完成：刷新索引并同步面板数据（面板保持打开，可连续操作） */

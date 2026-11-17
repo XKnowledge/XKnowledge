@@ -112,6 +112,42 @@ await page.waitForTimeout(2_000) // 相机飞行
 await shot('world-expanded')
 expectTrue('展开列表出现', (await page.locator('.world-expanded-bar .ant-tag').count()) === 1)
 
+// 场景 4：图库目录面板——内置目录隐藏/显示切换（不可移除、置灰常驻）。
+// 注意：冒烟写的是真实 userData 的 world-settings.json，末尾务必切回显示
+await page.locator('.world-header a.no-move').hover()
+await page.waitForTimeout(500) // 等 dropdown 浮层展开
+await page.getByText('图库目录…', { exact: true }).click()
+await page.waitForSelector('[data-world-dirs]')
+const builtinRow = page.locator('[data-world-builtin-row]')
+expectTrue('面板内置行常驻', await builtinRow.isVisible())
+const builtinToggle = page.locator('[data-world-builtin-toggle]')
+expectTrue(
+  '内置行初始按钮为「隐藏」（默认显示）',
+  ((await builtinToggle.textContent()) ?? '').trim() === '隐藏'
+)
+await builtinToggle.click()
+// 切换后 changed 链路全量重扫（示例图全缓存命中，秒级）——行置灰即刷新完成
+await page.waitForFunction(
+  () => document.querySelector('[data-world-builtin-row]')?.classList.contains('world-dirs-hidden'),
+  { timeout: 30_000 }
+)
+expectTrue(
+  '隐藏后内置行置灰、按钮变「显示」',
+  ((await builtinToggle.textContent()) ?? '').trim() === '显示'
+)
+await shot('world-dirs-hidden')
+// 恢复显示（还原用户现场）
+await builtinToggle.click()
+await page.waitForFunction(
+  () =>
+    !document.querySelector('[data-world-builtin-row]')?.classList.contains('world-dirs-hidden'),
+  { timeout: 30_000 }
+)
+expectTrue(
+  '恢复显示：按钮回到「隐藏」',
+  ((await builtinToggle.textContent()) ?? '').trim() === '隐藏'
+)
+
 expectTrue('无页面错误', errors.length === 0, errors.join(' | '))
 await app.close()
 if (failures > 0) {

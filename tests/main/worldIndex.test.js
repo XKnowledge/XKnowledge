@@ -209,6 +209,7 @@ describe('loadWorldIndex', () => {
     const idx = await loadWorldIndex()
     expect(idx.userDirs).toEqual([userDir])
     expect(idx.graphs.some((g) => g.title === 'L')).toBe(true)
+    expect(idx.hideBuiltIn).toBe(false) // v1 无此字段：默认显示
   })
 
   it('多目录聚合：两个用户目录的图合并进同一世界，缝合线跨目录生成', async () => {
@@ -251,6 +252,33 @@ describe('loadWorldIndex', () => {
     const idx = await loadWorldIndex()
     expect(idx.userDirs).toEqual([])
     expect(idx.graphs.map((g) => g.title)).toEqual(['A'])
+  })
+
+  it('隐藏内置目录：examples 不收录、返回 hideBuiltIn:true；恢复显示后重收录', async () => {
+    await fs.promises.writeFile(join(root, 'examples', 'A.xk'), mkChart(['甲']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [], hideBuiltIn: true })
+    )
+    const hidden = await loadWorldIndex()
+    expect(hidden.hideBuiltIn).toBe(true)
+    expect(hidden.graphs).toEqual([])
+    // 恢复显示：缓存已淘汰 example 条目，重读收录
+    await setWorldUserDirs({ hideBuiltIn: false })
+    const shown = await loadWorldIndex()
+    expect(shown.hideBuiltIn).toBe(false)
+    expect(shown.graphs.map((g) => g.title)).toEqual(['A'])
+  })
+
+  it('设置无 hideBuiltIn 字段默认显示（旧 v2 文件兼容）', async () => {
+    await fs.promises.writeFile(join(root, 'examples', 'A.xk'), mkChart(['甲']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [] })
+    )
+    const idx = await loadWorldIndex()
+    expect(idx.hideBuiltIn).toBe(false)
+    expect(idx.graphs).toHaveLength(1)
   })
 })
 
@@ -307,6 +335,23 @@ describe('readWorldGraph', () => {
     // 移除 dirB 后白名单收窄，dirB 内路径被拒
     await setWorldUserDirs({ remove: dirB })
     await expect(readWorldGraph(bFile)).rejects.toThrow('[WORLD_PATH_REJECTED]')
+  })
+
+  it('隐藏内置目录：examples 路径被拒（白名单随索引收窄）、用户目录不受影响；恢复显示后放行', async () => {
+    const exampleFile = join(root, 'examples', '化学.xk')
+    const userDir = join(root, 'my-graphs')
+    await fs.promises.mkdir(userDir, { recursive: true })
+    const userFile = join(userDir, 'U.xk')
+    await fs.promises.writeFile(userFile, mkChart(['u']))
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [userDir], hideBuiltIn: true })
+    )
+    await expect(readWorldGraph(exampleFile)).rejects.toThrow('[WORLD_PATH_REJECTED]')
+    // 混合态：隐藏内置不波及用户图库（allowed 两分支各自独立）
+    await expect(readWorldGraph(userFile)).resolves.toBeDefined()
+    await setWorldUserDirs({ hideBuiltIn: false })
+    await expect(readWorldGraph(exampleFile)).resolves.toBeDefined()
   })
 })
 
@@ -428,5 +473,48 @@ describe('setWorldUserDirs', () => {
     expect(res.ok).toBe(false)
     expect(res.reason).toBe('limit')
     expect(res.userDirs).toHaveLength(16)
+  })
+
+  it('{ hideBuiltIn } 切换内置目录可见性：持久化、不动 userDirs、往返生效', async () => {
+    const userDir = join(root, 'my-graphs')
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [userDir] })
+    )
+    const res = await setWorldUserDirs({ hideBuiltIn: true })
+    expect(res).toEqual({ ok: true, userDirs: [userDir], hideBuiltIn: true })
+    const saved = JSON.parse(
+      await fs.promises.readFile(join(userData, 'world-settings.json'), 'utf-8')
+    )
+    expect(saved.hideBuiltIn).toBe(true)
+    expect(saved.userDirs).toEqual([userDir])
+    const back = await setWorldUserDirs({ hideBuiltIn: false })
+    expect(back.hideBuiltIn).toBe(false)
+  })
+
+  it('隐藏标志不被增删目录抹掉：hideBuiltIn 后 pick 追加、remove 移除均保留标志', async () => {
+    const dirA = join(root, 'lib-a')
+    const dirB = join(root, 'picked')
+    await fs.promises.mkdir(dirA, { recursive: true })
+    await fs.promises.mkdir(dirB, { recursive: true })
+    await fs.promises.writeFile(
+      join(userData, 'world-settings.json'),
+      JSON.stringify({ version: 2, userDirs: [dirA], hideBuiltIn: true })
+    )
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [dirB] })
+    await setWorldUserDirs('pick')
+    let saved = JSON.parse(
+      await fs.promises.readFile(join(userData, 'world-settings.json'), 'utf-8')
+    )
+    expect(saved.userDirs).toHaveLength(2)
+    expect(saved.hideBuiltIn).toBe(true)
+    await setWorldUserDirs({ remove: dirA })
+    saved = JSON.parse(await fs.promises.readFile(join(userData, 'world-settings.json'), 'utf-8'))
+    expect(saved.userDirs).toEqual([dirB])
+    expect(saved.hideBuiltIn).toBe(true)
+  })
+
+  it('{ hideBuiltIn: 非布尔 } 拒绝（throw WORLD_DIR_REJECTED）', async () => {
+    await expect(setWorldUserDirs({ hideBuiltIn: 'yes' })).rejects.toThrow('[WORLD_DIR_REJECTED]')
   })
 })

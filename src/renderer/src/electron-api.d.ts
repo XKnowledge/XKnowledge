@@ -36,6 +36,8 @@ export interface WorldIndex {
   stitches: Stitch[]
   brokenCount: number
   userDirs: string[]
+  /** 内置示例目录是否隐藏（隐藏 = 不收录不可读，面板可切回） */
+  hideBuiltIn: boolean
 }
 
 /** 导出交互式 HTML 的 viewer 数据（serializeGraphForViewer 产物）。主进程
@@ -84,11 +86,12 @@ export interface ElectronApi {
   localeApplied(payload: { locale: string }): Promise<{ ok: true }>
   worldLoadIndex(): Promise<WorldIndex>
   worldReadGraph(id: string): Promise<{ content: string }>
-  /** 管理世界库目录列表：'pick' 弹框追加 / { remove } 移除一项 / null 清空。
-   *  ok:false 时 reason 说明原因（canceled / duplicate / notfound / limit） */
+  /** 管理世界库目录列表：'pick' 弹框追加 / { remove } 移除一项 / { hideBuiltIn }
+   *  切换内置示例目录显隐（不可移除）/ null 清空。ok:false 时 reason 说明
+   *  原因（canceled / duplicate / notfound / limit） */
   worldSetUserDirs(
-    action: 'pick' | { remove: string } | null
-  ): Promise<{ ok: boolean; reason?: string; userDirs: string[] }>
+    action: 'pick' | { remove: string } | { hideBuiltIn: boolean } | null
+  ): Promise<{ ok: boolean; reason?: string; userDirs: string[]; hideBuiltIn?: boolean }>
   /** process.platform（macOS 隐藏自绘关闭钮等平台分流用） */
   platform: string
   minimizeWindow(): Promise<{ ok: true }>
